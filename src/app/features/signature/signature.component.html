@@ -11,6 +11,7 @@
         <button type="button" class="sig-tab" [class.sig-tab--active]="tab() === 'draw'" (click)="setTab('draw')">Draw</button>
         <button type="button" class="sig-tab" [class.sig-tab--active]="tab() === 'type'" (click)="setTab('type')">Type</button>
         <button type="button" class="sig-tab" [class.sig-tab--active]="tab() === 'upload'" (click)="setTab('upload')">Upload</button>
+        <button type="button" class="sig-tab" [class.sig-tab--active]="tab() === 'digital'" (click)="setTab('digital')">Digital ID</button>
       </div>
 
       @if (tab() === 'draw') {
@@ -39,12 +40,51 @@
             <button type="button" class="sig-font-btn" [class.sig-font-btn--active]="font() === 'sans'" (click)="font.set('sans')">Sans</button>
           </div>
         </div>
+      } @else if (tab() === 'upload') {
+        <div class="sig-upload">
+          <input
+            class="pf-input"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            (change)="onUpload($event)"
+          />
+          @if (uploadDataUrl()) {
+            <img class="sig-upload__preview" [src]="uploadDataUrl()!" alt="Uploaded signature" />
+          }
+        </div>
       } @else {
-        <app-file-dropzone [multiple]="false" accept="image/*" label="Upload a signature image" />
+        <div class="sig-upload">
+          <p class="pf-text-muted">
+            Cryptographic signing embeds a real PKCS#7 digital signature into the PDF using your
+            certificate. Nothing leaves this device.
+          </p>
+          <label class="pf-dialog__field">
+            <span>Certificate (.p12 / .pfx)</span>
+            <input class="pf-input" type="file" accept=".p12,.pfx,application/x-pkcs12" (change)="onCertUpload($event)" />
+          </label>
+          @if (certName()) {
+            <p class="pf-dialog__hint">Certificate: {{ certName() }}</p>
+          }
+          <label class="pf-dialog__field">
+            <span>Password</span>
+            <input class="pf-input" type="password" [ngModel]="password()" (ngModelChange)="password.set($event)" />
+          </label>
+          <label class="pf-dialog__field">
+            <span>Reason</span>
+            <input class="pf-input" type="text" [ngModel]="reason()" (ngModelChange)="reason.set($event)" />
+          </label>
+          <label class="pf-dialog__field">
+            <span>Location</span>
+            <input class="pf-input" type="text" [ngModel]="location()" (ngModelChange)="location.set($event)" />
+          </label>
+          @if (certError()) {
+            <p class="pf-dialog__error">{{ certError() }}</p>
+          }
+        </div>
       }
 
       <div class="tool-page__footer">
-        <button class="pf-btn pf-btn--primary" type="button" disabled title="Placing into a PDF arrives with the editor">
+        <button class="pf-btn pf-btn--primary" type="button" (click)="addToPdf()">
           <i class="fa-solid fa-plus"></i> Add to PDF
         </button>
       </div>

@@ -4,15 +4,15 @@
       @for (group of toolGroups() | keyvalue; track group.key) {
         <div class="editor__toolset">
           @for (tool of group.value; track tool.id) {
-            <button
-              type="button"
-              class="editor__tool"
-              [class.editor__tool--active]="activeTool() === tool.id"
-              [title]="tool.label + (tool.shortcut ? ' (' + tool.shortcut + ')' : '')"
-              [attr.aria-label]="tool.label"
-              [attr.aria-pressed]="activeTool() === tool.id"
-              (click)="selectTool(tool.id)"
-            >
+          <button
+            type="button"
+            class="editor__tool"
+            [class.editor__tool--active]="state.tool() === tool.id"
+            [title]="tool.label + (tool.shortcut ? ' (' + tool.shortcut + ')' : '')"
+            [attr.aria-label]="tool.label"
+            [attr.aria-pressed]="state.tool() === tool.id"
+            (click)="selectTool(tool.id)"
+          >
               <i [ngClass]="tool.icon"></i>
             </button>
           }
@@ -20,6 +20,26 @@
       }
     </div>
     <div class="editor__toolbar-actions">
+      <button
+        type="button"
+        class="icon-btn"
+        (click)="undo()"
+        [disabled]="!history.canUndo()"
+        title="Undo (Ctrl/Cmd+Z)"
+        aria-label="Undo"
+      >
+        <i class="fa-solid fa-rotate-left"></i>
+      </button>
+      <button
+        type="button"
+        class="icon-btn"
+        (click)="redo()"
+        [disabled]="!history.canRedo()"
+        title="Redo (Ctrl/Cmd+Shift+Z)"
+        aria-label="Redo"
+      >
+        <i class="fa-solid fa-rotate-right"></i>
+      </button>
       <button
         type="button"
         class="pf-btn pf-btn--primary pf-btn--sm"
@@ -84,7 +104,7 @@
         <button
           type="button"
           class="editor__chip"
-          [class.editor__chip--active]="fitMode() === 'width'"
+          [class.editor__chip--active]="state.fitMode() === 'width'"
           (click)="setFit('width')"
         >
           Fit width
@@ -92,7 +112,7 @@
         <button
           type="button"
           class="editor__chip"
-          [class.editor__chip--active]="fitMode() === 'page'"
+          [class.editor__chip--active]="state.fitMode() === 'page'"
           (click)="setFit('page')"
         >
           Fit page
@@ -252,20 +272,52 @@
           </p>
         </div>
       } @else {
-        <app-pdf-page
-          [pageIndex]="currentSourceIndex()"
-          [zoom]="zoom()"
-          [fitMode]="fitMode()"
-          [rotation]="currentRotation()"
-        ></app-pdf-page>
+        <div class="editor__canvas-stage" #stage>
+          <div
+            class="editor__page-frame"
+            [style.width.px]="displaySize()?.width"
+            [style.height.px]="displaySize()?.height"
+          >
+            <app-pdf-page
+              [pageIndex]="currentSourceIndex()"
+              [scale]="displaySize()?.scale ?? 1"
+              [rotation]="currentRotation()"
+            ></app-pdf-page>
+            <app-editor-overlay
+              [pageId]="currentPageId() ?? ''"
+              [pageIndex]="currentSourceIndex()"
+              [annotations]="currentAnnotations()"
+              [tool]="state.tool()"
+              [selectedId]="state.selectedId()"
+              [width]="displaySize()?.width ?? 0"
+              [height]="displaySize()?.height ?? 0"
+            ></app-editor-overlay>
+          </div>
+        </div>
       }
     </section>
 
     <aside class="editor__properties" aria-label="Properties">
-      <div class="editor__properties-head">
-        <span class="pf-label-caps">Properties</span>
-      </div>
-      <p class="pf-text-muted">Select an object to edit its properties.</p>
+      <app-properties-panel [docName]="docName()" />
     </aside>
   </div>
+
+  <input
+    #imageInput
+    type="file"
+    accept="image/png,image/jpeg,image/webp"
+    hidden
+    (change)="onImageFile($event)"
+  />
+
+  @if (signatureOpen()) {
+    <app-signature-dialog
+      (result)="onSignatureResult($event)"
+      (digitalResult)="onDigitalResult($event)"
+    />
+  }
+
+  @if (stampOpen()) {
+    <app-stamp-dialog (result)="onStampResult($event)" />
+  }
 </div>

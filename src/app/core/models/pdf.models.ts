@@ -13,6 +13,7 @@ export type PdfToolId =
   | 'rectangle'
   | 'circle'
   | 'arrow'
+  | 'line'
   | 'image'
   | 'signature'
   | 'stamp'
@@ -126,6 +127,30 @@ export interface CommentAnnotation extends BaseAnnotation {
   type: 'comment';
   text: string;
   author: string;
+}
+
+export interface PendingMedia {
+  readonly kind: 'image' | 'signature' | 'stamp';
+  dataUrl?: string;
+  naturalWidth?: number;
+  naturalHeight?: number;
+  text?: string;
+  color?: string;
+}
+
+export interface SignatureResult {
+  readonly dataUrl: string;
+  readonly width: number;
+  readonly height: number;
+}
+
+export interface DigitalSignatureRequest {
+  readonly certBytes: Uint8Array;
+  readonly password: string;
+  readonly reason?: string;
+  readonly location?: string;
+  readonly contactInfo?: string;
+  readonly signerName?: string;
 }
 
 export type PdfAnnotation =

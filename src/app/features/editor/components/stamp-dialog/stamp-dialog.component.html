@@ -1,0 +1,57 @@
+<div class="pf-dialog-overlay" role="presentation" (click)="cancel()">
+  <div
+    class="pf-dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Create stamp"
+    (click)="$event.stopPropagation()"
+  >
+    <h2 class="pf-dialog__title">Add stamp</h2>
+    <p class="pf-dialog__message">Choose a label and color for the stamp.</p>
+
+    <label class="pf-dialog__field">
+      <span>Text</span>
+      <input
+        class="pf-input"
+        type="text"
+        [value]="text()"
+        (input)="text.set($any($event.target).value)"
+      />
+    </label>
+
+    <div class="pf-dialog__field">
+      <span>Presets</span>
+      <div class="pf-dialog__tabs">
+        @for (preset of presets; track preset) {
+          <button
+            type="button"
+            class="pf-btn pf-btn--sm"
+            [ngClass]="text() === preset ? 'pf-btn--primary' : 'pf-btn--ghost'"
+            (click)="pick(preset)"
+          >
+            {{ preset }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <label class="pf-dialog__field">
+      <span>Color</span>
+      <input
+        class="pf-color"
+        type="color"
+        [value]="color()"
+        (input)="color.set($any($event.target).value)"
+      />
+    </label>
+
+    <div class="pf-dialog__actions">
+      <button type="button" class="pf-btn pf-btn--ghost" (click)="cancel()">
+        Cancel
+      </button>
+      <button type="button" class="pf-btn pf-btn--primary" (click)="confirm()">
+        Add stamp
+      </button>
+    </div>
+  </div>
+</div>

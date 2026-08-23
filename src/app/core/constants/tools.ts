@@ -102,6 +102,12 @@ export const EDITOR_TOOLS: EditorTool[] = [
     group: 'shapes',
   },
   {
+    id: 'line',
+    label: 'Line',
+    icon: 'fa-solid fa-slash',
+    group: 'shapes',
+  },
+  {
     id: 'arrow',
     label: 'Arrow',
     icon: 'fa-solid fa-arrow-right',
