@@ -1,0 +1,59 @@
+<section class="tool-page">
+  <div class="pf-container">
+    <header class="tool-page__header">
+      <a class="tool-page__back" routerLink="/tools"><i class="fa-solid fa-arrow-left"></i> Tools</a>
+      @if (mode() === 'protect') {
+        <h1><i class="fa-solid fa-lock tool-page__icon"></i> Protect PDF</h1>
+        <p class="pf-text-muted">Add a password and permission restrictions — locally.</p>
+      } @else {
+        <h1><i class="fa-solid fa-lock-open tool-page__icon"></i> Unlock PDF</h1>
+        <p class="pf-text-muted">Remove a password from a supported PDF — locally.</p>
+      }
+    </header>
+
+    <div class="tool-page__body">
+      <app-file-dropzone [multiple]="false" label="Add a PDF" />
+
+      @if (mode() === 'protect') {
+        <div class="security-form">
+          <label class="security-field">
+            <span class="pf-label-caps">Password</span>
+            <input class="pf-input" type="password" [value]="password()" (input)="password.set($any($event.target).value)" />
+          </label>
+          <label class="security-field">
+            <span class="pf-label-caps">Confirm password</span>
+            <input class="pf-input" type="password" [value]="confirm()" (input)="confirm.set($any($event.target).value)" />
+          </label>
+
+          <fieldset class="security-perms">
+            <legend class="pf-label-caps">Permissions</legend>
+            <label class="security-check"><input type="checkbox" [checked]="permissions().print" (change)="togglePerm('print')" /> Allow printing</label>
+            <label class="security-check"><input type="checkbox" [checked]="permissions().copy" (change)="togglePerm('copy')" /> Allow copy / extract</label>
+            <label class="security-check"><input type="checkbox" [checked]="permissions().modify" (change)="togglePerm('modify')" /> Allow modifications</label>
+          </fieldset>
+        </div>
+      } @else {
+        <div class="security-form">
+          <label class="security-field">
+            <span class="pf-label-caps">Password</span>
+            <input class="pf-input" type="password" [value]="password()" (input)="password.set($any($event.target).value)" />
+          </label>
+        </div>
+      }
+
+      <div class="tool-page__footer">
+        <button class="pf-btn pf-btn--primary" type="button" disabled title="Security pipeline arrives in the next milestone">
+          @if (mode() === 'protect') {
+            <i class="fa-solid fa-lock"></i> Protect PDF
+          } @else {
+            <i class="fa-solid fa-lock-open"></i> Unlock PDF
+          }
+        </button>
+      </div>
+    </div>
+
+    <p class="tool-page__privacy">
+      <i class="fa-solid fa-lock"></i> Files never leave your device.
+    </p>
+  </div>
+</section>

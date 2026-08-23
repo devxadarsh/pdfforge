@@ -1,0 +1,84 @@
+<header class="pf-header">
+  <div class="pf-header__inner pf-container">
+    <a class="pf-brand" routerLink="/" (click)="closeMore()" aria-label="PDFForge home">
+      <span class="pf-brand__mark"><i class="fa-solid fa-file-pdf"></i></span>
+      <span class="pf-brand__name">PDF<span class="pf-brand__accent">Forge</span></span>
+    </a>
+
+    <nav class="pf-nav-primary" aria-label="Primary">
+      <ul class="pf-nav-primary__list">
+        @for (item of primaryNav; track item.path) {
+          <li class="pf-nav-primary__item">
+            <a
+              class="pf-nav__link"
+              [routerLink]="item.path"
+              routerLinkActive="pf-nav__link--active"
+              [routerLinkActiveOptions]="{ exact: item.path === '/' }"
+              (click)="closeMore()"
+            >
+              <i class="pf-nav__icon" [ngClass]="item.icon"></i>
+              <span>{{ item.label }}</span>
+            </a>
+          </li>
+        }
+        <li class="pf-more">
+          <button
+            class="pf-more__btn"
+            type="button"
+            (click)="toggleMore()"
+            [attr.aria-expanded]="moreOpen()"
+            aria-haspopup="menu"
+          >
+            More
+            <i class="fa-solid" [ngClass]="moreOpen() ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+          </button>
+          @if (moreOpen()) {
+            <div class="pf-more__menu" role="menu">
+              @for (g of navGroups; track g.title) {
+                <div class="pf-more__group">
+                  @if (g.title) {
+                    <div class="pf-more__group-title">{{ g.title }}</div>
+                  }
+                  @for (item of g.items; track item.path) {
+                    <a
+                      class="pf-more__item"
+                      role="menuitem"
+                      [routerLink]="item.path"
+                      (click)="closeMore()"
+                    >
+                      <i class="pf-more__item-icon" [ngClass]="item.icon"></i>
+                      <span>{{ item.label }}</span>
+                    </a>
+                  }
+                </div>
+              }
+            </div>
+          }
+        </li>
+      </ul>
+    </nav>
+
+    <div class="pf-header__actions">
+      <span class="pf-privacy-pill" title="All processing happens locally in your browser.">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span class="pf-privacy-pill__text">Stays on your device</span>
+      </span>
+      <button
+        class="pf-icon-btn"
+        type="button"
+        (click)="cycleTheme()"
+        [title]="'Theme: ' + theme.theme()"
+        [attr.aria-label]="'Theme: ' + theme.theme()"
+      >
+        <i class="fa-solid" [ngClass]="themeIcon()"></i>
+      </button>
+      <button class="pf-btn pf-btn--primary" type="button" (click)="openPdf()">
+        <i class="fa-solid fa-folder-open"></i> Open PDF
+      </button>
+    </div>
+  </div>
+
+  @if (moreOpen()) {
+    <div class="pf-more__backdrop" (click)="closeMore()"></div>
+  }
+</header>

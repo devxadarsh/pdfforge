@@ -1,0 +1,74 @@
+<div class="editor">
+  <div class="editor__toolbar">
+    <div class="editor__toolbar-group">
+      @for (group of toolGroups() | keyvalue; track group.key) {
+        <div class="editor__toolset">
+          @for (tool of group.value; track tool.id) {
+            <button
+              type="button"
+              class="editor__tool"
+              [class.editor__tool--active]="activeTool() === tool.id"
+              [title]="tool.label + (tool.shortcut ? ' (' + tool.shortcut + ')' : '')"
+              [attr.aria-label]="tool.label"
+              [attr.aria-pressed]="activeTool() === tool.id"
+              (click)="selectTool(tool.id)"
+            >
+              <i [ngClass]="tool.icon"></i>
+            </button>
+          }
+        </div>
+      }
+    </div>
+    <div class="editor__toolbar-actions">
+      <a class="pf-btn pf-btn--ghost pf-btn--sm" routerLink="/tools">
+        <i class="fa-solid fa-arrow-left"></i> Tools
+      </a>
+    </div>
+  </div>
+
+  <div class="editor__body">
+    <aside class="editor__sidebar" aria-label="Pages">
+      <div class="editor__sidebar-head">
+        <span class="pf-label-caps">Pages</span>
+      </div>
+      <div class="editor__pages">
+        @if (loadedFileName()) {
+          <p class="editor__pages-hint pf-text-muted">
+            Page thumbnails appear here once the viewer is connected.
+          </p>
+        } @else {
+          <p class="editor__pages-hint pf-text-muted">No document loaded.</p>
+        }
+      </div>
+    </aside>
+
+    <section class="editor__workspace">
+      @if (!loadedFileName()) {
+        <div class="editor__drop">
+          <app-file-dropzone
+            [multiple]="false"
+            label="Open a PDF to start editing"
+            (filesLoaded)="onFiles($event)"
+          />
+          <p class="editor__privacy">
+            <i class="fa-solid fa-lock"></i> Your file stays on this device.
+          </p>
+        </div>
+      } @else {
+        <div class="editor__loaded">
+          <p>Loaded: <strong>{{ loadedFileName() }}</strong></p>
+          <p class="pf-text-muted">
+            Rendering and editing tools are connected in the next milestone.
+          </p>
+        </div>
+      }
+    </section>
+
+    <aside class="editor__properties" aria-label="Properties">
+      <div class="editor__properties-head">
+        <span class="pf-label-caps">Properties</span>
+      </div>
+      <p class="pf-text-muted">Select an object to edit its properties.</p>
+    </aside>
+  </div>
+</div>

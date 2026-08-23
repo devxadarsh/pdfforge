@@ -1,0 +1,43 @@
+<section class="tool-page">
+  <div class="pf-container">
+    <header class="tool-page__header">
+      <a class="tool-page__back" routerLink="/tools"><i class="fa-solid fa-arrow-left"></i> Tools</a>
+      <h1><i class="fa-solid fa-arrows-rotate tool-page__icon"></i> Convert PDF</h1>
+      <p class="pf-text-muted">Convert between PDF and images or text, all locally.</p>
+    </header>
+
+    <div class="tool-page__body">
+      <div class="convert-modes">
+        @for (m of modes; track m.id) {
+          <button
+            type="button"
+            class="convert-mode"
+            [class.convert-mode--active]="active() === m.id"
+            (click)="setMode(m.id)"
+          >
+            <i [ngClass]="m.icon"></i>
+            <span>{{ m.label }}</span>
+          </button>
+        }
+      </div>
+
+      <p class="convert-hint pf-text-muted">{{ current.hint }}</p>
+
+      <app-file-dropzone
+        [multiple]="current.id === 'img-pdf'"
+        [accept]="current.accept"
+        [label]="current.id === 'img-pdf' ? 'Add images to convert' : 'Add a PDF to convert'"
+      />
+
+      <div class="tool-page__footer">
+        <button class="pf-btn pf-btn--primary" type="button" disabled title="Conversion pipeline arrives in the next milestone">
+          <i class="fa-solid fa-arrows-rotate"></i> Convert
+        </button>
+      </div>
+    </div>
+
+    <p class="tool-page__privacy">
+      <i class="fa-solid fa-lock"></i> Files never leave your device.
+    </p>
+  </div>
+</section>

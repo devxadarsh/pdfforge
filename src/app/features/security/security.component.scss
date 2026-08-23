@@ -1,0 +1,31 @@
+.security-form {
+  margin-top: 20px;
+  display: grid;
+  gap: 16px;
+  max-width: 420px;
+}
+
+.security-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.security-field .pf-input {
+  height: 42px;
+}
+
+.security-perms {
+  border: 1px solid var(--pf-outline-variant);
+  border-radius: var(--pf-radius);
+  padding: 14px 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.security-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}

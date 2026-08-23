@@ -1,0 +1,140 @@
+:host {
+  display: block;
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - var(--pf-header-height) - var(--pf-footer-height));
+  min-height: 480px;
+}
+
+.editor__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 12px;
+  background: var(--pf-surface-container-lowest);
+  border-bottom: 1px solid var(--pf-outline-variant);
+}
+
+.editor__toolbar-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.editor__toolset {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--pf-radius);
+  background: var(--pf-surface-container);
+}
+
+.editor__tool {
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: var(--pf-radius);
+  background: transparent;
+  color: var(--pf-on-surface-variant);
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.editor__tool:hover {
+  background: var(--pf-surface-container-high);
+  color: var(--pf-on-surface);
+}
+
+.editor__tool--active {
+  background: var(--pf-primary);
+  color: var(--pf-on-primary);
+}
+
+.editor__body {
+  display: grid;
+  grid-template-columns: 240px 1fr 300px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.editor__sidebar,
+.editor__properties {
+  background: var(--pf-surface-container-low);
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.editor__sidebar {
+  border-right: 1px solid var(--pf-outline-variant);
+}
+
+.editor__properties {
+  border-left: 1px solid var(--pf-outline-variant);
+}
+
+.editor__sidebar-head,
+.editor__properties-head {
+  margin-bottom: 12px;
+}
+
+.editor__pages-hint,
+.editor__properties p {
+  font-size: 13px;
+}
+
+.editor__workspace {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: var(--pf-surface-container);
+  overflow: auto;
+}
+
+.editor__drop {
+  width: 100%;
+  max-width: 560px;
+  text-align: center;
+}
+
+.editor__privacy {
+  margin-top: 16px;
+  font-size: 13px;
+  color: var(--pf-on-surface-variant);
+}
+
+.editor__privacy i {
+  color: var(--pf-success);
+  margin-right: 6px;
+}
+
+.editor__loaded {
+  text-align: center;
+}
+
+.pf-btn--sm {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+@media (max-width: 1024px) {
+  .editor__body {
+    grid-template-columns: 200px 1fr;
+  }
+  .editor__properties {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .editor__body {
+    grid-template-columns: 1fr;
+  }
+  .editor__sidebar {
+    display: none;
+  }
+}

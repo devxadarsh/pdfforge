@@ -1,0 +1,64 @@
+<section class="settings-page">
+  <div class="pf-container">
+    <header class="settings-page__header">
+      <h1>Settings</h1>
+      <p class="pf-text-muted">
+        Preferences are stored locally in this browser only.
+      </p>
+    </header>
+
+    <div class="settings-card pf-card">
+      <h2 class="settings-card__title">Appearance</h2>
+      <div class="settings-row">
+        <div>
+          <h3>Theme</h3>
+          <p class="pf-text-muted">Choose how PDFForge looks.</p>
+        </div>
+        <div class="segmented" role="radiogroup" aria-label="Theme">
+          @for (opt of themeOptions; track opt.value) {
+            <button
+              type="button"
+              class="segmented__btn"
+              role="radio"
+              [class.segmented__btn--active]="theme() === opt.value"
+              [attr.aria-checked]="theme() === opt.value"
+              (click)="setTheme(opt.value)"
+            >
+              {{ opt.label }}
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="settings-row">
+        <div>
+          <h3>Reduce motion</h3>
+          <p class="pf-text-muted">Minimize non-essential animations.</p>
+        </div>
+        <button
+          type="button"
+          class="switch"
+          role="switch"
+          [attr.aria-checked]="reduceMotion()"
+          [class.switch--on]="reduceMotion()"
+          (click)="toggleMotion()"
+        >
+          <span class="switch__thumb"></span>
+        </button>
+      </div>
+    </div>
+
+    <div class="settings-card pf-card">
+      <h2 class="settings-card__title">Privacy</h2>
+      <p class="pf-text-muted">
+        PDFForge processes everything on your device. Nothing is uploaded,
+        stored on a server, or shared.
+      </p>
+      <ul class="settings-list">
+        <li><i class="fa-solid fa-shield-halved"></i> No account required</li>
+        <li><i class="fa-solid fa-server"></i> No servers, no uploads</li>
+        <li><i class="fa-solid fa-trash-can"></i> Clear local data anytime</li>
+      </ul>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,46 @@
+<section class="tool-page">
+  <div class="pf-container">
+    <header class="tool-page__header">
+      <a class="tool-page__back" routerLink="/tools"><i class="fa-solid fa-arrow-left"></i> Tools</a>
+      <h1><i class="fa-solid fa-compress tool-page__icon"></i> Compress PDF</h1>
+      <p class="pf-text-muted">
+        Shrink PDF size with honest, local compression. Your file stays private.
+      </p>
+    </header>
+
+    <div class="tool-page__body">
+      <app-file-dropzone [multiple]="false" label="Add a PDF to compress" />
+
+      <div class="compress-levels">
+        @for (l of levels; track l.value) {
+          <button
+            type="button"
+            class="compress-level"
+            [class.compress-level--active]="level() === l.value"
+            (click)="setLevel(l.value)"
+          >
+            <span class="compress-level__radio"></span>
+            <span class="compress-level__label">{{ l.label }}</span>
+            <span class="compress-level__hint pf-text-muted">{{ l.hint }}</span>
+          </button>
+        }
+      </div>
+
+      <div class="tool-page__footer">
+        <button class="pf-btn pf-btn--primary" type="button" disabled title="Compression pipeline arrives in the next milestone">
+          <i class="fa-solid fa-compress"></i> Compress PDF
+        </button>
+      </div>
+
+      <p class="compress-note pf-text-muted">
+        Note: browser-side compression relies on re-encoding images and
+        object streams. Some PDFs (e.g. already-optimized or scan-heavy) may
+        see limited reduction — we will never report a fake size.
+      </p>
+    </div>
+
+    <p class="tool-page__privacy">
+      <i class="fa-solid fa-lock"></i> Files never leave your device.
+    </p>
+  </div>
+</section>

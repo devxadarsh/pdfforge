@@ -1,0 +1,215 @@
+/* PDFForge global styles */
+@use 'styles/tokens';
+
+/* Third-party base styles */
+@import 'bootstrap/dist/css/bootstrap.min.css';
+@import '@fortawesome/fontawesome-free/css/all.min.css';
+
+/* ---- Base ---- */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  font-family: var(--pf-font-base);
+  background-color: var(--pf-background);
+  color: var(--pf-on-background);
+  font-size: 16px;
+  line-height: 24px;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+a {
+  color: var(--pf-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--pf-font-base);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--pf-on-surface);
+  margin: 0;
+}
+
+code,
+.pf-mono {
+  font-family: var(--pf-font-mono);
+}
+
+/* ---- Layout helpers ---- */
+.pf-container {
+  width: 100%;
+  max-width: var(--pf-container-max);
+  margin-inline: auto;
+  padding-inline: var(--pf-gutter);
+}
+
+.pf-app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.pf-main {
+  flex: 1 1 auto;
+}
+
+/* ---- Surface utility classes ---- */
+.pf-surface {
+  background-color: var(--pf-surface);
+  color: var(--pf-on-surface);
+}
+
+.pf-surface-container {
+  background-color: var(--pf-surface-container);
+}
+
+.pf-card {
+  background-color: var(--pf-surface-container-lowest);
+  border: 1px solid var(--pf-outline-variant);
+  border-radius: var(--pf-radius);
+  box-shadow: var(--pf-shadow-1);
+}
+
+/* ---- Text utilities ---- */
+.pf-text-muted {
+  color: var(--pf-on-surface-variant);
+}
+
+.pf-label-caps {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--pf-on-surface-variant);
+}
+
+/* ---- Focus visibility (accessibility) ---- */
+:focus-visible {
+  outline: 2px solid var(--pf-primary);
+  outline-offset: 2px;
+}
+
+/* ---- Reduced motion ---- */
+[data-reduce-motion='true'] * {
+  animation-duration: 0.001ms !important;
+  transition-duration: 0.001ms !important;
+}
+
+/* ---- Generic tool page (merge/split/compress/convert/security) ---- */
+.tool-page {
+  padding-block: 32px 48px;
+}
+
+.tool-page__header {
+  margin-bottom: 24px;
+}
+
+.tool-page__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.tool-page__icon {
+  color: var(--pf-primary);
+  margin-right: 10px;
+}
+
+.tool-page__header h1 {
+  font-size: 32px;
+  margin-bottom: 6px;
+}
+
+.tool-page__body {
+  max-width: 720px;
+}
+
+.tool-page__footer {
+  margin-top: 20px;
+}
+
+.tool-page__empty {
+  margin-top: 16px;
+  font-size: 14px;
+}
+
+.tool-page__privacy {
+  margin-top: 24px;
+  font-size: 13px;
+  color: var(--pf-on-surface-variant);
+}
+
+.tool-page__privacy i {
+  color: var(--pf-success);
+  margin-right: 6px;
+}
+
+/* ---- Icon button (list actions) ---- */
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--pf-outline-variant);
+  border-radius: var(--pf-radius);
+  background: var(--pf-surface-container-lowest);
+  color: var(--pf-on-surface);
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.icon-btn:hover:not(:disabled) {
+  background: var(--pf-surface-container);
+}
+
+.icon-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.icon-btn--danger {
+  color: var(--pf-error);
+}
+
+.icon-btn--danger:hover:not(:disabled) {
+  background: var(--pf-error-container);
+}
+
+/* ---- Scrollbars ---- */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--pf-outline-variant);
+  border-radius: var(--pf-radius-full);
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}

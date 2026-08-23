@@ -1,0 +1,16 @@
+<div class="pf-toasts" role="region" aria-label="Notifications" aria-live="polite">
+  @for (t of list(); track t.id) {
+    <div class="pf-toast" [ngClass]="'pf-toast--' + t.kind">
+      <i class="pf-toast__icon" [ngClass]="kinds[t.kind]"></i>
+      <span class="pf-toast__msg">{{ t.message }}</span>
+      <button
+        class="pf-toast__close"
+        type="button"
+        (click)="dismiss(t.id)"
+        aria-label="Dismiss notification"
+      >
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  }
+</div>

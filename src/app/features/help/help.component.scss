@@ -1,0 +1,75 @@
+:host {
+  display: block;
+}
+
+.help-page {
+  padding-block: 40px 56px;
+}
+
+.help-page__header {
+  margin-bottom: 28px;
+}
+
+.help-page__header h1 {
+  font-size: 36px;
+  margin-bottom: 6px;
+}
+
+.help-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.help-card {
+  padding: 22px;
+}
+
+.help-card__icon {
+  font-size: 22px;
+  color: var(--pf-primary);
+  margin-bottom: 12px;
+}
+
+.help-card h3 {
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+.help-card p {
+  font-size: 13px;
+  margin: 0;
+}
+
+.faq h2 {
+  font-size: 22px;
+  margin-bottom: 16px;
+}
+
+.faq__item {
+  padding: 4px 18px;
+  margin-bottom: 10px;
+}
+
+.faq__item summary {
+  cursor: pointer;
+  padding-block: 14px;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.faq__item p {
+  font-size: 14px;
+  margin: 0 0 14px;
+}
+
+.help-cta {
+  margin-top: 28px;
+}
+
+@media (max-width: 768px) {
+  .help-grid {
+    grid-template-columns: 1fr;
+  }
+}

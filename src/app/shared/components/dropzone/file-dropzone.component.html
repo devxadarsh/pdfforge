@@ -1,0 +1,25 @@
+<div
+  class="pf-dropzone"
+  [class.pf-dropzone--active]="dragging()"
+  (click)="openPicker()"
+  (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave($event)"
+  (drop)="onDrop($event)"
+  role="button"
+  tabindex="0"
+  [attr.aria-label]="label()"
+  (keydown.enter)="openPicker()"
+  (keydown.space)="openPicker()"
+>
+  <input
+    #fileInput
+    type="file"
+    class="pf-dropzone__input"
+    [multiple]="multiple()"
+    [accept]="accept()"
+    (change)="onInputChange($event)"
+  />
+  <i class="fa-solid fa-cloud-arrow-up pf-dropzone__icon"></i>
+  <p class="pf-dropzone__label">{{ label() }}</p>
+  <p class="pf-dropzone__hint">PDF only · up to {{ formatBytes(500 * 1024 * 1024) }}</p>
+</div>

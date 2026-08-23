@@ -1,0 +1,57 @@
+<section class="tool-page">
+  <div class="pf-container">
+    <header class="tool-page__header">
+      <a class="tool-page__back" routerLink="/tools"><i class="fa-solid fa-arrow-left"></i> Tools</a>
+      <h1><i class="fa-solid fa-object-group tool-page__icon"></i> Merge PDF</h1>
+      <p class="pf-text-muted">
+        Combine multiple PDFs into a single document — entirely on your device.
+      </p>
+    </header>
+
+    <div class="tool-page__body">
+      <app-file-dropzone
+        [multiple]="true"
+        label="Add PDFs to merge"
+        (filesLoaded)="addFiles($event)"
+      />
+
+      @if (items().length > 0) {
+        <ul class="merge-list">
+          @for (item of items(); track item.id; let i = $index) {
+            <li class="merge-list__item pf-card">
+              <span class="merge-list__index">{{ i + 1 }}</span>
+              <i class="fa-solid fa-file-pdf merge-list__file"></i>
+              <div class="merge-list__meta">
+                <span class="merge-list__name">{{ item.name }}</span>
+                <span class="merge-list__size pf-text-muted">{{ formatBytes(item.sizeBytes) }}</span>
+              </div>
+              <div class="merge-list__actions">
+                <button type="button" class="icon-btn" (click)="moveUp(i)" [disabled]="i === 0" aria-label="Move up">
+                  <i class="fa-solid fa-arrow-up"></i>
+                </button>
+                <button type="button" class="icon-btn" (click)="moveDown(i)" [disabled]="i === items().length - 1" aria-label="Move down">
+                  <i class="fa-solid fa-arrow-down"></i>
+                </button>
+                <button type="button" class="icon-btn icon-btn--danger" (click)="remove(item.id)" aria-label="Remove">
+                  <i class="fa-solid fa-trash"></i>
+                </button>
+              </div>
+            </li>
+          }
+        </ul>
+
+        <div class="tool-page__footer">
+          <button class="pf-btn pf-btn--primary" type="button" disabled title="Merge pipeline arrives in the next milestone">
+            <i class="fa-solid fa-object-group"></i> Merge {{ items().length }} files
+          </button>
+        </div>
+      } @else {
+        <p class="tool-page__empty pf-text-muted">No files added yet.</p>
+      }
+    </div>
+
+    <p class="tool-page__privacy">
+      <i class="fa-solid fa-lock"></i> Files never leave your device.
+    </p>
+  </div>
+</section>

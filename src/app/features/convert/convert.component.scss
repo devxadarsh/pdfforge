@@ -1,0 +1,35 @@
+.convert-modes {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.convert-mode {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--pf-outline-variant);
+  border-radius: var(--pf-radius);
+  background: var(--pf-surface-container-lowest);
+  color: var(--pf-on-surface);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.convert-mode i {
+  color: var(--pf-primary);
+}
+
+.convert-mode--active {
+  border-color: var(--pf-primary);
+  background: var(--pf-surface-container);
+}
+
+.convert-hint {
+  margin: 12px 0;
+  font-size: 13px;
+}

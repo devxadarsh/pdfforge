@@ -1,0 +1,41 @@
+.split-modes {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.split-mode {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border: 1px solid var(--pf-outline-variant);
+  border-radius: var(--pf-radius);
+  background: var(--pf-surface-container-lowest);
+  color: var(--pf-on-surface);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.split-mode i {
+  color: var(--pf-primary);
+}
+
+.split-mode--active {
+  border-color: var(--pf-primary);
+  background: var(--pf-surface-container);
+}
+
+.split-range {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.split-range .pf-input {
+  height: 42px;
+}

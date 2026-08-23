@@ -1,0 +1,59 @@
+<section class="tools-page">
+  <div class="pf-container">
+    <header class="tools-page__header">
+      <h1 class="tools-page__title">All PDF tools</h1>
+      <p class="pf-text-muted">
+        Every tool runs locally in your browser. Pick one to get started.
+      </p>
+
+      <div class="tools-page__search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input
+          type="search"
+          class="pf-input"
+          placeholder="Search tools…"
+          [value]="query()"
+          (input)="setQuery($any($event.target).value)"
+          aria-label="Search tools"
+        />
+      </div>
+    </header>
+
+    @if (filtered().length === 0) {
+      <div class="empty-state pf-card">
+        <i class="fa-solid fa-magnifying-glass empty-state__icon"></i>
+        <h3>No tools match “{{ query() }}”</h3>
+        <p class="pf-text-muted">Try a different keyword.</p>
+      </div>
+    } @else {
+      @for (cat of categories; track cat.id) {
+        <section class="tools-page__category">
+          <div class="tools-page__category-head">
+            <i class="tools-page__category-icon" [ngClass]="cat.icon"></i>
+            <div>
+              <h2>{{ cat.title }}</h2>
+              <p class="pf-text-muted">{{ cat.description }}</p>
+            </div>
+          </div>
+
+          <div class="tools-page__grid">
+            @for (item of cat.items; track item.title) {
+              @if (
+                filtered().includes(item)
+              ) {
+                <a class="tool-tile pf-card" [routerLink]="item.path">
+                  <span class="tool-tile__icon"><i [ngClass]="item.icon"></i></span>
+                  <div class="tool-tile__body">
+                    <h3>{{ item.title }}</h3>
+                    <p class="pf-text-muted">{{ item.description }}</p>
+                  </div>
+                  <i class="fa-solid fa-arrow-right tool-tile__arrow"></i>
+                </a>
+              }
+            }
+          </div>
+        </section>
+      }
+    }
+  </div>
+</section>

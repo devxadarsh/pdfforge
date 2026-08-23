@@ -1,0 +1,52 @@
+.pf-toasts {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: min(380px, calc(100vw - 32px));
+}
+
+.pf-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--pf-radius);
+  background-color: var(--pf-surface-container-lowest);
+  border: 1px solid var(--pf-outline-variant);
+  box-shadow: var(--pf-shadow-3);
+  color: var(--pf-on-surface);
+}
+
+.pf-toast__icon {
+  margin-top: 2px;
+}
+
+.pf-toast--success .pf-toast__icon {
+  color: var(--pf-success);
+}
+.pf-toast--warning .pf-toast__icon {
+  color: var(--pf-warning);
+}
+.pf-toast--error .pf-toast__icon {
+  color: var(--pf-error);
+}
+.pf-toast--info .pf-toast__icon {
+  color: var(--pf-primary);
+}
+
+.pf-toast__msg {
+  flex: 1 1 auto;
+  font-size: 14px;
+}
+
+.pf-toast__close {
+  border: none;
+  background: transparent;
+  color: var(--pf-on-surface-variant);
+  cursor: pointer;
+  font-size: 14px;
+}

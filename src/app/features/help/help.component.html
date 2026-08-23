@@ -1,0 +1,49 @@
+<section class="help-page">
+  <div class="pf-container">
+    <header class="help-page__header">
+      <h1>Help &amp; FAQ</h1>
+      <p class="pf-text-muted">Everything you need to use PDFForge confidently.</p>
+    </header>
+
+    <div class="help-grid">
+      <div class="help-card pf-card">
+        <i class="fa-solid fa-shield-halved help-card__icon"></i>
+        <h3>Privacy by design</h3>
+        <p class="pf-text-muted">
+          All PDF processing happens locally in your browser. We can't see,
+          store, or transmit your documents.
+        </p>
+      </div>
+      <div class="help-card pf-card">
+        <i class="fa-solid fa-bolt help-card__icon"></i>
+        <h3>Fast &amp; free</h3>
+        <p class="pf-text-muted">
+          No installs, no accounts. Open a tool and start working in seconds.
+        </p>
+      </div>
+      <div class="help-card pf-card">
+        <i class="fa-solid fa-mobile-screen help-card__icon"></i>
+        <h3>Works everywhere</h3>
+        <p class="pf-text-muted">
+          Responsive design means it works on desktop, tablet, and mobile.
+        </p>
+      </div>
+    </div>
+
+    <div class="faq">
+      <h2>Frequently asked questions</h2>
+      @for (item of faqs; track item.q) {
+        <details class="faq__item pf-card">
+          <summary>{{ item.q }}</summary>
+          <p class="pf-text-muted">{{ item.a }}</p>
+        </details>
+      }
+    </div>
+
+    <div class="help-cta">
+      <a class="pf-btn pf-btn--primary" routerLink="/tools">
+        <i class="fa-solid fa-toolbox"></i> Browse all tools
+      </a>
+    </div>
+  </div>
+</section>

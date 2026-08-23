@@ -1,0 +1,127 @@
+<section class="hero">
+  <div class="pf-container hero__inner">
+    <div class="hero__copy">
+      <span class="pf-privacy-pill hero__badge">
+        <i class="fa-solid fa-shield-halved"></i> Privacy-first PDF tools
+      </span>
+      <h1 class="hero__title">
+        Edit, merge &amp; secure PDFs —
+        <span class="hero__accent">right in your browser.</span>
+      </h1>
+      <p class="hero__subtitle">
+        PDFForge is a free, professional PDF workspace that runs entirely on
+        your device. Your files never leave your browser.
+      </p>
+
+      <div class="hero__actions">
+        <button class="pf-btn pf-btn--primary pf-btn--lg" type="button" (click)="openPdf()">
+          <i class="fa-solid fa-folder-open"></i> Open PDF
+        </button>
+        <a class="pf-btn pf-btn--ghost pf-btn--lg" routerLink="/tools">
+          <i class="fa-solid fa-toolbox"></i> Explore all tools
+        </a>
+      </div>
+
+      <ul class="hero__privacy">
+        @for (p of privacyPoints; track p.text) {
+          <li><i [ngClass]="p.icon"></i> {{ p.text }}</li>
+        }
+      </ul>
+    </div>
+
+    <div class="hero__panel" aria-hidden="true">
+      <div class="hero__doc">
+        <div class="hero__doc-bar">
+          <span></span><span></span><span></span>
+        </div>
+        <div class="hero__doc-lines">
+          <span style="width: 80%"></span>
+          <span style="width: 95%"></span>
+          <span style="width: 60%"></span>
+          <span style="width: 88%"></span>
+          <span style="width: 72%"></span>
+        </div>
+        <div class="hero__doc-tools">
+          <i class="fa-solid fa-font"></i>
+          <i class="fa-solid fa-highlighter"></i>
+          <i class="fa-solid fa-shapes"></i>
+          <i class="fa-solid fa-signature"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="quickstart">
+  <div class="pf-container quickstart__inner">
+    <app-file-dropzone
+      (filesLoaded)="onFilesLoaded($event)"
+    ></app-file-dropzone>
+  </div>
+</section>
+
+<section class="howitworks">
+  <div class="pf-container">
+    <h2 class="section-title">How it works</h2>
+    <div class="howitworks__grid">
+      @for (s of steps; track s.title) {
+        <div class="howitworks__step pf-card">
+          <span class="howitworks__icon"><i [ngClass]="s.icon"></i></span>
+          <h3>{{ s.title }}</h3>
+          <p class="pf-text-muted">{{ s.text }}</p>
+        </div>
+      }
+    </div>
+  </div>
+</section>
+
+<section class="tools">
+  <div class="pf-container">
+    <div class="tools__head">
+      <h2 class="section-title">Everything you need</h2>
+      <p class="pf-text-muted">
+        A complete PDF toolkit — no installs, no accounts, no uploads.
+      </p>
+    </div>
+
+    @for (cat of categories; track cat.id) {
+      <div class="tools__category">
+        <div class="tools__category-head">
+          <i class="tools__category-icon" [ngClass]="cat.icon"></i>
+          <div>
+            <h3>{{ cat.title }}</h3>
+            <p class="pf-text-muted">{{ cat.description }}</p>
+          </div>
+        </div>
+        <div class="tools__grid">
+          @for (item of cat.items; track item.title) {
+            <a class="tool-card pf-card" [routerLink]="item.path">
+              <span class="tool-card__icon"><i [ngClass]="item.icon"></i></span>
+              <div class="tool-card__body">
+                <h4>{{ item.title }}</h4>
+                <p class="pf-text-muted">{{ item.description }}</p>
+              </div>
+              <i class="fa-solid fa-arrow-right tool-card__arrow"></i>
+            </a>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</section>
+
+<section class="privacy-cta">
+  <div class="pf-container privacy-cta__inner">
+    <i class="fa-solid fa-lock privacy-cta__lock"></i>
+    <div>
+      <h2 class="section-title">Your files never leave your device.</h2>
+      <p class="pf-text-muted">
+        All PDF processing happens locally in your browser. We can't see,
+        store, or transmit your documents.
+      </p>
+    </div>
+    <button class="pf-btn pf-btn--primary pf-btn--lg" type="button" (click)="openPdf()">
+      Get started
+    </button>
+  </div>
+</section>

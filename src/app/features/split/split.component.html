@@ -1,0 +1,60 @@
+<section class="tool-page">
+  <div class="pf-container">
+    <header class="tool-page__header">
+      <a class="tool-page__back" routerLink="/tools"><i class="fa-solid fa-arrow-left"></i> Tools</a>
+      <h1><i class="fa-solid fa-scissors tool-page__icon"></i> Split PDF</h1>
+      <p class="pf-text-muted">
+        Extract pages or split by range. Everything stays on your device.
+      </p>
+    </header>
+
+    <div class="tool-page__body">
+      <app-file-dropzone [multiple]="false" label="Add a PDF to split" />
+
+      <div class="split-modes">
+        <button
+          type="button"
+          class="split-mode"
+          [class.split-mode--active]="mode() === 'every'"
+          (click)="setMode('every')"
+        >
+          <i class="fa-solid fa-grid-2"></i>
+          <span>Split every page</span>
+        </button>
+        <button
+          type="button"
+          class="split-mode"
+          [class.split-mode--active]="mode() === 'range'"
+          (click)="setMode('range')"
+        >
+          <i class="fa-solid fa-list"></i>
+          <span>Custom range</span>
+        </button>
+      </div>
+
+      @if (mode() === 'range') {
+        <label class="split-range">
+          <span class="pf-label-caps">Page ranges</span>
+          <input
+            class="pf-input"
+            type="text"
+            [value]="range()"
+            (input)="range.set($any($event.target).value)"
+            placeholder="e.g. 1-3, 5, 8-10"
+          />
+          <small class="pf-text-muted">Separate ranges with commas.</small>
+        </label>
+      }
+
+      <div class="tool-page__footer">
+        <button class="pf-btn pf-btn--primary" type="button" disabled title="Split pipeline arrives in the next milestone">
+          <i class="fa-solid fa-scissors"></i> Split PDF
+        </button>
+      </div>
+    </div>
+
+    <p class="tool-page__privacy">
+      <i class="fa-solid fa-lock"></i> Files never leave your device.
+    </p>
+  </div>
+</section>

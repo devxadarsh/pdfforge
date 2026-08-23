@@ -1,0 +1,47 @@
+@if (hasDialog) {
+  <div
+    class="pf-dialog-overlay"
+    role="presentation"
+    (click)="cancel()"
+  >
+    <div
+      class="pf-dialog"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-labelledby]="'dialog-title'"
+      (click)="$event.stopPropagation()"
+    >
+      <h2 class="pf-dialog__title" id="dialog-title">{{ active()!.title }}</h2>
+      <p class="pf-dialog__message">{{ active()!.message }}</p>
+
+      @if (active()!.input !== 'none') {
+        <label class="pf-dialog__field">
+          <span class="pf-label-caps">{{ active()!.inputLabel ?? 'Value' }}</span>
+          <input
+            #inputEl
+            class="pf-input"
+            [type]="active()!.input === 'password' ? 'password' : 'text'"
+            [value]="active()!.value"
+            (input)="onInput($any($event.target).value)"
+            (keydown.enter)="confirm()"
+            (keydown.escape)="cancel()"
+          />
+        </label>
+      }
+
+      <div class="pf-dialog__actions">
+        <button class="pf-btn pf-btn--ghost" type="button" (click)="cancel()">
+          {{ active()!.cancelLabel }}
+        </button>
+        <button
+          class="pf-btn"
+          type="button"
+          [ngClass]="active()!.destructive ? 'pf-btn--danger' : 'pf-btn--primary'"
+          (click)="confirm()"
+        >
+          {{ active()!.confirmLabel }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

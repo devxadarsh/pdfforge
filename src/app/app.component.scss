@@ -1,0 +1,9 @@
+.pf-app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.pf-main {
+  flex: 1 1 auto;
+}

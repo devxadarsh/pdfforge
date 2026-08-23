@@ -1,0 +1,57 @@
+<section class="tool-page">
+  <div class="pf-container">
+    <header class="tool-page__header">
+      <a class="tool-page__back" routerLink="/tools"><i class="fa-solid fa-arrow-left"></i> Tools</a>
+      <h1><i class="fa-solid fa-signature tool-page__icon"></i> Signature</h1>
+      <p class="pf-text-muted">Create a signature to place on your PDFs — locally.</p>
+    </header>
+
+    <div class="tool-page__body">
+      <div class="sig-tabs">
+        <button type="button" class="sig-tab" [class.sig-tab--active]="tab() === 'draw'" (click)="setTab('draw')">Draw</button>
+        <button type="button" class="sig-tab" [class.sig-tab--active]="tab() === 'type'" (click)="setTab('type')">Type</button>
+        <button type="button" class="sig-tab" [class.sig-tab--active]="tab() === 'upload'" (click)="setTab('upload')">Upload</button>
+      </div>
+
+      @if (tab() === 'draw') {
+        <div class="sig-pad">
+          <canvas
+            #canvas
+            class="sig-pad__canvas"
+            (pointerdown)="startDraw($event)"
+            (pointermove)="moveDraw($event)"
+            (pointerup)="endDraw()"
+            (pointerleave)="endDraw()"
+          ></canvas>
+          <div class="sig-pad__actions">
+            <button type="button" class="pf-btn pf-btn--ghost" (click)="clearDraw()">
+              <i class="fa-solid fa-eraser"></i> Clear
+            </button>
+          </div>
+        </div>
+      } @else if (tab() === 'type') {
+        <div class="sig-type">
+          <input class="pf-input sig-type__input" type="text" [value]="typed()" (input)="typed.set($any($event.target).value)" />
+          <div class="sig-type__preview" [ngClass]="'sig-font--' + font()">{{ typed() }}</div>
+          <div class="sig-type__fonts">
+            <button type="button" class="sig-font-btn" [class.sig-font-btn--active]="font() === 'cursive'" (click)="font.set('cursive')">Cursive</button>
+            <button type="button" class="sig-font-btn" [class.sig-font-btn--active]="font() === 'serif'" (click)="font.set('serif')">Serif</button>
+            <button type="button" class="sig-font-btn" [class.sig-font-btn--active]="font() === 'sans'" (click)="font.set('sans')">Sans</button>
+          </div>
+        </div>
+      } @else {
+        <app-file-dropzone [multiple]="false" accept="image/*" label="Upload a signature image" />
+      }
+
+      <div class="tool-page__footer">
+        <button class="pf-btn pf-btn--primary" type="button" disabled title="Placing into a PDF arrives with the editor">
+          <i class="fa-solid fa-plus"></i> Add to PDF
+        </button>
+      </div>
+    </div>
+
+    <p class="tool-page__privacy">
+      <i class="fa-solid fa-lock"></i> Signatures never leave your device.
+    </p>
+  </div>
+</section>
