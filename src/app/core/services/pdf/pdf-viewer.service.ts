@@ -5,8 +5,17 @@ import type {
   PDFDocumentLoadingTask,
 } from 'pdfjs-dist';
 import { Injectable } from '@angular/core';
+import { RawTextItem } from '../../models/pdf.models';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.mjs';
+
+function applyTransform(
+  x: number,
+  y: number,
+  m: readonly number[],
+): [number, number] {
+  return [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
+}
 
 export interface Cancellable {
   cancel(): void;
@@ -22,6 +31,7 @@ export interface PageSize {
 export class PdfViewerService {
   private doc: PDFDocumentProxy | null = null;
   private task: PDFDocumentLoadingTask | null = null;
+  private readonly rawTextCache = new Map<number, RawTextItem[]>();
 
   get pageCount(): number {
     return this.doc?.numPages ?? 0;
@@ -110,9 +120,75 @@ export class PdfViewerService {
       .join(' ');
   }
 
+  /**
+   * Extracts positioned text runs for a page (cached). Geometry is reported
+   * in the page's unrotated PDF user space so callers can re-project it to
+   * any display scale/rotation.
+   */
+  async getPageRawTextItems(pageIndex: number): Promise<RawTextItem[]> {
+    const cached = this.rawTextCache.get(pageIndex);
+    if (cached) {
+      return cached;
+    }
+    const page = await this.getPage(pageIndex);
+    const content = await page.getTextContent();
+    const source = content.items as Array<{
+      str?: string;
+      transform?: number[];
+      width?: number;
+      height?: number;
+    }>;
+    const result: RawTextItem[] = [];
+    let index = 0;
+    for (const it of source) {
+      if (typeof it.str !== 'string' || !it.str.trim() || !it.transform) {
+        continue;
+      }
+      const transform = it.transform;
+      const w = it.width ?? 0;
+      const h = it.height ?? 0;
+      const corners = [
+        applyTransform(0, 0, transform),
+        applyTransform(w, 0, transform),
+        applyTransform(0, h, transform),
+        applyTransform(w, h, transform),
+      ];
+      const xs = corners.map((c) => c[0]);
+      const ys = corners.map((c) => c[1]);
+      const x = Math.min(...xs);
+      const y = Math.min(...ys);
+      const baseline = applyTransform(0, 0, transform);
+      const fontSize = Math.hypot(transform[0], transform[1]) || h || 12;
+      result.push({
+        id: `t${pageIndex}-${index++}`,
+        str: it.str,
+        transform,
+        width: w,
+        height: h,
+        pdfRect: { x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y },
+        baseline: { x: baseline[0], y: baseline[1] },
+        fontSize,
+      });
+    }
+    this.rawTextCache.set(pageIndex, result);
+    return result;
+  }
+
+  /** Returns the PDF.js viewport transform that maps PDF user space to display pixels. */
+  async getViewportTransform(
+    pageIndex: number,
+    scale: number,
+    rotation = 0,
+  ): Promise<number[]> {
+    const page = await this.getPage(pageIndex);
+    const viewport = page.getViewport({ scale, rotation });
+    return Array.from(viewport.transform);
+  }
+
   destroy(): void {
     void this.task?.destroy();
     this.task = null;
     this.doc = null;
+    this.rawTextCache.clear();
   }
 }

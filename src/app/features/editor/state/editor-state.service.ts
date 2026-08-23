@@ -4,6 +4,7 @@ import {
   PdfAnnotation,
   PendingMedia,
   DigitalSignatureRequest,
+  TextEditOverrides,
 } from '../../../core/models/pdf.models';
 import { EditorPagesService } from './editor-pages.service';
 
@@ -24,6 +25,10 @@ export class EditorStateService {
   private readonly _pendingMedia = signal<PendingMedia | null>(null);
   private readonly _digitalSignature =
     signal<DigitalSignatureRequest | null>(null);
+  private readonly _textOverrides = signal<TextEditOverrides>(
+    new Map(),
+  );
+  private readonly _textEditEnabled = signal(false);
 
   readonly tool = this._tool.asReadonly();
   readonly zoom = this._zoom.asReadonly();
@@ -33,6 +38,8 @@ export class EditorStateService {
   readonly annotationsByPage = this._annotations.asReadonly();
   readonly pendingMedia = this._pendingMedia.asReadonly();
   readonly digitalSignature = this._digitalSignature.asReadonly();
+  readonly textOverrides = this._textOverrides.asReadonly();
+  readonly textEditEnabled = this._textEditEnabled.asReadonly();
 
   setDigitalSignature(req: DigitalSignatureRequest | null): void {
     this._digitalSignature.set(req);
@@ -62,6 +69,61 @@ export class EditorStateService {
 
   setDigital(req: DigitalSignatureRequest | null): void {
     this._digitalSignature.set(req);
+  }
+
+  /* Document text editing overrides */
+  textOverride(pageIndex: number, id: string): string | undefined {
+    return this._textOverrides().get(pageIndex)?.get(id);
+  }
+
+  hasTextEdits(): boolean {
+    for (const pageMap of this._textOverrides().values()) {
+      if (pageMap.size > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  setTextOverride(pageIndex: number, id: string, str: string): void {
+    const map = new Map(this._textOverrides());
+    const pageMap = new Map(map.get(pageIndex) ?? new Map());
+    pageMap.set(id, str);
+    map.set(pageIndex, pageMap);
+    this._textOverrides.set(map);
+    this._modified.set(true);
+  }
+
+  clearTextOverride(pageIndex: number, id: string): void {
+    const map = new Map(this._textOverrides());
+    const pageMap = map.get(pageIndex);
+    if (!pageMap) {
+      return;
+    }
+    pageMap.delete(id);
+    if (pageMap.size === 0) {
+      map.delete(pageIndex);
+    } else {
+      map.set(pageIndex, pageMap);
+    }
+    this._textOverrides.set(map);
+    this._modified.set(true);
+  }
+
+  getTextOverrides(): TextEditOverrides {
+    return this._textOverrides();
+  }
+
+  setTextOverrides(map: TextEditOverrides): void {
+    this._textOverrides.set(new Map(map));
+  }
+
+  setTextEditEnabled(enabled: boolean): void {
+    this._textEditEnabled.set(enabled);
+  }
+
+  toggleTextEdit(): void {
+    this._textEditEnabled.update((v) => !v);
   }
 
   setModified(value: boolean): void {
@@ -182,6 +244,7 @@ export class EditorStateService {
     this._selectedId.set(null);
     this._pendingMedia.set(null);
     this._digitalSignature.set(null);
+    this._textOverrides.set(new Map());
     this._modified.set(false);
     this._tool.set('select');
     this._zoom.set(1);

@@ -3,6 +3,7 @@ import {
   Output,
   EventEmitter,
   signal,
+  computed,
   viewChild,
   ElementRef,
   ChangeDetectionStrategy,
@@ -32,10 +33,32 @@ export class SignatureDialogComponent {
   readonly canvasRef = viewChild<ElementRef<HTMLCanvasElement>>('canvas');
   readonly mode = signal<SigMode>('draw');
   readonly typedText = signal('Your Name');
-  readonly font = signal('cursive');
+  readonly font = signal(
+    "'Brush Script MT', 'Segoe Script', 'Snell Roundhand', 'Apple Chancery', cursive",
+  );
   readonly size = signal(48);
   readonly color = signal('#0f172a');
   readonly error = signal<string | null>(null);
+
+  readonly fontOptions = [
+    {
+      label: 'Signature',
+      value:
+        "'Brush Script MT', 'Segoe Script', 'Snell Roundhand', 'Apple Chancery', cursive",
+    },
+    {
+      label: 'Elegant',
+      value: "'Snell Roundhand', 'Apple Chancery', 'Segoe Script', cursive",
+    },
+    {
+      label: 'Handwritten',
+      value: "'Bradley Hand', 'Comic Sans MS', 'Segoe Print', cursive",
+    },
+    { label: 'Serif', value: "Georgia, 'Times New Roman', serif" },
+    { label: 'Sans', value: "'Segoe UI', system-ui, sans-serif" },
+  ];
+
+  readonly previewSize = computed(() => Math.min(this.size(), 56));
 
   // Seal
   readonly sealName = signal('');

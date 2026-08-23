@@ -8,7 +8,6 @@ import {
   ElementRef,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { NgClass, KeyValuePipe } from '@angular/common';
 import { HostListener } from '@angular/core';
 import { EDITOR_TOOLS } from '../../core/constants/tools';
@@ -18,13 +17,14 @@ import { FileDropzoneComponent } from '../../shared/components/dropzone/file-dro
 import { FileService } from '../../core/services/file/file.service';
 import { DownloadService } from '../../core/services/download/download.service';
 import { PdfViewerService, PageSize } from '../../core/services/pdf/pdf-viewer.service';
-import { PdfExportService } from '../../core/services/pdf/pdf-export.service';
+import { PdfExportService, ExportTextEdit } from '../../core/services/pdf/pdf-export.service';
 import { PdfSignService } from '../../core/services/pdf/pdf-sign.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SignatureBridgeService } from '../../core/services/signature-bridge.service';
 import { PdfPageComponent } from './components/pdf-page/pdf-page.component';
 import { PageThumbnailComponent } from './components/page-thumbnail/page-thumbnail.component';
 import { EditorOverlayComponent } from './components/editor-overlay/editor-overlay.component';
+import { EditorTextLayerComponent } from './components/editor-text-layer/editor-text-layer.component';
 import { PropertiesPanelComponent } from './components/properties-panel/properties-panel.component';
 import { SignatureDialogComponent } from './components/signature-dialog/signature-dialog.component';
 import { StampDialogComponent } from './components/stamp-dialog/stamp-dialog.component';
@@ -36,13 +36,13 @@ import { EditorHistoryService } from './state/editor-history.service';
   selector: 'app-editor',
   standalone: true,
   imports: [
-    RouterLink,
     NgClass,
     KeyValuePipe,
     FileDropzoneComponent,
     PdfPageComponent,
     PageThumbnailComponent,
     EditorOverlayComponent,
+    EditorTextLayerComponent,
     PropertiesPanelComponent,
     SignatureDialogComponent,
     StampDialogComponent,
@@ -64,6 +64,7 @@ export class EditorComponent {
   readonly history = inject(EditorHistoryService);
 
   readonly exporting = signal(false);
+  readonly viewbarVisible = signal(true);
 
   readonly tools = EDITOR_TOOLS;
 
@@ -424,6 +425,14 @@ export class EditorComponent {
     this.history.redo();
   }
 
+  toggleTextEdit(): void {
+    this.state.toggleTextEdit();
+  }
+
+  toggleViewbar(): void {
+    this.viewbarVisible.update((v) => !v);
+  }
+
   @HostListener('window:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
     const target = event.target as HTMLElement | null;
@@ -435,19 +444,33 @@ export class EditorComponent {
     ) {
       return;
     }
+    const key = event.key;
+    if (key === 'Delete' || key === 'Backspace') {
+      const id = this.state.selectedId();
+      if (id) {
+        event.preventDefault();
+        this.state.removeAnnotation(id);
+        return;
+      }
+      if (this.pagesStore.selectedCount() > 0) {
+        event.preventDefault();
+        this.pagesStore.deleteSelected();
+        return;
+      }
+    }
     const mod = event.ctrlKey || event.metaKey;
     if (!mod) {
       return;
     }
-    const key = event.key.toLowerCase();
-    if (key === 'z') {
+    const lower = key.toLowerCase();
+    if (lower === 'z') {
       event.preventDefault();
       if (event.shiftKey) {
         this.redo();
       } else {
         this.undo();
       }
-    } else if (key === 'y') {
+    } else if (lower === 'y') {
       event.preventDefault();
       this.redo();
     }
@@ -461,13 +484,24 @@ export class EditorComponent {
     }
     this.exporting.set(true);
     try {
-      const pages = this.pagesStore
-        .pages()
-        .map((p) => ({ sourceIndex: p.sourceIndex, rotation: p.rotation }));
+      const display = this.displaySize();
+      const scale = display?.scale ?? 1;
+      const pages = this.pagesStore.pages().map((p) => {
+        const base = this.baseSizes().get(p.sourceIndex);
+        return {
+          sourceIndex: p.sourceIndex,
+          rotation: p.rotation,
+          width: base?.width ?? 0,
+          height: base?.height ?? 0,
+          scale,
+          annotations: this.state.annotationsFor(p.id),
+        };
+      });
+      const textEdits = await this.buildTextEdits();
       let bytes = await this.exporter.exportDocument(
         new Uint8Array(file.data.slice(0)),
         pages,
-        { title: file.name.replace(/\.pdf$/i, '') },
+        { title: file.name.replace(/\.pdf$/i, ''), textEdits },
       );
       const digital = this.state.digitalSignature();
       if (digital) {
@@ -488,6 +522,35 @@ export class EditorComponent {
     } finally {
       this.exporting.set(false);
     }
+  }
+
+  private async buildTextEdits(): Promise<ExportTextEdit[]> {
+    const overrides = this.state.getTextOverrides();
+    const edits: ExportTextEdit[] = [];
+    for (const [pageIndex, pageMap] of overrides) {
+      let raw: Awaited<ReturnType<PdfViewerService['getPageRawTextItems']>>;
+      try {
+        raw = await this.viewer.getPageRawTextItems(pageIndex);
+      } catch {
+        continue;
+      }
+      const rawById = new Map(raw.map((r) => [r.id, r]));
+      for (const [id, str] of pageMap) {
+        const item = rawById.get(id);
+        if (!item || str === item.str) {
+          continue;
+        }
+        edits.push({
+          pageIndex,
+          box: item.pdfRect,
+          baseline: item.baseline,
+          fontSize: item.fontSize,
+          text: str,
+          removed: str === '',
+        });
+      }
+    }
+    return edits;
   }
 
   /* Drag and drop reordering */

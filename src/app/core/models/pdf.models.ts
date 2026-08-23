@@ -129,6 +129,25 @@ export interface CommentAnnotation extends BaseAnnotation {
   author: string;
 }
 
+/**
+ * A text run extracted from a source PDF page via PDF.js.
+ * Geometry is stored in the page's unrotated PDF user space
+ * (origin bottom-left, y up) so it stays correct across zoom/rotation.
+ */
+export interface RawTextItem {
+  readonly id: string;
+  readonly str: string;
+  readonly transform: readonly number[];
+  readonly width: number;
+  readonly height: number;
+  readonly pdfRect: Rect;
+  readonly baseline: Point;
+  readonly fontSize: number;
+}
+
+/** Map of page source index -> (text item id -> edited string). */
+export type TextEditOverrides = Map<number, Map<string, string>>;
+
 export interface PendingMedia {
   readonly kind: 'image' | 'signature' | 'stamp';
   dataUrl?: string;

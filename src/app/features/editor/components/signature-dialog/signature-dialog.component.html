@@ -6,201 +6,223 @@
     aria-label="Create signature"
     (click)="$event.stopPropagation()"
   >
-    <h2 class="pf-dialog__title">Add signature</h2>
-    <p class="pf-dialog__message">
-      Choose a signature type. It stays on this device.
-    </p>
-
-    <div class="pf-dialog__tabs">
-      <button
-        type="button"
-        class="pf-btn pf-btn--sm"
-        [ngClass]="mode() === 'draw' ? 'pf-btn--primary' : 'pf-btn--ghost'"
-        (click)="setMode('draw')"
-      >
-        Draw
-      </button>
-      <button
-        type="button"
-        class="pf-btn pf-btn--sm"
-        [ngClass]="mode() === 'type' ? 'pf-btn--primary' : 'pf-btn--ghost'"
-        (click)="setMode('type')"
-      >
-        Type
-      </button>
-      <button
-        type="button"
-        class="pf-btn pf-btn--sm"
-        [ngClass]="mode() === 'upload' ? 'pf-btn--primary' : 'pf-btn--ghost'"
-        (click)="setMode('upload')"
-      >
-        Upload
-      </button>
-      <button
-        type="button"
-        class="pf-btn pf-btn--sm"
-        [ngClass]="mode() === 'seal' ? 'pf-btn--primary' : 'pf-btn--ghost'"
-        (click)="setMode('seal')"
-      >
-        Seal
-      </button>
-      <button
-        type="button"
-        class="pf-btn pf-btn--sm"
-        [ngClass]="mode() === 'digital' ? 'pf-btn--primary' : 'pf-btn--ghost'"
-        (click)="setMode('digital')"
-      >
-        Digital ID
-      </button>
-    </div>
-
-    <div [hidden]="mode() === 'digital'">
-      <div class="pf-dialog__canvas-wrap">
-        <canvas
-          #canvas
-          class="pf-dialog__canvas"
-          [class.pf-dialog__canvas--locked]="mode() !== 'draw'"
-          width="360"
-          height="140"
-          (pointerdown)="onPointerDown($event)"
-          (pointermove)="onPointerMove($event)"
-          (pointerup)="onPointerUp()"
-          (pointerleave)="onPointerUp()"
-        ></canvas>
+    <header class="sig-header">
+      <span class="sig-header__icon">
+        <i class="fa-solid fa-signature"></i>
+      </span>
+      <div class="sig-header__text">
+        <h2 class="sig-header__title">Add signature</h2>
+        <p class="sig-header__sub">Stays on this device. Nothing is uploaded.</p>
       </div>
-    </div>
-
-    @if (mode() === 'type') {
-      <label class="pf-dialog__field">
-        <span>Text</span>
-        <input
-          class="pf-input"
-          type="text"
-          [value]="typedText()"
-          (input)="typedText.set($any($event.target).value); onTypeChange()"
-        />
-      </label>
-      <label class="pf-dialog__field">
-        <span>Font</span>
-        <select
-          class="pf-input"
-          [value]="font()"
-          (change)="font.set($any($event.target).value); onTypeChange()"
-        >
-          <option value="cursive">Script</option>
-          <option value="serif">Serif</option>
-          <option value="sans-serif">Sans</option>
-          <option value="monospace">Mono</option>
-        </select>
-      </label>
-      <label class="pf-dialog__field">
-        <span>Size</span>
-        <input
-          class="pf-input"
-          type="range"
-          min="24"
-          max="96"
-          [value]="size()"
-          (input)="size.set(+$any($event.target).value); onTypeChange()"
-        />
-      </label>
-      <label class="pf-dialog__field">
-        <span>Color</span>
-        <input
-          class="pf-color"
-          type="color"
-          [value]="color()"
-          (input)="color.set($any($event.target).value); onTypeChange()"
-        />
-      </label>
-    }
-
-    @if (mode() === 'upload') {
-      <label class="pf-dialog__field">
-        <span>Image</span>
-        <input
-          class="pf-input"
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          (change)="onUpload($event)"
-        />
-      </label>
-      @if (error()) {
-        <p class="pf-dialog__error">{{ error() }}</p>
-      }
-    }
-
-    @if (mode() === 'seal') {
-      <p class="pf-dialog__message">
-        A Certified seal is placed like a signature and marks the document as certified.
-      </p>
-      <label class="pf-dialog__field">
-        <span>Signer name</span>
-        <input
-          class="pf-input"
-          type="text"
-          [value]="sealName()"
-          (input)="sealName.set($any($event.target).value); onSealChange()"
-        />
-      </label>
-    }
-
-    @if (mode() === 'digital') {
-      <p class="pf-dialog__message">
-        Cryptographic signing embeds a real PKCS#7 digital signature into the PDF using your
-        certificate. Your file never leaves this device.
-      </p>
-      <label class="pf-dialog__field">
-        <span>Certificate (.p12 / .pfx)</span>
-        <input
-          class="pf-input"
-          type="file"
-          accept=".p12,.pfx,application/x-pkcs12"
-          (change)="onCertUpload($event)"
-        />
-      </label>
-      @if (certName()) {
-        <p class="pf-dialog__hint">Certificate: {{ certName() }}</p>
-      }
-      <label class="pf-dialog__field">
-        <span>Password</span>
-        <input
-          class="pf-input"
-          type="password"
-          [ngModel]="password()"
-          (ngModelChange)="password.set($event); error.set(null)"
-        />
-      </label>
-      <label class="pf-dialog__field">
-        <span>Reason</span>
-        <input class="pf-input" type="text" [ngModel]="reason()" (ngModelChange)="reason.set($event)" />
-      </label>
-      <label class="pf-dialog__field">
-        <span>Location</span>
-        <input class="pf-input" type="text" [ngModel]="location()" (ngModelChange)="location.set($event)" />
-      </label>
-      <label class="pf-dialog__field">
-        <span>Contact info</span>
-        <input class="pf-input" type="text" [ngModel]="contactInfo()" (ngModelChange)="contactInfo.set($event)" />
-      </label>
-      @if (error()) {
-        <p class="pf-dialog__error">{{ error() }}</p>
-      }
-    }
-
-    <div class="pf-dialog__actions">
-      <button type="button" class="pf-btn pf-btn--ghost" (click)="cancel()">
-        Cancel
+      <button type="button" class="sig-close" (click)="cancel()" aria-label="Close">
+        <i class="fa-solid fa-xmark"></i>
       </button>
-      @if (mode() === 'digital') {
-        <button type="button" class="pf-btn pf-btn--primary" (click)="confirm()">
-          Load Digital ID
+    </header>
+
+    <div class="sig-body">
+      <div class="sig-tabs">
+        <button
+          type="button"
+          class="sig-tab"
+          [class.sig-tab--active]="mode() === 'draw'"
+          (click)="setMode('draw')"
+        >
+          Draw
         </button>
-      } @else {
-        <button type="button" class="pf-btn pf-btn--primary" (click)="confirm()">
-          Add signature
+        <button
+          type="button"
+          class="sig-tab"
+          [class.sig-tab--active]="mode() === 'type'"
+          (click)="setMode('type')"
+        >
+          Type
         </button>
+        <button
+          type="button"
+          class="sig-tab"
+          [class.sig-tab--active]="mode() === 'upload'"
+          (click)="setMode('upload')"
+        >
+          Upload
+        </button>
+        <button
+          type="button"
+          class="sig-tab"
+          [class.sig-tab--active]="mode() === 'seal'"
+          (click)="setMode('seal')"
+        >
+          Seal
+        </button>
+        <button
+          type="button"
+          class="sig-tab"
+          [class.sig-tab--active]="mode() === 'digital'"
+          (click)="setMode('digital')"
+        >
+          Digital ID
+        </button>
+      </div>
+
+      <div [hidden]="mode() === 'digital' || mode() === 'type'">
+        <div class="pf-dialog__canvas-wrap">
+          <canvas
+            #canvas
+            class="pf-dialog__canvas"
+            [class.pf-dialog__canvas--locked]="mode() !== 'draw'"
+            width="360"
+            height="140"
+            (pointerdown)="onPointerDown($event)"
+            (pointermove)="onPointerMove($event)"
+            (pointerup)="onPointerUp()"
+            (pointerleave)="onPointerUp()"
+          ></canvas>
+        </div>
+      </div>
+
+      @if (mode() === 'type') {
+        <div
+          class="sig-preview"
+          [style.font-family]="font()"
+          [style.font-size.px]="previewSize()"
+          [style.color]="color()"
+        >
+          {{ typedText() }}
+        </div>
+
+        <label class="sig-field">
+          <span>Text</span>
+          <input
+            class="pf-input"
+            type="text"
+            [value]="typedText()"
+            (input)="typedText.set($any($event.target).value); onTypeChange()"
+          />
+        </label>
+
+        <label class="sig-field">
+          <span>Font</span>
+          <select
+            class="pf-input"
+            [value]="font()"
+            (change)="font.set($any($event.target).value); onTypeChange()"
+          >
+            @for (opt of fontOptions; track opt.label) {
+              <option [value]="opt.value">{{ opt.label }}</option>
+            }
+          </select>
+        </label>
+
+        <div class="sig-grid">
+          <label class="sig-field">
+            <span>Size</span>
+            <input
+              class="pf-input"
+              type="range"
+              min="24"
+              max="96"
+              [value]="size()"
+              (input)="size.set(+$any($event.target).value); onTypeChange()"
+            />
+          </label>
+          <label class="sig-field">
+            <span>Color</span>
+            <input
+              class="pf-color"
+              type="color"
+              [value]="color()"
+              (input)="color.set($any($event.target).value); onTypeChange()"
+            />
+          </label>
+        </div>
       }
+
+      @if (mode() === 'upload') {
+        <label class="sig-field">
+          <span>Image</span>
+          <input
+            class="pf-input"
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            (change)="onUpload($event)"
+          />
+        </label>
+        @if (error()) {
+          <p class="sig-error">{{ error() }}</p>
+        }
+      }
+
+      @if (mode() === 'seal') {
+        <p class="sig-message">
+          A Certified seal is placed like a signature and marks the document as certified.
+        </p>
+        <label class="sig-field">
+          <span>Signer name</span>
+          <input
+            class="pf-input"
+            type="text"
+            [value]="sealName()"
+            (input)="sealName.set($any($event.target).value); onSealChange()"
+          />
+        </label>
+      }
+
+      @if (mode() === 'digital') {
+        <p class="sig-message">
+          Cryptographic signing embeds a real PKCS#7 digital signature into the PDF using your
+          certificate. Your file never leaves this device.
+        </p>
+        <label class="sig-field">
+          <span>Certificate (.p12 / .pfx)</span>
+          <input
+            class="pf-input"
+            type="file"
+            accept=".p12,.pfx,application/x-pkcs12"
+            (change)="onCertUpload($event)"
+          />
+        </label>
+        @if (certName()) {
+          <p class="sig-hint">Certificate: {{ certName() }}</p>
+        }
+        <label class="sig-field">
+          <span>Password</span>
+          <input
+            class="pf-input"
+            type="password"
+            [ngModel]="password()"
+            (ngModelChange)="password.set($event); error.set(null)"
+          />
+        </label>
+        <label class="sig-field">
+          <span>Reason</span>
+          <input class="pf-input" type="text" [ngModel]="reason()" (ngModelChange)="reason.set($event)" />
+        </label>
+        <label class="sig-field">
+          <span>Location</span>
+          <input class="pf-input" type="text" [ngModel]="location()" (ngModelChange)="location.set($event)" />
+        </label>
+        <label class="sig-field">
+          <span>Contact info</span>
+          <input class="pf-input" type="text" [ngModel]="contactInfo()" (ngModelChange)="contactInfo.set($event)" />
+        </label>
+        @if (error()) {
+          <p class="sig-error">{{ error() }}</p>
+        }
+      }
+
+      <div class="sig-actions">
+        <button type="button" class="pf-btn pf-btn--ghost" (click)="cancel()">
+          Cancel
+        </button>
+        @if (mode() === 'digital') {
+          <button type="button" class="pf-btn pf-btn--primary" (click)="confirm()">
+            Load Digital ID
+          </button>
+        } @else {
+          <button type="button" class="pf-btn pf-btn--primary" (click)="confirm()">
+            Add signature
+          </button>
+        }
+      </div>
     </div>
   </div>
 </div>

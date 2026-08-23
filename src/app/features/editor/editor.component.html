@@ -40,27 +40,54 @@
       >
         <i class="fa-solid fa-rotate-right"></i>
       </button>
+      <span class="editor__toolbar-divider" aria-hidden="true"></span>
       <button
         type="button"
-        class="pf-btn pf-btn--primary pf-btn--sm"
+        class="icon-btn"
+        [class.is-active]="state.textEditEnabled()"
+        (click)="toggleTextEdit()"
+        [attr.aria-pressed]="state.textEditEnabled()"
+        title="Edit document text: click text on the page to change or remove it"
+        aria-label="Edit document text"
+      >
+        <i class="fa-solid fa-i-cursor"></i>
+      </button>
+      <button
+        type="button"
+        class="export-btn"
         (click)="exportPdf()"
         [disabled]="!docName() || exporting()"
         [attr.aria-label]="'Export edited PDF'"
         title="Export edited PDF"
       >
-        @if (exporting()) {
-          <i class="fa-solid fa-spinner fa-spin"></i> Exporting…
-        } @else {
-          <i class="fa-solid fa-file-arrow-down"></i> Export PDF
-        }
+        <span class="export-btn__icon">
+          @if (exporting()) {
+            <i class="fa-solid fa-spinner fa-spin"></i>
+          } @else {
+            <i class="fa-solid fa-file-arrow-down"></i>
+          }
+        </span>
+        <span class="export-btn__label">
+          @if (exporting()) { Exporting… } @else { Export PDF }
+        </span>
       </button>
-      <a class="pf-btn pf-btn--ghost pf-btn--sm" routerLink="/tools">
-        <i class="fa-solid fa-arrow-left"></i> Tools
-      </a>
+      <button
+        type="button"
+        class="icon-btn editor__viewbar-toggle"
+        (click)="toggleViewbar()"
+        [title]="viewbarVisible() ? 'Hide page bar' : 'Show page bar'"
+        [attr.aria-label]="viewbarVisible() ? 'Hide page bar' : 'Show page bar'"
+        [attr.aria-pressed]="viewbarVisible()"
+      >
+        <i
+          class="fa-solid"
+          [ngClass]="viewbarVisible() ? 'fa-chevron-up' : 'fa-chevron-down'"
+        ></i>
+      </button>
     </div>
   </div>
 
-  @if (docName()) {
+  @if (docName() && viewbarVisible()) {
     <div class="editor__viewbar">
       <div class="editor__pagenav">
         <button
@@ -154,83 +181,95 @@
 
   <div class="editor__body">
     <aside class="editor__sidebar" aria-label="Pages">
-      <div class="editor__sidebar-head">
-        <span class="pf-label-caps">Pages</span>
-        <span class="editor__sidebar-count">{{ totalPages() }}</span>
-      </div>
+      <header class="side-head">
+        <span class="side-head__icon">
+          <i class="fa-solid fa-layer-group"></i>
+        </span>
+        <div class="side-head__text">
+          <span class="side-head__eyebrow">Editor</span>
+          <h2 class="side-head__heading">Pages</h2>
+        </div>
+        <span class="side-head__count">{{ totalPages() }}</span>
+      </header>
 
       @if (docName()) {
-        <div class="editor__page-actions">
-          <button
-            type="button"
-            class="icon-btn"
-            (click)="rotateLeft()"
-            [disabled]="selectedCount() === 0"
-            title="Rotate left"
-            aria-label="Rotate selected pages left"
-          >
-            <i class="fa-solid fa-rotate-left"></i>
-          </button>
-          <button
-            type="button"
-            class="icon-btn"
-            (click)="rotateRight()"
-            [disabled]="selectedCount() === 0"
-            title="Rotate right"
-            aria-label="Rotate selected pages right"
-          >
-            <i class="fa-solid fa-rotate-right"></i>
-          </button>
-          <button
-            type="button"
-            class="icon-btn"
-            (click)="duplicateSelected()"
-            [disabled]="selectedCount() === 0"
-            title="Duplicate"
-            aria-label="Duplicate selected pages"
-          >
-            <i class="fa-solid fa-copy"></i>
-          </button>
-          <button
-            type="button"
-            class="icon-btn icon-btn--danger"
-            (click)="deleteSelected()"
-            [disabled]="selectedCount() === 0"
-            title="Delete"
-            aria-label="Delete selected pages"
-          >
-            <i class="fa-solid fa-trash"></i>
-          </button>
-          <button
-            type="button"
-            class="icon-btn"
-            (click)="extractSelected()"
-            [disabled]="selectedCount() === 0"
-            title="Extract to new PDF"
-            aria-label="Extract selected pages to a new PDF"
-          >
-            <i class="fa-solid fa-file-export"></i>
-          </button>
-          <span class="editor__selection-hint">
-            {{ selectedCount() ? selectedCount() + ' selected' : 'No selection' }}
-          </span>
-          <button
-            type="button"
-            class="editor__chip"
-            (click)="selectAll()"
-            [disabled]="totalPages() === 0"
-          >
-            All
-          </button>
-          <button
-            type="button"
-            class="editor__chip"
-            (click)="clearSelection()"
-            [disabled]="selectedCount() === 0"
-          >
-            Clear
-          </button>
-        </div>
+        <section class="side-card">
+          <div class="side-actions">
+            <button
+              type="button"
+              class="icon-btn"
+              (click)="rotateLeft()"
+              [disabled]="selectedCount() === 0"
+              title="Rotate left"
+              aria-label="Rotate selected pages left"
+            >
+              <i class="fa-solid fa-rotate-left"></i>
+            </button>
+            <button
+              type="button"
+              class="icon-btn"
+              (click)="rotateRight()"
+              [disabled]="selectedCount() === 0"
+              title="Rotate right"
+              aria-label="Rotate selected pages right"
+            >
+              <i class="fa-solid fa-rotate-right"></i>
+            </button>
+            <button
+              type="button"
+              class="icon-btn"
+              (click)="duplicateSelected()"
+              [disabled]="selectedCount() === 0"
+              title="Duplicate"
+              aria-label="Duplicate selected pages"
+            >
+              <i class="fa-solid fa-copy"></i>
+            </button>
+            <button
+              type="button"
+              class="icon-btn icon-btn--danger"
+              (click)="deleteSelected()"
+              [disabled]="selectedCount() === 0"
+              title="Delete"
+              aria-label="Delete selected pages"
+            >
+              <i class="fa-solid fa-trash"></i>
+            </button>
+            <button
+              type="button"
+              class="icon-btn"
+              (click)="extractSelected()"
+              [disabled]="selectedCount() === 0"
+              title="Extract to new PDF"
+              aria-label="Extract selected pages to a new PDF"
+            >
+              <i class="fa-solid fa-file-export"></i>
+            </button>
+          </div>
+          <div class="side-selection">
+            <span class="side-hint">
+              {{ selectedCount() ? selectedCount() + ' selected' : 'No selection' }}
+            </span>
+            <div class="side-selection-btns">
+              <button
+                type="button"
+                class="editor__chip"
+                (click)="selectAll()"
+                [disabled]="totalPages() === 0"
+              >
+                All
+              </button>
+              <button
+                type="button"
+                class="editor__chip"
+                (click)="clearSelection()"
+                [disabled]="selectedCount() === 0"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        </section>
 
         <div class="editor__pages">
           @for (page of pagesList(); track page.id) {
@@ -252,7 +291,10 @@
           }
         </div>
       } @else {
-        <p class="editor__pages-hint pf-text-muted">No document loaded.</p>
+        <p class="side-empty">
+          <i class="fa-regular fa-file-lines"></i>
+          No document loaded.
+        </p>
       }
     </aside>
 
@@ -292,6 +334,12 @@
               [width]="displaySize()?.width ?? 0"
               [height]="displaySize()?.height ?? 0"
             ></app-editor-overlay>
+            <app-editor-text-layer
+              [pageIndex]="currentSourceIndex()"
+              [scale]="displaySize()?.scale ?? 1"
+              [rotation]="currentRotation()"
+              [enabled]="state.textEditEnabled()"
+            ></app-editor-text-layer>
           </div>
         </div>
       }

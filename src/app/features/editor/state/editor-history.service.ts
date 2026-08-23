@@ -2,6 +2,7 @@ import { Injectable, inject, signal, effect } from '@angular/core';
 import {
   PdfAnnotation,
   DigitalSignatureRequest,
+  TextEditOverrides,
 } from '../../../core/models/pdf.models';
 import { EditorPage } from '../models/editor-page.model';
 import { EditorStateService } from './editor-state.service';
@@ -11,6 +12,7 @@ interface HistorySnapshot {
   annotations: Map<string, PdfAnnotation[]>;
   pages: EditorPage[];
   digital: DigitalSignatureRequest | null;
+  textOverrides: TextEditOverrides;
 }
 
 const DEBOUNCE_MS = 200;
@@ -34,6 +36,7 @@ export class EditorHistoryService {
       this.state.annotationsByPage();
       this.pages.pages();
       this.state.digitalSignature();
+      this.state.textOverrides();
       if (this.isApplying) {
         return;
       }
@@ -94,6 +97,7 @@ export class EditorHistoryService {
         ? { ...snapshot.digital, certBytes: new Uint8Array(snapshot.digital.certBytes) }
         : null,
     );
+    this.state.setTextOverrides(this.cloneTextOverrides(snapshot.textOverrides));
     setTimeout(() => {
       this.isApplying = false;
     }, 0);
@@ -113,7 +117,18 @@ export class EditorHistoryService {
       digital: digital
         ? { ...digital, certBytes: new Uint8Array(digital.certBytes) }
         : null,
+      textOverrides: this.cloneTextOverrides(this.state.getTextOverrides()),
     };
+  }
+
+  private cloneTextOverrides(
+    map: TextEditOverrides,
+  ): TextEditOverrides {
+    const out = new Map<number, Map<string, string>>();
+    for (const [pageIndex, pageMap] of map) {
+      out.set(pageIndex, new Map(pageMap));
+    }
+    return out;
   }
 
   private cloneAnnotations(
