@@ -23,6 +23,9 @@
             "polyfills": [
               "zone.js"
             ],
+            "allowedCommonJsDependencies": [
+              "pako"
+            ],
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [

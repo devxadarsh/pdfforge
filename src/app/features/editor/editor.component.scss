@@ -14,7 +14,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 8px 12px;
+  padding: 5px 8px;
   background: var(--pf-surface-container-lowest);
   border-bottom: 1px solid var(--pf-outline-variant);
 }
@@ -34,13 +34,13 @@
 }
 
 .editor__tool {
-  width: 38px;
-  height: 38px;
+  width: 26px;
+  height: 26px;
   border: none;
   border-radius: var(--pf-radius);
   background: transparent;
   color: var(--pf-on-surface-variant);
-  font-size: 16px;
+  font-size: 12px;
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
@@ -57,7 +57,7 @@
 
 .editor__body {
   display: grid;
-  grid-template-columns: 240px 1fr 300px;
+  grid-template-columns: 220px 1fr 260px;
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -65,7 +65,7 @@
 .editor__sidebar,
 .editor__properties {
   background: var(--pf-surface-container-low);
-  padding: 12px;
+  padding: 10px;
   overflow-y: auto;
 }
 
@@ -82,22 +82,67 @@
   margin-bottom: 12px;
 }
 
+.editor__sidebar-count {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pf-on-surface-variant);
+  background: var(--pf-surface-container);
+  border-radius: 9999px;
+  padding: 2px 10px;
+}
+
+.editor__page-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--pf-outline-variant);
+}
+
+.icon-btn--danger:hover {
+  background: var(--pf-error-container);
+  color: var(--pf-on-error-container);
+}
+
+.editor__selection-hint {
+  flex: 1 1 100%;
+  font-size: 12px;
+  color: var(--pf-on-surface-variant);
+}
+
+.editor__thumb-wrap {
+  cursor: grab;
+  border-radius: var(--pf-radius);
+  transition: box-shadow 0.15s ease;
+}
+
+.editor__thumb-wrap:active {
+  cursor: grabbing;
+}
+
+.editor__thumb-wrap:hover {
+  box-shadow: 0 0 0 2px var(--pf-primary-container);
+}
+
 .editor__pages-hint,
 .editor__properties p {
   font-size: 13px;
 }
 
 .editor__workspace {
-  display: grid;
-  place-items: center;
-  padding: 24px;
+  display: block;
+  padding: 0;
   background: var(--pf-surface-container);
-  overflow: auto;
+  overflow: hidden;
 }
 
 .editor__drop {
   width: 100%;
   max-width: 560px;
+  margin: 48px auto 0;
   text-align: center;
 }
 
@@ -112,13 +157,111 @@
   margin-right: 6px;
 }
 
-.editor__loaded {
+.editor__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  color: var(--pf-on-surface-variant);
+  font-size: 15px;
+}
+
+.editor__loading i {
+  font-size: 28px;
+  color: var(--pf-primary);
+}
+
+/* View bar */
+.editor__viewbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 5px 8px;
+  background: var(--pf-surface-container-lowest);
+  border-bottom: 1px solid var(--pf-outline-variant);
+}
+
+.editor__pagenav,
+.editor__zoom,
+.editor__search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editor__pagenav-label {
+  font-size: 13px;
+  font-weight: 600;
+  min-width: 92px;
   text-align: center;
 }
 
-.pf-btn--sm {
-  padding: 6px 12px;
+.editor__zoom-value {
+  border: 1px solid var(--pf-outline-variant);
+  background: var(--pf-surface-container);
+  color: var(--pf-on-surface);
+  border-radius: var(--pf-radius);
+  padding: 3px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 84px;
+}
+
+.editor__chip {
+  border: 1px solid var(--pf-outline-variant);
+  background: var(--pf-surface-container);
+  color: var(--pf-on-surface);
+  border-radius: var(--pf-radius-full);
+  padding: 3px 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.editor__chip--active {
+  background: var(--pf-primary);
+  color: var(--pf-on-primary);
+  border-color: var(--pf-primary);
+}
+
+.editor__search {
+  flex: 1 1 240px;
+  justify-content: flex-end;
+}
+
+.editor__search i {
+  color: var(--pf-on-surface-variant);
+}
+
+.editor__search-input {
+  height: 26px;
+  width: 220px;
+  max-width: 100%;
+}
+
+.editor__search-count {
   font-size: 13px;
+  color: var(--pf-on-surface-variant);
+  white-space: nowrap;
+}
+
+/* Page list */
+.editor__pages {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.editor__pages-hint {
+  font-size: 13px;
+}
+
+.pf-btn--sm {
+  padding: 3px 6px;
+  font-size: 11px;
 }
 
 @media (max-width: 1024px) {

@@ -9,16 +9,16 @@
 .pf-header__inner {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
   height: var(--pf-header-height);
 }
 
 .pf-brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   font-weight: 700;
-  font-size: 20px;
+  font-size: 18px;
   color: var(--pf-on-surface);
   text-decoration: none;
   flex-shrink: 0;
@@ -27,12 +27,12 @@
 .pf-brand__mark {
   display: inline-grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 26px;
+  height: 26px;
   border-radius: var(--pf-radius);
   background-color: var(--pf-primary);
   color: var(--pf-on-primary);
-  font-size: 18px;
+  font-size: 14px;
 }
 
 .pf-brand__accent {
@@ -59,11 +59,11 @@
 .pf-nav__link {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
+  gap: 6px;
+  padding: 3px 6px;
   border-radius: var(--pf-radius);
   color: var(--pf-on-surface-variant);
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
   text-decoration: none;
@@ -82,7 +82,7 @@
 }
 
 .pf-nav__icon {
-  width: 18px;
+  width: 16px;
   text-align: center;
 }
 
@@ -95,13 +95,13 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: 3px 6px;
   border: 0;
   background: transparent;
   border-radius: var(--pf-radius);
   color: var(--pf-on-surface-variant);
   font: inherit;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
@@ -174,7 +174,7 @@
 .pf-header__actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
   white-space: nowrap;
 }
@@ -183,11 +183,11 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
+  padding: 2px 6px;
   border-radius: var(--pf-radius-full);
   background-color: var(--pf-surface-container);
   color: var(--pf-on-surface-variant);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -198,13 +198,13 @@
 .pf-icon-btn {
   display: inline-grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 26px;
+  height: 26px;
   border: 1px solid var(--pf-outline-variant);
   border-radius: var(--pf-radius);
   background: var(--pf-surface-container-lowest);
   color: var(--pf-on-surface);
-  font-size: 16px;
+  font-size: 12px;
   cursor: pointer;
   transition: background-color 0.15s ease;
 }
@@ -216,10 +216,10 @@
 .pf-btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
+  gap: 6px;
+  padding: 4px 10px;
   border-radius: var(--pf-radius);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   border: 1px solid transparent;
   cursor: pointer;

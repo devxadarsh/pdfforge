@@ -9,11 +9,11 @@
   grid-template-columns: 1.4fr 1fr auto;
   gap: 24px;
   align-items: center;
-  padding-block: 20px;
+  padding-block: 10px;
 }
 
 .pf-footer__brand .pf-brand__name {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--pf-on-surface);
 }
@@ -24,7 +24,7 @@
 
 .pf-footer__tagline {
   margin: 6px 0 0;
-  font-size: 13px;
+  font-size: 12px;
   max-width: 320px;
 }
 
@@ -32,11 +32,11 @@
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .pf-footer__legal {
-  font-size: 12px;
+  font-size: 11px;
   text-align: right;
   margin: 0;
 }

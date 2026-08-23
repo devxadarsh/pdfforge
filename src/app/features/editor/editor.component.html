@@ -20,47 +20,244 @@
       }
     </div>
     <div class="editor__toolbar-actions">
+      <button
+        type="button"
+        class="pf-btn pf-btn--primary pf-btn--sm"
+        (click)="exportPdf()"
+        [disabled]="!docName() || exporting()"
+        [attr.aria-label]="'Export edited PDF'"
+        title="Export edited PDF"
+      >
+        @if (exporting()) {
+          <i class="fa-solid fa-spinner fa-spin"></i> Exporting…
+        } @else {
+          <i class="fa-solid fa-file-arrow-down"></i> Export PDF
+        }
+      </button>
       <a class="pf-btn pf-btn--ghost pf-btn--sm" routerLink="/tools">
         <i class="fa-solid fa-arrow-left"></i> Tools
       </a>
     </div>
   </div>
 
+  @if (docName()) {
+    <div class="editor__viewbar">
+      <div class="editor__pagenav">
+        <button
+          type="button"
+          class="icon-btn"
+          (click)="prevPage()"
+          [disabled]="currentPageNumber() <= 1"
+          aria-label="Previous page"
+        >
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <span class="editor__pagenav-label"
+          >Page {{ currentPageNumber() }} / {{ totalPages() }}</span
+        >
+        <button
+          type="button"
+          class="icon-btn"
+          (click)="nextPage()"
+          [disabled]="currentPageNumber() >= totalPages()"
+          aria-label="Next page"
+        >
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
+
+      <div class="editor__zoom">
+        <button type="button" class="icon-btn" (click)="zoomOut()" aria-label="Zoom out">
+          <i class="fa-solid fa-magnifying-glass-minus"></i>
+        </button>
+        <button
+          type="button"
+          class="editor__zoom-value"
+          (click)="resetZoom()"
+          [title]="zoomLabel()"
+        >
+          {{ zoomLabel() }}
+        </button>
+        <button type="button" class="icon-btn" (click)="zoomIn()" aria-label="Zoom in">
+          <i class="fa-solid fa-magnifying-glass-plus"></i>
+        </button>
+        <button
+          type="button"
+          class="editor__chip"
+          [class.editor__chip--active]="fitMode() === 'width'"
+          (click)="setFit('width')"
+        >
+          Fit width
+        </button>
+        <button
+          type="button"
+          class="editor__chip"
+          [class.editor__chip--active]="fitMode() === 'page'"
+          (click)="setFit('page')"
+        >
+          Fit page
+        </button>
+      </div>
+
+      <div class="editor__search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input
+          type="search"
+          class="pf-input editor__search-input"
+          placeholder="Search in document…"
+          [value]="searchQuery()"
+          (input)="onSearch($any($event.target).value)"
+          aria-label="Search in document"
+        />
+        @if (searchQuery().trim()) {
+          <button
+            type="button"
+            class="icon-btn"
+            (click)="searchPrev()"
+            aria-label="Previous match"
+          >
+            <i class="fa-solid fa-chevron-up"></i>
+          </button>
+          <button
+            type="button"
+            class="icon-btn"
+            (click)="searchNext()"
+            aria-label="Next match"
+          >
+            <i class="fa-solid fa-chevron-down"></i>
+          </button>
+          <span class="editor__search-count">{{ searchCountLabel() }}</span>
+        }
+      </div>
+    </div>
+  }
+
   <div class="editor__body">
     <aside class="editor__sidebar" aria-label="Pages">
       <div class="editor__sidebar-head">
         <span class="pf-label-caps">Pages</span>
+        <span class="editor__sidebar-count">{{ totalPages() }}</span>
       </div>
-      <div class="editor__pages">
-        @if (loadedFileName()) {
-          <p class="editor__pages-hint pf-text-muted">
-            Page thumbnails appear here once the viewer is connected.
-          </p>
-        } @else {
-          <p class="editor__pages-hint pf-text-muted">No document loaded.</p>
-        }
-      </div>
+
+      @if (docName()) {
+        <div class="editor__page-actions">
+          <button
+            type="button"
+            class="icon-btn"
+            (click)="rotateLeft()"
+            [disabled]="selectedCount() === 0"
+            title="Rotate left"
+            aria-label="Rotate selected pages left"
+          >
+            <i class="fa-solid fa-rotate-left"></i>
+          </button>
+          <button
+            type="button"
+            class="icon-btn"
+            (click)="rotateRight()"
+            [disabled]="selectedCount() === 0"
+            title="Rotate right"
+            aria-label="Rotate selected pages right"
+          >
+            <i class="fa-solid fa-rotate-right"></i>
+          </button>
+          <button
+            type="button"
+            class="icon-btn"
+            (click)="duplicateSelected()"
+            [disabled]="selectedCount() === 0"
+            title="Duplicate"
+            aria-label="Duplicate selected pages"
+          >
+            <i class="fa-solid fa-copy"></i>
+          </button>
+          <button
+            type="button"
+            class="icon-btn icon-btn--danger"
+            (click)="deleteSelected()"
+            [disabled]="selectedCount() === 0"
+            title="Delete"
+            aria-label="Delete selected pages"
+          >
+            <i class="fa-solid fa-trash"></i>
+          </button>
+          <button
+            type="button"
+            class="icon-btn"
+            (click)="extractSelected()"
+            [disabled]="selectedCount() === 0"
+            title="Extract to new PDF"
+            aria-label="Extract selected pages to a new PDF"
+          >
+            <i class="fa-solid fa-file-export"></i>
+          </button>
+          <span class="editor__selection-hint">
+            {{ selectedCount() ? selectedCount() + ' selected' : 'No selection' }}
+          </span>
+          <button
+            type="button"
+            class="editor__chip"
+            (click)="selectAll()"
+            [disabled]="totalPages() === 0"
+          >
+            All
+          </button>
+          <button
+            type="button"
+            class="editor__chip"
+            (click)="clearSelection()"
+            [disabled]="selectedCount() === 0"
+          >
+            Clear
+          </button>
+        </div>
+
+        <div class="editor__pages">
+          @for (page of pagesList(); track page.id) {
+            <div
+              class="editor__thumb-wrap"
+              draggable="true"
+              (dragstart)="onDragStart(page.id)"
+              (dragover)="onDragOver($event)"
+              (drop)="onDrop(page.id)"
+              (click)="selectPage(page.id, $event)"
+            >
+              <app-page-thumbnail
+                [pageIndex]="page.sourceIndex"
+                [rotation]="page.rotation"
+                [active]="pagesStore.isSelected(page.id)"
+                [current]="pagesStore.currentId() === page.id"
+              ></app-page-thumbnail>
+            </div>
+          }
+        </div>
+      } @else {
+        <p class="editor__pages-hint pf-text-muted">No document loaded.</p>
+      }
     </aside>
 
     <section class="editor__workspace">
-      @if (!loadedFileName()) {
+      @if (loading()) {
+        <div class="editor__loading">
+          <i class="fa-solid fa-spinner fa-spin"></i> Loading document…
+        </div>
+      } @else if (!docName()) {
         <div class="editor__drop">
           <app-file-dropzone
             [multiple]="false"
             label="Open a PDF to start editing"
-            (filesLoaded)="onFiles($event)"
           />
           <p class="editor__privacy">
             <i class="fa-solid fa-lock"></i> Your file stays on this device.
           </p>
         </div>
       } @else {
-        <div class="editor__loaded">
-          <p>Loaded: <strong>{{ loadedFileName() }}</strong></p>
-          <p class="pf-text-muted">
-            Rendering and editing tools are connected in the next milestone.
-          </p>
-        </div>
+        <app-pdf-page
+          [pageIndex]="currentSourceIndex()"
+          [zoom]="zoom()"
+          [fitMode]="fitMode()"
+          [rotation]="currentRotation()"
+        ></app-pdf-page>
       }
     </section>
 
