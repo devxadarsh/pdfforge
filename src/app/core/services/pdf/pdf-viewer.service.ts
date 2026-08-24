@@ -7,7 +7,7 @@ import type {
 import { Injectable } from '@angular/core';
 import { RawTextItem } from '../../models/pdf.models';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
 function applyTransform(
   x: number,
@@ -32,6 +32,10 @@ export class PdfViewerService {
   private doc: PDFDocumentProxy | null = null;
   private task: PDFDocumentLoadingTask | null = null;
   private readonly rawTextCache = new Map<number, RawTextItem[]>();
+  /** Serializes render() calls per canvas so a cancelled render releases the
+   *  canvas before the next one starts (PDF.js forbids concurrent renders on
+   *  the same canvas, which otherwise blanks pages during navigation). */
+  private readonly renderLocks = new WeakMap<HTMLCanvasElement, Promise<void>>();
 
   get pageCount(): number {
     return this.doc?.numPages ?? 0;
@@ -71,22 +75,39 @@ export class PdfViewerService {
     if (!ctx) {
       return;
     }
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = Math.max(1, Math.floor(viewport.width * dpr));
-    canvas.height = Math.max(1, Math.floor(viewport.height * dpr));
-    canvas.style.width = `${Math.floor(viewport.width)}px`;
-    canvas.style.height = `${Math.floor(viewport.height)}px`;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    renderTaskRef?.task?.cancel();
-    const task = page.render({ canvas, canvasContext: ctx, viewport });
-    if (renderTaskRef) {
-      renderTaskRef.task = task as unknown as Cancellable;
-    }
-    try {
-      await task.promise;
-    } catch {
-      /* render cancelled or failed */
-    }
+    const viewport0 = viewport;
+    const run = async () => {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.max(1, Math.floor(viewport0.width * dpr));
+      canvas.height = Math.max(1, Math.floor(viewport0.height * dpr));
+      canvas.style.width = `${Math.floor(viewport0.width)}px`;
+      canvas.style.height = `${Math.floor(viewport0.height)}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const prev = renderTaskRef?.task;
+      if (prev) {
+        prev.cancel();
+        try {
+          await prev.promise;
+        } catch {
+          /* previous render cancelled */
+        }
+      }
+      const task = page.render({ canvas, canvasContext: ctx, viewport: viewport0 });
+      if (renderTaskRef) {
+        renderTaskRef.task = task as unknown as Cancellable;
+      }
+      try {
+        await task.promise;
+      } catch {
+        /* render cancelled or failed */
+      }
+    };
+    const chain = (this.renderLocks.get(canvas) ?? Promise.resolve()).then(
+      run,
+      run,
+    );
+    this.renderLocks.set(canvas, chain);
+    await chain;
   }
 
   async renderThumbnail(
@@ -103,11 +124,19 @@ export class PdfViewerService {
     }
     canvas.width = Math.max(1, Math.floor(viewport.width));
     canvas.height = Math.max(1, Math.floor(viewport.height));
-    try {
-      await page.render({ canvas, canvasContext: ctx, viewport }).promise;
-    } catch {
-      /* render cancelled or failed */
-    }
+    const run = async () => {
+      try {
+        await page.render({ canvas, canvasContext: ctx, viewport }).promise;
+      } catch {
+        /* render cancelled or failed */
+      }
+    };
+    const chain = (this.renderLocks.get(canvas) ?? Promise.resolve()).then(
+      run,
+      run,
+    );
+    this.renderLocks.set(canvas, chain);
+    await chain;
   }
 
   async getPageText(pageIndex: number): Promise<string> {

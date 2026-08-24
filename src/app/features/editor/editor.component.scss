@@ -334,22 +334,109 @@
 .editor__search {
   flex: 1 1 240px;
   justify-content: flex-end;
+  min-width: 0;
 }
 
-.editor__search i {
+.editor__search-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  max-width: 420px;
+  height: 34px;
+  padding: 2px 6px 2px 10px;
+  background: var(--pf-surface-container);
+  border: 1px solid var(--pf-outline-variant);
+  border-radius: var(--pf-radius-full);
+  box-shadow: var(--pf-shadow-1);
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+
+  &:focus-within {
+    border-color: var(--pf-primary);
+    background: var(--pf-surface-container-lowest);
+    box-shadow: 0 0 0 3px var(--pf-on-primary-container);
+  }
+}
+
+.editor__search-icon {
   color: var(--pf-on-surface-variant);
+  font-size: 13px;
+  flex: 0 0 auto;
 }
 
-.editor__search-input {
-  height: 26px;
-  width: 220px;
-  max-width: 100%;
+.editor__search-field {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-family: var(--pf-font-base);
+  font-size: 13px;
+  color: var(--pf-on-surface);
+
+  &::placeholder {
+    color: var(--pf-on-surface-variant);
+    opacity: 0.85;
+  }
+
+  &::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
 }
 
 .editor__search-count {
-  font-size: 13px;
+  flex: 0 0 auto;
+  padding: 0 4px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
   color: var(--pf-on-surface-variant);
   white-space: nowrap;
+}
+
+.editor__search-divider {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 18px;
+  background: var(--pf-outline-variant);
+}
+
+.editor__search-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: var(--pf-radius-full);
+  color: var(--pf-on-surface-variant);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+
+  &:hover {
+    background: var(--pf-surface-container-high);
+    color: var(--pf-on-surface);
+  }
+
+  &:active {
+    background: var(--pf-surface-variant);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--pf-primary);
+    outline-offset: 1px;
+  }
+}
+
+.editor__search-close:hover {
+  color: var(--pf-error);
 }
 
 /* Page list */

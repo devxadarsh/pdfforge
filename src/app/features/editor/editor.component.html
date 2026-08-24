@@ -146,35 +146,46 @@
         </button>
       </div>
 
-      <div class="editor__search">
-        <i class="fa-solid fa-magnifying-glass"></i>
-        <input
-          type="search"
-          class="pf-input editor__search-input"
-          placeholder="Search in document…"
-          [value]="searchQuery()"
-          (input)="onSearch($any($event.target).value)"
-          aria-label="Search in document"
-        />
-        @if (searchQuery().trim()) {
-          <button
-            type="button"
-            class="icon-btn"
-            (click)="searchPrev()"
-            aria-label="Previous match"
-          >
-            <i class="fa-solid fa-chevron-up"></i>
-          </button>
-          <button
-            type="button"
-            class="icon-btn"
-            (click)="searchNext()"
-            aria-label="Next match"
-          >
-            <i class="fa-solid fa-chevron-down"></i>
-          </button>
-          <span class="editor__search-count">{{ searchCountLabel() }}</span>
-        }
+      <div class="editor__search" role="search">
+        <div class="editor__search-box">
+          <i class="fa-solid fa-magnifying-glass editor__search-icon" aria-hidden="true"></i>
+          <input
+            type="search"
+            class="editor__search-field"
+            placeholder="Search in document"
+            [value]="searchQuery()"
+            (input)="onSearch($any($event.target).value)"
+            aria-label="Search in document"
+          />
+          @if (searchQuery().trim()) {
+            <span class="editor__search-count">{{ searchCountLabel() }}</span>
+            <span class="editor__search-divider" aria-hidden="true"></span>
+            <button
+              type="button"
+              class="editor__search-nav"
+              (click)="searchPrev()"
+              aria-label="Previous match"
+            >
+              <i class="fa-solid fa-angle-up" aria-hidden="true"></i>
+            </button>
+            <button
+              type="button"
+              class="editor__search-nav"
+              (click)="searchNext()"
+              aria-label="Next match"
+            >
+              <i class="fa-solid fa-angle-down" aria-hidden="true"></i>
+            </button>
+            <button
+              type="button"
+              class="editor__search-nav editor__search-close"
+              (click)="clearSearch()"
+              aria-label="Clear search"
+            >
+              <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+          }
+        </div>
       </div>
     </div>
   }

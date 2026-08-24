@@ -648,7 +648,7 @@ export class EditorComponent {
     this.pagesStore.setCurrent(this.pagesStore.pages()[hits[idx]].id);
   }
 
-  private clearSearch(): void {
+  clearSearch(): void {
     this.searchQuery.set('');
     this.searchHits.set([]);
     this.searchTotal.set(0);
