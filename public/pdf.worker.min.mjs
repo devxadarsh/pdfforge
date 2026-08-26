@@ -1,4 +1,3 @@
-if(typeof Promise.try!=="function"){Promise.try=function(e){var t=Array.prototype.slice.call(arguments,1);try{return Promise.resolve(e.apply(undefined,t))}catch(n){return Promise.reject(n)}}};
 /**
  * @licstart The following is the entire license notice for the
  * JavaScript code in this page

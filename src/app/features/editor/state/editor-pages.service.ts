@@ -86,31 +86,6 @@ export class EditorPagesService {
     this._selected.set(new Set(this._pages().map((p) => p.id)));
   }
 
-  /* Snapshot/restore for history */
-  getPages(): EditorPage[] {
-    return this._pages();
-  }
-
-  setPages(pages: EditorPage[]): void {
-    this._pages.set(pages);
-    if (!pages.some((p) => p.id === this._currentId())) {
-      this._currentId.set(pages.length ? pages[0].id : null);
-      this._lastSelectedId = null;
-    }
-    const valid = new Set(pages.map((p) => p.id));
-    const sel = new Set(this._selected());
-    let changed = false;
-    for (const id of sel) {
-      if (!valid.has(id)) {
-        sel.delete(id);
-        changed = true;
-      }
-    }
-    if (changed) {
-      this._selected.set(sel);
-    }
-  }
-
   clearSelection(): void {
     this._selected.set(new Set());
     this._lastSelectedId = null;

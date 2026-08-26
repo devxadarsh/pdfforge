@@ -124,18 +124,3 @@
   color: var(--pf-primary);
   background: var(--pf-primary-soft);
 }
-
-.sig-upload {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.sig-upload__preview {
-  max-width: 100%;
-  max-height: 200px;
-  border: 1px solid var(--pf-border);
-  border-radius: var(--pf-radius);
-  background: var(--pf-surface);
-  padding: 8px;
-}

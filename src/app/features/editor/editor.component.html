@@ -2,224 +2,283 @@
   <div class="editor__toolbar">
     <div class="editor__toolbar-group">
       @for (group of toolGroups() | keyvalue; track group.key) {
-      <div class="editor__toolset">
-        @for (tool of group.value; track tool.id) {
-        <button type="button" class="editor__tool" [class.editor__tool--active]="state.tool() === tool.id"
-          [title]="tool.label + (tool.shortcut ? ' (' + tool.shortcut + ')' : '')" [attr.aria-label]="tool.label"
-          [attr.aria-pressed]="state.tool() === tool.id" (click)="selectTool(tool.id)">
-          <i [ngClass]="tool.icon"></i>
-        </button>
-        }
-      </div>
+        <div class="editor__toolset">
+          @for (tool of group.value; track tool.id) {
+          <button
+            type="button"
+            class="editor__tool"
+            [class.editor__tool--active]="state.tool() === tool.id"
+            [title]="tool.label + (tool.shortcut ? ' (' + tool.shortcut + ')' : '')"
+            [attr.aria-label]="tool.label"
+            [attr.aria-pressed]="state.tool() === tool.id"
+            (click)="selectTool(tool.id)"
+          >
+              <i [ngClass]="tool.icon"></i>
+            </button>
+          }
+        </div>
       }
     </div>
     <div class="editor__toolbar-actions">
-      <button type="button" class="icon-btn" (click)="undo()" [disabled]="!history.canUndo()" title="Undo (Ctrl/Cmd+Z)"
-        aria-label="Undo">
-        <i class="fa-solid fa-rotate-left"></i>
+      <button
+        type="button"
+        class="pf-btn pf-btn--primary pf-btn--sm"
+        (click)="exportPdf()"
+        [disabled]="!docName() || exporting()"
+        [attr.aria-label]="'Export edited PDF'"
+        title="Export edited PDF"
+      >
+        @if (exporting()) {
+          <i class="fa-solid fa-spinner fa-spin"></i> Exporting…
+        } @else {
+          <i class="fa-solid fa-file-arrow-down"></i> Export PDF
+        }
       </button>
-      <button type="button" class="icon-btn" (click)="redo()" [disabled]="!history.canRedo()"
-        title="Redo (Ctrl/Cmd+Shift+Z)" aria-label="Redo">
-        <i class="fa-solid fa-rotate-right"></i>
-      </button>
-      <span class="editor__toolbar-divider" aria-hidden="true"></span>
-      <button type="button" class="export-btn" (click)="exportPdf()" [disabled]="!docName() || exporting()"
-        [attr.aria-label]="'Export edited PDF'" title="Export edited PDF">
-        <span class="export-btn__icon">
-          @if (exporting()) {
-          <i class="fa-solid fa-spinner fa-spin"></i>
-          } @else {
-          <i class="fa-solid fa-file-arrow-down"></i>
-          }
-        </span>
-        <span class="export-btn__label">
-          @if (exporting()) { Exporting… } @else { Export PDF }
-        </span>
-      </button>
-      <button type="button" class="icon-btn editor__viewbar-toggle" (click)="toggleViewbar()"
-        [title]="viewbarVisible() ? 'Hide page bar' : 'Show page bar'"
-        [attr.aria-label]="viewbarVisible() ? 'Hide page bar' : 'Show page bar'" [attr.aria-pressed]="viewbarVisible()">
-        <i class="fa-solid" [ngClass]="viewbarVisible() ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
-      </button>
+      <a class="pf-btn pf-btn--ghost pf-btn--sm" routerLink="/tools">
+        <i class="fa-solid fa-arrow-left"></i> Tools
+      </a>
     </div>
   </div>
 
-  @if (docName() && viewbarVisible()) {
-  <div class="editor__viewbar">
-    <div class="editor__pagenav">
-      <button type="button" class="icon-btn" (click)="prevPage()" [disabled]="currentPageNumber() <= 1"
-        aria-label="Previous page">
-        <i class="fa-solid fa-chevron-left"></i>
-      </button>
-      <span class="editor__pagenav-label">Page {{ currentPageNumber() }} / {{ totalPages() }}</span>
-      <button type="button" class="icon-btn" (click)="nextPage()" [disabled]="currentPageNumber() >= totalPages()"
-        aria-label="Next page">
-        <i class="fa-solid fa-chevron-right"></i>
-      </button>
-    </div>
+  @if (docName()) {
+    <div class="editor__viewbar">
+      <div class="editor__pagenav">
+        <button
+          type="button"
+          class="icon-btn"
+          (click)="prevPage()"
+          [disabled]="currentPageNumber() <= 1"
+          aria-label="Previous page"
+        >
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <span class="editor__pagenav-label"
+          >Page {{ currentPageNumber() }} / {{ totalPages() }}</span
+        >
+        <button
+          type="button"
+          class="icon-btn"
+          (click)="nextPage()"
+          [disabled]="currentPageNumber() >= totalPages()"
+          aria-label="Next page"
+        >
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
 
-    <div class="editor__zoom">
-      <button type="button" class="icon-btn" (click)="zoomOut()" aria-label="Zoom out">
-        <i class="fa-solid fa-magnifying-glass-minus"></i>
-      </button>
-      <button type="button" class="editor__zoom-value" (click)="resetZoom()" [title]="zoomLabel()">
-        {{ zoomLabel() }}
-      </button>
-      <button type="button" class="icon-btn" (click)="zoomIn()" aria-label="Zoom in">
-        <i class="fa-solid fa-magnifying-glass-plus"></i>
-      </button>
-      <button type="button" class="editor__chip" [class.editor__chip--active]="state.fitMode() === 'width'"
-        (click)="setFit('width')">
-        Fit width
-      </button>
-      <button type="button" class="editor__chip" [class.editor__chip--active]="state.fitMode() === 'page'"
-        (click)="setFit('page')">
-        Fit page
-      </button>
-    </div>
+      <div class="editor__zoom">
+        <button type="button" class="icon-btn" (click)="zoomOut()" aria-label="Zoom out">
+          <i class="fa-solid fa-magnifying-glass-minus"></i>
+        </button>
+        <button
+          type="button"
+          class="editor__zoom-value"
+          (click)="resetZoom()"
+          [title]="zoomLabel()"
+        >
+          {{ zoomLabel() }}
+        </button>
+        <button type="button" class="icon-btn" (click)="zoomIn()" aria-label="Zoom in">
+          <i class="fa-solid fa-magnifying-glass-plus"></i>
+        </button>
+        <button
+          type="button"
+          class="editor__chip"
+          [class.editor__chip--active]="state.fitMode() === 'width'"
+          (click)="setFit('width')"
+        >
+          Fit width
+        </button>
+        <button
+          type="button"
+          class="editor__chip"
+          [class.editor__chip--active]="state.fitMode() === 'page'"
+          (click)="setFit('page')"
+        >
+          Fit page
+        </button>
+      </div>
 
-    <div class="editor__search" role="search">
-      <div class="editor__search-box">
-        <i class="fa-solid fa-magnifying-glass editor__search-icon" aria-hidden="true"></i>
-        <input type="search" class="editor__search-field" placeholder="Search in document" [value]="searchQuery()"
-          (input)="onSearch($any($event.target).value)" aria-label="Search in document" />
+      <div class="editor__search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input
+          type="search"
+          class="pf-input editor__search-input"
+          placeholder="Search in document…"
+          [value]="searchQuery()"
+          (input)="onSearch($any($event.target).value)"
+          aria-label="Search in document"
+        />
         @if (searchQuery().trim()) {
-        <span class="editor__search-count">{{ searchCountLabel() }}</span>
-        <span class="editor__search-divider" aria-hidden="true"></span>
-        <button type="button" class="editor__search-nav" (click)="searchPrev()" aria-label="Previous match">
-          <i class="fa-solid fa-angle-up" aria-hidden="true"></i>
-        </button>
-        <button type="button" class="editor__search-nav" (click)="searchNext()" aria-label="Next match">
-          <i class="fa-solid fa-angle-down" aria-hidden="true"></i>
-        </button>
-        <button type="button" class="editor__search-nav editor__search-close" (click)="clearSearch()"
-          aria-label="Clear search">
-          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-        </button>
+          <button
+            type="button"
+            class="icon-btn"
+            (click)="searchPrev()"
+            aria-label="Previous match"
+          >
+            <i class="fa-solid fa-chevron-up"></i>
+          </button>
+          <button
+            type="button"
+            class="icon-btn"
+            (click)="searchNext()"
+            aria-label="Next match"
+          >
+            <i class="fa-solid fa-chevron-down"></i>
+          </button>
+          <span class="editor__search-count">{{ searchCountLabel() }}</span>
         }
       </div>
     </div>
-  </div>
   }
 
   <div class="editor__body">
     <aside class="editor__sidebar" aria-label="Pages">
-      <header class="side-head">
-        <span class="side-head__icon">
-          <i class="fa-solid fa-layer-group"></i>
-        </span>
-        <div class="side-head__text">
-          <span class="side-head__eyebrow">Editor</span>
-          <h2 class="side-head__heading">Pages</h2>
-        </div>
-        <span class="side-head__count">{{ totalPages() }}</span>
-      </header>
+      <div class="editor__sidebar-head">
+        <span class="pf-label-caps">Pages</span>
+        <span class="editor__sidebar-count">{{ totalPages() }}</span>
+      </div>
 
       @if (docName()) {
-      <section class="side-card">
-        <div class="side-actions">
-          <button type="button" class="icon-btn" (click)="rotateLeft()" [disabled]="selectedCount() === 0"
-            title="Rotate left" aria-label="Rotate selected pages left">
+        <div class="editor__page-actions">
+          <button
+            type="button"
+            class="icon-btn"
+            (click)="rotateLeft()"
+            [disabled]="selectedCount() === 0"
+            title="Rotate left"
+            aria-label="Rotate selected pages left"
+          >
             <i class="fa-solid fa-rotate-left"></i>
           </button>
-          <button type="button" class="icon-btn" (click)="rotateRight()" [disabled]="selectedCount() === 0"
-            title="Rotate right" aria-label="Rotate selected pages right">
+          <button
+            type="button"
+            class="icon-btn"
+            (click)="rotateRight()"
+            [disabled]="selectedCount() === 0"
+            title="Rotate right"
+            aria-label="Rotate selected pages right"
+          >
             <i class="fa-solid fa-rotate-right"></i>
           </button>
-          <button type="button" class="icon-btn" (click)="duplicateSelected()" [disabled]="selectedCount() === 0"
-            title="Duplicate" aria-label="Duplicate selected pages">
+          <button
+            type="button"
+            class="icon-btn"
+            (click)="duplicateSelected()"
+            [disabled]="selectedCount() === 0"
+            title="Duplicate"
+            aria-label="Duplicate selected pages"
+          >
             <i class="fa-solid fa-copy"></i>
           </button>
-          <button type="button" class="icon-btn icon-btn--danger" (click)="deleteSelected()"
-            [disabled]="selectedCount() === 0" title="Delete" aria-label="Delete selected pages">
+          <button
+            type="button"
+            class="icon-btn icon-btn--danger"
+            (click)="deleteSelected()"
+            [disabled]="selectedCount() === 0"
+            title="Delete"
+            aria-label="Delete selected pages"
+          >
             <i class="fa-solid fa-trash"></i>
           </button>
-          <button type="button" class="icon-btn" (click)="extractSelected()" [disabled]="selectedCount() === 0"
-            title="Extract to new PDF" aria-label="Extract selected pages to a new PDF">
+          <button
+            type="button"
+            class="icon-btn"
+            (click)="extractSelected()"
+            [disabled]="selectedCount() === 0"
+            title="Extract to new PDF"
+            aria-label="Extract selected pages to a new PDF"
+          >
             <i class="fa-solid fa-file-export"></i>
           </button>
-        </div>
-        <div class="side-selection">
-          <span class="side-hint">
+          <span class="editor__selection-hint">
             {{ selectedCount() ? selectedCount() + ' selected' : 'No selection' }}
           </span>
-          <div class="side-selection-btns">
-            <button type="button" class="editor__chip" (click)="selectAll()" [disabled]="totalPages() === 0">
-              All
-            </button>
-            <button type="button" class="editor__chip" (click)="clearSelection()" [disabled]="selectedCount() === 0">
-              Clear
-            </button>
-          </div>
+          <button
+            type="button"
+            class="editor__chip"
+            (click)="selectAll()"
+            [disabled]="totalPages() === 0"
+          >
+            All
+          </button>
+          <button
+            type="button"
+            class="editor__chip"
+            (click)="clearSelection()"
+            [disabled]="selectedCount() === 0"
+          >
+            Clear
+          </button>
         </div>
-      </section>
 
-      <div class="editor__pages">
-        @for (page of pagesList(); track page.id) {
-        <div class="editor__thumb-wrap" draggable="true" (dragstart)="onDragStart(page.id)"
-          (dragover)="onDragOver($event)" (drop)="onDrop(page.id)" (click)="selectPage(page.id, $event)">
-          <app-page-thumbnail [pageIndex]="page.sourceIndex" [rotation]="page.rotation"
-            [active]="pagesStore.isSelected(page.id)"
-            [current]="pagesStore.currentId() === page.id"></app-page-thumbnail>
+        <div class="editor__pages">
+          @for (page of pagesList(); track page.id) {
+            <div
+              class="editor__thumb-wrap"
+              draggable="true"
+              (dragstart)="onDragStart(page.id)"
+              (dragover)="onDragOver($event)"
+              (drop)="onDrop(page.id)"
+              (click)="selectPage(page.id, $event)"
+            >
+              <app-page-thumbnail
+                [pageIndex]="page.sourceIndex"
+                [rotation]="page.rotation"
+                [active]="pagesStore.isSelected(page.id)"
+                [current]="pagesStore.currentId() === page.id"
+              ></app-page-thumbnail>
+            </div>
+          }
         </div>
-        }
-      </div>
       } @else {
-      <p class="side-empty">
-        <i class="fa-regular fa-file-lines"></i>
-        No document loaded.
-      </p>
+        <p class="editor__pages-hint pf-text-muted">No document loaded.</p>
       }
     </aside>
 
     <section class="editor__workspace">
       @if (loading()) {
-      <div class="editor__loading">
-        <i class="fa-solid fa-spinner fa-spin"></i> Loading document…
-      </div>
+        <div class="editor__loading">
+          <i class="fa-solid fa-spinner fa-spin"></i> Loading document…
+        </div>
       } @else if (!docName()) {
-      <div class="editor__drop">
-        <app-file-dropzone [multiple]="false" label="Open a PDF to start editing" />
-        <p class="editor__privacy">
-          <i class="fa-solid fa-lock"></i> Your file stays on this device.
-        </p>
-      </div>
+        <div class="editor__drop">
+          <app-file-dropzone
+            [multiple]="false"
+            label="Open a PDF to start editing"
+          />
+          <p class="editor__privacy">
+            <i class="fa-solid fa-lock"></i> Your file stays on this device.
+          </p>
+        </div>
       } @else {
-      <div class="editor__ngx">
-        @if (pdfSrc(); as src) {
-        <ngx-extended-pdf-viewer [src]="src" [page]="ngxPage()" [zoom]="ngxZoom()" [rotation]="ngxRotation()"
-          [handTool]="handToolOn()" [textLayer]="true" [showToolbar]="false" [showSidebarButton]="false"
-          [showSecondaryToolbarButton]="false" [showFindButton]="false" [findbarVisible]="false"
-          [pageViewMode]="'single'" (pdfLoaded)="onNgxLoaded()" (pageChange)="onNgxPageChange($event)"
-          (updateFindMatchesCount)="onFindCount($event)"
-          (annotationEditorEvent)="onAnnotationEvent($event)"></ngx-extended-pdf-viewer>
-        }
-      </div>
+        <div class="editor__canvas-stage" #stage>
+          <div
+            class="editor__page-frame"
+            [style.width.px]="displaySize()?.width"
+            [style.height.px]="displaySize()?.height"
+          >
+            <app-pdf-page
+              [pageIndex]="currentSourceIndex()"
+              [scale]="displaySize()?.scale ?? 1"
+              [rotation]="currentRotation()"
+            ></app-pdf-page>
+            <app-editor-overlay
+              [pageId]="currentPageId() ?? ''"
+              [pageIndex]="currentSourceIndex()"
+              [annotations]="currentAnnotations()"
+              [tool]="state.tool()"
+              [selectedId]="state.selectedId()"
+              [width]="displaySize()?.width ?? 0"
+              [height]="displaySize()?.height ?? 0"
+            ></app-editor-overlay>
+          </div>
+        </div>
       }
     </section>
 
     <aside class="editor__properties" aria-label="Properties">
-      <app-properties-panel
-        [docName]="docName()"
-        [activeTool]="state.tool()"
-        [styles]="state.styles()"
-        [annotations]="ngxAnnotations()"
-        [selectedId]="selectedNgxId()"
-        (styleChange)="onStyleChange($event.kind, $event.patch)"
-        (selectAnnotation)="selectNgxAnnotation($event)"
-        (updateAnnotation)="updateNgxAnnotation($event.id, $event.patch)"
-        (deleteAnnotation)="deleteNgxAnnotation($event)"
-      />
+      <app-properties-panel [docName]="docName()" />
     </aside>
   </div>
-
-  <input #imageInput type="file" accept="image/png,image/jpeg,image/webp" hidden (change)="onImageFile($event)" />
-
-  @if (signatureOpen()) {
-  <app-signature-dialog (result)="onSignatureResult($event)" (digitalResult)="onDigitalResult($event)" />
-  }
-
-  @if (stampOpen()) {
-  <app-stamp-dialog (result)="onStampResult($event)" />
-  }
 </div>
