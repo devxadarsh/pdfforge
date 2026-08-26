@@ -130,6 +130,70 @@ export interface CommentAnnotation extends BaseAnnotation {
 }
 
 /**
+ * Style defaults for a single annotation tool. Applied to the active ngx
+ * annotation editor so newly drawn annotations adopt the chosen look, and used
+ * to drive underline/strikethrough/shape vector annotations.
+ */
+export type AnnotationStyleKind =
+  | 'text'
+  | 'highlight'
+  | 'underline'
+  | 'strikethrough'
+  | 'pen'
+  | 'freehand'
+  | 'comment';
+
+export interface AnnotationStyle {
+  color: string;
+  opacity: number;
+  fontSize: number;
+  fontFamily: string;
+  align: 'left' | 'center' | 'right';
+  thickness: number;
+}
+
+export const DEFAULT_ANNOTATION_STYLES: Record<AnnotationStyleKind, AnnotationStyle> = {
+  text: { color: '#1c1b1b', opacity: 1, fontSize: 16, fontFamily: 'sans-serif', align: 'left', thickness: 2 },
+  highlight: { color: '#ffe066', opacity: 1, fontSize: 16, fontFamily: 'sans-serif', align: 'left', thickness: 12 },
+  underline: { color: '#1c1b1b', opacity: 1, fontSize: 16, fontFamily: 'sans-serif', align: 'left', thickness: 2 },
+  strikethrough: { color: '#e5484d', opacity: 1, fontSize: 16, fontFamily: 'sans-serif', align: 'left', thickness: 2 },
+  pen: { color: '#1c1b1b', opacity: 1, fontSize: 16, fontFamily: 'sans-serif', align: 'left', thickness: 3 },
+  freehand: { color: '#1c1b1b', opacity: 1, fontSize: 16, fontFamily: 'sans-serif', align: 'left', thickness: 3 },
+  comment: { color: '#1c1b1b', opacity: 1, fontSize: 16, fontFamily: 'sans-serif', align: 'left', thickness: 2 },
+};
+
+/** Normalized view of an ngx-extended-pdf-viewer editor annotation. */
+export type NgxAnnotationKind =
+  | 'text'
+  | 'highlight'
+  | 'underline'
+  | 'strikethrough'
+  | 'ink'
+  | 'stamp'
+  | 'comment'
+  | 'image';
+
+export interface NgxAnnotationView {
+  id: string;
+  kind: NgxAnnotationKind;
+  color: string;
+  opacity: number;
+  fontSize: number;
+  thickness: number;
+  text: string;
+  pageIndex: number;
+}
+
+/** Editable fields for an existing ngx annotation (patch applied via re-add). */
+export interface NgxAnnotationPatch {
+  color?: string;
+  opacity?: number;
+  fontSize?: number;
+  thickness?: number;
+  text?: string;
+}
+
+/**
  * A text run extracted from a source PDF page via PDF.js.
  * Geometry is stored in the page's unrotated PDF user space
  * (origin bottom-left, y up) so it stays correct across zoom/rotation.

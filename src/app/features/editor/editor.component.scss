@@ -85,6 +85,7 @@
   padding: 4px 8px 0;
   margin-bottom: 12px;
 }
+
 .side-head__icon {
   display: grid;
   place-items: center;
@@ -96,11 +97,13 @@
   color: var(--pf-on-primary-container);
   font-size: 15px;
 }
+
 .side-head__text {
   display: flex;
   flex-direction: column;
   line-height: 1.15;
 }
+
 .side-head__eyebrow {
   font-size: 11px;
   font-weight: 600;
@@ -108,12 +111,14 @@
   text-transform: uppercase;
   color: var(--pf-on-surface-variant);
 }
+
 .side-head__heading {
   margin: 0;
   font-size: 17px;
   font-weight: 700;
   color: var(--pf-on-surface);
 }
+
 .side-head__count {
   margin-left: auto;
   font-family: var(--pf-font-mono);
@@ -138,15 +143,18 @@
   padding: 10px;
   margin-bottom: 12px;
 }
+
 .side-actions {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 4px;
 }
+
 .side-actions .icon-btn {
   flex: 0 0 auto;
 }
+
 .side-selection {
   display: flex;
   align-items: center;
@@ -155,11 +163,13 @@
   padding-top: 10px;
   border-top: 1px solid var(--pf-outline-variant);
 }
+
 .side-hint {
   font-size: 12px;
   font-weight: 600;
   color: var(--pf-on-surface-variant);
 }
+
 .side-selection-btns {
   display: flex;
   gap: 6px;
@@ -212,6 +222,7 @@
   font-size: 13px;
   color: var(--pf-on-surface-variant);
 }
+
 .side-empty i {
   font-size: 18px;
   color: var(--pf-on-surface-variant);
@@ -224,23 +235,24 @@
   overflow: hidden;
 }
 
-.editor__canvas-stage {
+.editor__ngx {
   position: relative;
   width: 100%;
   height: 100%;
-  overflow: auto;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 16px;
-  box-sizing: border-box;
+  overflow: hidden;
+  background: var(--pf-surface-container);
 }
 
-.editor__page-frame {
-  position: relative;
-  flex: 0 0 auto;
-  box-shadow: var(--pf-shadow-3);
-  background: #ffffff;
+.editor__ngx ngx-extended-pdf-viewer {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background: var(--pf-surface-container);
+}
+
+.editor__ngx ngx-extended-pdf-viewer > div,
+.editor__ngx ::ng-deep .pdfViewer#viewer {
+  background-color: var(--pf-surface-container) !important;
 }
 
 .editor__drop {
@@ -456,11 +468,9 @@
   padding: 0 16px;
   border: none;
   border-radius: var(--pf-radius-md);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--pf-primary) 90%, #ffffff 10%),
-    var(--pf-primary)
-  );
+  background: linear-gradient(180deg,
+      color-mix(in srgb, var(--pf-primary) 90%, #ffffff 10%),
+      var(--pf-primary));
   color: var(--pf-on-primary);
   font-family: var(--pf-font-base);
   font-size: 13px;
@@ -469,23 +479,28 @@
   box-shadow: var(--pf-shadow-2);
   transition: transform 0.12s ease, filter 0.15s ease, box-shadow 0.15s ease;
 }
+
 .export-btn:hover:not(:disabled) {
   filter: brightness(1.05);
   box-shadow: var(--pf-shadow-3);
 }
+
 .export-btn:active:not(:disabled) {
   transform: translateY(1px);
   filter: brightness(0.97);
 }
+
 .export-btn:focus-visible {
   outline: 2px solid var(--pf-primary);
   outline-offset: 2px;
 }
+
 .export-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   box-shadow: none;
 }
+
 .export-btn__icon {
   display: inline-flex;
   align-items: center;
@@ -505,6 +520,7 @@
   .editor__body {
     grid-template-columns: 200px 1fr;
   }
+
   .editor__properties {
     display: none;
   }
@@ -514,6 +530,7 @@
   .editor__body {
     grid-template-columns: 1fr;
   }
+
   .editor__sidebar {
     display: none;
   }

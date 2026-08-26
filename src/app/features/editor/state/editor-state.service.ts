@@ -5,6 +5,9 @@ import {
   PendingMedia,
   DigitalSignatureRequest,
   TextEditOverrides,
+  AnnotationStyleKind,
+  AnnotationStyle,
+  DEFAULT_ANNOTATION_STYLES,
 } from '../../../core/models/pdf.models';
 import { EditorPagesService } from './editor-pages.service';
 
@@ -29,6 +32,9 @@ export class EditorStateService {
     new Map(),
   );
   private readonly _textEditEnabled = signal(false);
+  private readonly _styles = signal<Record<AnnotationStyleKind, AnnotationStyle>>(
+    structuredClone(DEFAULT_ANNOTATION_STYLES),
+  );
 
   readonly tool = this._tool.asReadonly();
   readonly zoom = this._zoom.asReadonly();
@@ -40,6 +46,17 @@ export class EditorStateService {
   readonly digitalSignature = this._digitalSignature.asReadonly();
   readonly textOverrides = this._textOverrides.asReadonly();
   readonly textEditEnabled = this._textEditEnabled.asReadonly();
+  readonly styles = this._styles.asReadonly();
+
+  style(kind: AnnotationStyleKind): AnnotationStyle {
+    return this._styles()[kind];
+  }
+
+  updateStyle(kind: AnnotationStyleKind, patch: Partial<AnnotationStyle>): void {
+    const map = { ...this._styles() };
+    map[kind] = { ...map[kind], ...patch };
+    this._styles.set(map);
+  }
 
   setDigitalSignature(req: DigitalSignatureRequest | null): void {
     this._digitalSignature.set(req);

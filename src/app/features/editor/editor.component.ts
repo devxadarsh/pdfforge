@@ -10,8 +10,24 @@ import {
 } from '@angular/core';
 import { NgClass, KeyValuePipe } from '@angular/common';
 import { HostListener } from '@angular/core';
+import {
+  NgxExtendedPdfViewerModule,
+  NgxExtendedPdfViewerService,
+  FindResultMatchesCount,
+  AnnotationEditorType,
+  AnnotationEditorEvent,
+  EditorAnnotation,
+} from 'ngx-extended-pdf-viewer';
 import { EDITOR_TOOLS } from '../../core/constants/tools';
-import { PdfToolId, SignatureResult, DigitalSignatureRequest } from '../../core/models/pdf.models';
+import {
+  PdfToolId,
+  SignatureResult,
+  DigitalSignatureRequest,
+  AnnotationStyleKind,
+  AnnotationStyle,
+  NgxAnnotationView,
+  NgxAnnotationPatch,
+} from '../../core/models/pdf.models';
 import { LoadedFile } from '../../core/models/file.models';
 import { FileDropzoneComponent } from '../../shared/components/dropzone/file-dropzone.component';
 import { FileService } from '../../core/services/file/file.service';
@@ -21,10 +37,7 @@ import { PdfExportService, ExportTextEdit } from '../../core/services/pdf/pdf-ex
 import { PdfSignService } from '../../core/services/pdf/pdf-sign.service';
 import { ToastService } from '../../core/services/toast.service';
 import { SignatureBridgeService } from '../../core/services/signature-bridge.service';
-import { PdfPageComponent } from './components/pdf-page/pdf-page.component';
 import { PageThumbnailComponent } from './components/page-thumbnail/page-thumbnail.component';
-import { EditorOverlayComponent } from './components/editor-overlay/editor-overlay.component';
-import { EditorTextLayerComponent } from './components/editor-text-layer/editor-text-layer.component';
 import { PropertiesPanelComponent } from './components/properties-panel/properties-panel.component';
 import { SignatureDialogComponent } from './components/signature-dialog/signature-dialog.component';
 import { StampDialogComponent } from './components/stamp-dialog/stamp-dialog.component';
@@ -32,17 +45,80 @@ import { EditorPagesService } from './state/editor-pages.service';
 import { EditorStateService } from './state/editor-state.service';
 import { EditorHistoryService } from './state/editor-history.service';
 
+function hexToRgbArray(hex: string): number[] {
+  const clean = hex.replace('#', '');
+  const full =
+    clean.length === 3
+      ? clean
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : clean;
+  const num = parseInt(full, 16);
+  return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+}
+
+function rgbArrayToHex(rgb: unknown): string {
+  if (!Array.isArray(rgb) || rgb.length < 3) {
+    return '#1c1b1b';
+  }
+  const toHex = (n: number) =>
+    Math.max(0, Math.min(255, Math.round(n)))
+      .toString(16)
+      .padStart(2, '0');
+  return `#${toHex(rgb[0])}${toHex(rgb[1])}${toHex(rgb[2])}`;
+}
+
+function toNgxView(a: Record<string, unknown>): NgxAnnotationView | null {
+  const type = a['annotationType'] as number | undefined;
+  const id = (a['id'] as string | undefined) ?? '';
+  const pageIndex = (a['pageIndex'] as number | undefined) ?? 0;
+  if (!id) {
+    return null;
+  }
+  let kind: NgxAnnotationView['kind'];
+  switch (type) {
+    case 3:
+      kind = 'text';
+      break;
+    case 9:
+      kind = 'highlight';
+      break;
+    case 13:
+      kind = 'stamp';
+      break;
+    case 15:
+      kind = 'ink';
+      break;
+    case 16:
+      kind = 'comment';
+      break;
+    default:
+      kind = 'image';
+  }
+  const text =
+    (a['value'] as string) ?? (a['content'] as string) ?? '';
+  return {
+    id,
+    kind,
+    color: rgbArrayToHex(a['color']),
+    opacity: (a['opacity'] as number) ?? 1,
+    fontSize: (a['fontSize'] as number) ?? 16,
+    thickness: (a['thickness'] as number) ?? 2,
+    text,
+    pageIndex,
+  };
+}
+
 @Component({
   selector: 'app-editor',
   standalone: true,
   imports: [
     NgClass,
     KeyValuePipe,
+    NgxExtendedPdfViewerModule,
     FileDropzoneComponent,
-    PdfPageComponent,
     PageThumbnailComponent,
-    EditorOverlayComponent,
-    EditorTextLayerComponent,
     PropertiesPanelComponent,
     SignatureDialogComponent,
     StampDialogComponent,
@@ -62,9 +138,38 @@ export class EditorComponent {
   readonly pagesStore = inject(EditorPagesService);
   readonly state = inject(EditorStateService);
   readonly history = inject(EditorHistoryService);
+  private readonly pdfViewer = inject(NgxExtendedPdfViewerService);
 
   readonly exporting = signal(false);
   readonly viewbarVisible = signal(true);
+
+  /** Blob URL of the loaded PDF, fed to <ngx-extended-pdf-viewer>. */
+  readonly pdfSrc = signal<string | null>(null);
+  readonly ngxReady = signal(false);
+  private readonly pendingSearch = signal<string | null>(null);
+
+  /** Whether the ngx hand tool (pan/drag) is active. */
+  readonly handToolOn = signal(false);
+
+  /** Live ngx editor annotations (text/highlight/ink/popup/stamp/image). */
+  readonly ngxAnnotations = signal<NgxAnnotationView[]>([]);
+  readonly selectedNgxId = signal<string | null>(null);
+
+  /** The currently selected ngx annotation (for the properties inspector). */
+  readonly selectedNgxAnnotation = computed(
+    () =>
+      this.ngxAnnotations().find((a) => a.id === this.selectedNgxId()) ??
+      null,
+  );
+
+  /** Maps a toolbar tool to a pdf.js annotation editor mode (when applicable). */
+  private readonly editorModeTools: Partial<Record<PdfToolId, number>> = {
+    text: AnnotationEditorType.FREETEXT,
+    highlight: AnnotationEditorType.HIGHLIGHT,
+    pen: AnnotationEditorType.INK,
+    freehand: AnnotationEditorType.INK,
+    comment: AnnotationEditorType.POPUP,
+  };
 
   readonly tools = EDITOR_TOOLS;
 
@@ -157,6 +262,26 @@ export class EditorComponent {
     return `${Math.round(this.state.zoom() * 100)}%`;
   });
 
+  /** 1-based document page number (source order) for <ngx-extended-pdf-viewer>. */
+  readonly ngxPage = computed(() => this.currentSourceIndex() + 1);
+
+  /** Zoom value understood by ngx-extended-pdf-viewer. */
+  readonly ngxZoom = computed<string | number>(() => {
+    const fit = this.state.fitMode();
+    if (fit === 'width') {
+      return 'page-width';
+    }
+    if (fit === 'page') {
+      return 'page-fit';
+    }
+    return Math.round(this.state.zoom() * 100);
+  });
+
+  /** Rotation accepted by ngx-extended-pdf-viewer (literal union). */
+  readonly ngxRotation = computed<0 | 90 | 180 | 270>(
+    () => (this.currentRotation() % 360) as 0 | 90 | 180 | 270,
+  );
+
   readonly searchCountLabel = computed(() => {
     if (!this.searchQuery().trim()) {
       return '';
@@ -166,8 +291,12 @@ export class EditorComponent {
     if (total === 0) {
       return 'No matches';
     }
-    const matches = `${total} match${total !== 1 ? 'es' : ''}`;
+    const current = this.searchHitIndex();
     const pages = `${pageCount} page${pageCount !== 1 ? 's' : ''}`;
+    if (current > 0) {
+      return `Match ${current} / ${total} · ${pages}`;
+    }
+    const matches = `${total} match${total !== 1 ? 'es' : ''}`;
     return `${matches} · ${pages}`;
   });
 
@@ -218,15 +347,12 @@ export class EditorComponent {
         if (!file || !pending) {
           return;
         }
-        this.state.setPendingMedia({
-          kind: 'signature',
-          dataUrl: pending.dataUrl,
-          naturalWidth: pending.width,
-          naturalHeight: pending.height,
-        });
-        this.state.setTool('signature');
         this.signatureBridge.clear();
-        this.toasts.info('Click on the page to place your signature.');
+        this.addImageAnnotation(
+          pending.dataUrl,
+          pending.width,
+          pending.height,
+        );
       },
       { allowSignalWrites: true },
     );
@@ -250,6 +376,20 @@ export class EditorComponent {
 
   ngOnDestroy(): void {
     this.ro?.disconnect();
+    const src = this.pdfSrc();
+    if (src) {
+      URL.revokeObjectURL(src);
+    }
+  }
+
+  private setPdfSrc(data: ArrayBuffer): void {
+    const prev = this.pdfSrc();
+    if (prev) {
+      URL.revokeObjectURL(prev);
+    }
+    const blob = new Blob([data], { type: 'application/pdf' });
+    this.pdfSrc.set(URL.createObjectURL(blob));
+    this.ngxReady.set(false);
   }
 
   selectTool(id: PdfToolId): void {
@@ -265,7 +405,57 @@ export class EditorComponent {
       this.stampOpen.set(true);
       return;
     }
-    this.state.setTool(id);
+    if (id === 'hand') {
+      this.handToolOn.set(true);
+      this.state.setTool('hand');
+      this.activateEditorMode(AnnotationEditorType.NONE);
+      return;
+    }
+    if (id === 'select') {
+      this.handToolOn.set(false);
+      this.state.setTool('select');
+      this.activateEditorMode(AnnotationEditorType.NONE);
+      return;
+    }
+    const mode = this.editorModeTools[id];
+    if (mode !== undefined) {
+      this.handToolOn.set(false);
+      this.state.setTool(id);
+      this.activateEditorMode(mode);
+      this.applyStyleToEditor(id as AnnotationStyleKind);
+      return;
+    }
+    this.handToolOn.set(false);
+    this.applyActionTool(id);
+  }
+
+  /** Switches the live annotation editor mode in the ngx viewer. */
+  private activateEditorMode(mode: number): void {
+    if (!this.ngxReady()) {
+      this.toasts.info('The document is still loading. Try again in a moment.');
+      return;
+    }
+    this.pdfViewer.switchAnnotationEdtorMode(mode);
+  }
+
+  /** Pushes the saved style defaults for a tool into the ngx editor so newly
+   * drawn annotations adopt the chosen color/size/opacity/thickness. */
+  private applyStyleToEditor(kind: AnnotationStyleKind): void {
+    if (!this.ngxReady()) {
+      return;
+    }
+    const s = this.state.style(kind);
+    if (kind === 'text') {
+      this.pdfViewer.editorFontSize = s.fontSize;
+      this.pdfViewer.editorFontColor = s.color;
+    } else if (kind === 'highlight') {
+      this.pdfViewer.editorHighlightColor = s.color;
+      this.pdfViewer.editorHighlightThickness = s.thickness;
+    } else if (kind === 'pen' || kind === 'freehand') {
+      this.pdfViewer.editorInkColor = s.color;
+      this.pdfViewer.editorInkThickness = s.thickness;
+      this.pdfViewer.editorInkOpacity = s.opacity;
+    }
   }
 
   private openImagePicker(): void {
@@ -284,14 +474,7 @@ export class EditorComponent {
       const dataUrl = reader.result as string;
       const img = new Image();
       img.onload = () => {
-        this.state.setPendingMedia({
-          kind: 'image',
-          dataUrl,
-          naturalWidth: img.naturalWidth,
-          naturalHeight: img.naturalHeight,
-        });
-        this.state.setTool('image');
-        this.toasts.info('Click on the page to place the image.');
+        this.addImageAnnotation(dataUrl, img.naturalWidth, img.naturalHeight);
       };
       img.src = dataUrl;
     };
@@ -303,14 +486,7 @@ export class EditorComponent {
     if (!result) {
       return;
     }
-    this.state.setPendingMedia({
-      kind: 'signature',
-      dataUrl: result.dataUrl,
-      naturalWidth: result.width,
-      naturalHeight: result.height,
-    });
-    this.state.setTool('signature');
-    this.toasts.info('Click on the page to place the signature.');
+    this.addImageAnnotation(result.dataUrl, result.width, result.height);
   }
 
   onDigitalResult(result: DigitalSignatureRequest | null): void {
@@ -329,9 +505,296 @@ export class EditorComponent {
     if (!result) {
       return;
     }
-    this.state.setPendingMedia({ kind: 'stamp', text: result.text, color: result.color });
-    this.state.setTool('stamp');
-    this.toasts.info('Click on the page to place the stamp.');
+    this.addStamp(result.text, result.color);
+  }
+
+  /* ---- Annotation creation (delegated to ngx-extended-pdf-viewer) ---- */
+
+  private currentPageSize(): PageSize | null {
+    const idx = this.currentSourceIndex();
+    if (idx < 0) {
+      return null;
+    }
+    return this.baseSizes().get(idx) ?? null;
+  }
+
+  /** Adds an image (signature / uploaded image) as a real stamp annotation. */
+  private addImageAnnotation(
+    dataUrl: string,
+    naturalWidth: number,
+    naturalHeight: number,
+  ): void {
+    const size = this.currentPageSize();
+    const idx = this.currentSourceIndex();
+    if (!size || idx < 0) {
+      this.toasts.error('Open a document before adding media.');
+      return;
+    }
+    const maxWidth = 200;
+    const scale = naturalWidth > maxWidth ? maxWidth / naturalWidth : 1;
+    const w = naturalWidth * scale;
+    const h = naturalHeight * scale;
+    const left = size.width / 2 - w / 2;
+    const bottom = size.height / 2 - h / 2;
+    void this.pdfViewer
+      .addImageToAnnotationLayer({
+        urlOrDataUrl: dataUrl,
+        page: idx,
+        left,
+        bottom,
+        right: left + w,
+        top: bottom + h,
+        rotation: 0,
+      })
+      .then(() => {
+        this.toasts.success(`Added to page ${idx + 1}`);
+        this.state.setTool('select');
+        this.activateEditorMode(AnnotationEditorType.NONE);
+      })
+      .catch(() => this.toasts.error('Could not add the image.'));
+  }
+
+  /** Adds a vector shape / text rendered to SVG as a real stamp annotation. */
+  private addSvgAnnotation(svg: string, width: number, height: number): void {
+    const size = this.currentPageSize();
+    const idx = this.currentSourceIndex();
+    if (!size || idx < 0) {
+      this.toasts.error('Open a document before adding annotations.');
+      return;
+    }
+    const dataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    const left = size.width / 2 - width / 2;
+    const bottom = size.height / 2 - height / 2;
+    void this.pdfViewer
+      .addImageToAnnotationLayer({
+        urlOrDataUrl: dataUrl,
+        page: idx,
+        left,
+        bottom,
+        right: left + width,
+        top: bottom + height,
+        rotation: 0,
+      })
+      .then(() => {
+        this.toasts.success(`Added to page ${idx + 1}`);
+        this.state.setTool('select');
+        this.activateEditorMode(AnnotationEditorType.NONE);
+      })
+      .catch(() => this.toasts.error('Could not add the annotation.'));
+  }
+
+  private addShape(kind: string): void {
+    const styleKind: AnnotationStyleKind =
+      kind === 'underline'
+        ? 'underline'
+        : kind === 'strikethrough'
+          ? 'strikethrough'
+          : 'pen';
+    const s = this.state.style(styleKind);
+    const ink = s.color;
+    const sw = Math.max(1, s.thickness);
+    const op = s.opacity;
+    const wrap = (inner: string) => `<g opacity="${op}">${inner}</g>`;
+    switch (kind) {
+      case 'rectangle': {
+        const w = 220;
+        const h = 140;
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">${wrap(`<rect x="1" y="1" width="${w - 2}" height="${h - 2}" fill="none" stroke="${ink}" stroke-width="${sw}"/>`)}</svg>`;
+        this.addSvgAnnotation(svg, w, h);
+        break;
+      }
+      case 'circle': {
+        const w = 160;
+        const h = 160;
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">${wrap(`<ellipse cx="${w / 2}" cy="${h / 2}" rx="${w / 2 - 1}" ry="${h / 2 - 1}" fill="none" stroke="${ink}" stroke-width="${sw}"/>`)}</svg>`;
+        this.addSvgAnnotation(svg, w, h);
+        break;
+      }
+      case 'line': {
+        const w = 220;
+        const h = 6;
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">${wrap(`<line x1="0" y1="${h / 2}" x2="${w}" y2="${h / 2}" stroke="${ink}" stroke-width="${sw}"/>`)}</svg>`;
+        this.addSvgAnnotation(svg, w, h);
+        break;
+      }
+      case 'arrow': {
+        const w = 220;
+        const h = 12;
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">${wrap(`<line x1="0" y1="${h / 2}" x2="${w - 10}" y2="${h / 2}" stroke="${ink}" stroke-width="${sw}"/><polygon points="${w - 2},${h / 2} ${w - 10},${h / 2 - 5} ${w - 10},${h / 2 + 5}" fill="${ink}"/>`)}</svg>`;
+        this.addSvgAnnotation(svg, w, h);
+        break;
+      }
+      case 'underline': {
+        const w = 220;
+        const h = 4;
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">${wrap(`<line x1="0" y1="${h - 1}" x2="${w}" y2="${h - 1}" stroke="${ink}" stroke-width="${sw}"/>`)}</svg>`;
+        this.addSvgAnnotation(svg, w, h);
+        break;
+      }
+      case 'strikethrough': {
+        const w = 220;
+        const h = 4;
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}">${wrap(`<line x1="0" y1="${h / 2}" x2="${w}" y2="${h / 2}" stroke="${ink}" stroke-width="${sw}"/>`)}</svg>`;
+        this.addSvgAnnotation(svg, w, h);
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  private addStamp(text: string, color: string): void {
+    const escaped = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+    const fontSize = 18;
+    const w = Math.max(80, escaped.length * fontSize * 0.6 + 16);
+    const h = fontSize * 1.6;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><text x="8" y="${h * 0.75}" font-family="sans-serif" font-size="${fontSize}" font-weight="700" fill="${color}">${escaped}</text></svg>`;
+    this.addSvgAnnotation(svg, w, h);
+  }
+
+  private applyActionTool(id: PdfToolId): void {
+    if (id === 'eraser') {
+      this.erasePageAnnotations();
+      return;
+    }
+    this.addShape(id);
+  }
+
+  private erasePageAnnotations(): void {
+    const idx = this.currentSourceIndex();
+    if (idx < 0) {
+      this.toasts.error('Open a document first.');
+      return;
+    }
+    this.pdfViewer.removeEditorAnnotations((a: object) => {
+      const rec = a as { pageIndex?: number };
+      return rec.pageIndex === idx;
+    });
+    this.toasts.success(`Cleared annotations on page ${idx + 1}`);
+  }
+
+  /* ---- Live ngx annotation tracking + properties ---- */
+
+  /** Handles annotation editor events emitted by ngx-extended-pdf-viewer. */
+  onAnnotationEvent(event: AnnotationEditorEvent): void {
+    if (
+      event.id &&
+      [
+        'added',
+        'commit',
+        'colorChanged',
+        'fontSizeChanged',
+        'thicknessChanged',
+        'opacityChanged',
+        'sizeChanged',
+        'moved',
+      ].includes(event.type)
+    ) {
+      this.selectedNgxId.set(event.id);
+    }
+    if (event.type === 'removed' && this.selectedNgxId() === event.id) {
+      this.selectedNgxId.set(null);
+    }
+    this.scheduleAnnotationRefresh();
+  }
+
+  selectNgxAnnotation(id: string): void {
+    this.selectedNgxId.set(id);
+  }
+
+  /** Commits a style default change from the properties panel. */
+  onStyleChange(kind: AnnotationStyleKind, patch: Partial<AnnotationStyle>): void {
+    this.state.updateStyle(kind, patch);
+    const active = this.state.tool();
+    const toolToStyle: Partial<Record<PdfToolId, AnnotationStyleKind>> = {
+      text: 'text',
+      highlight: 'highlight',
+      pen: 'pen',
+      freehand: 'freehand',
+      comment: 'comment',
+    };
+    if (toolToStyle[active] === kind) {
+      this.applyStyleToEditor(kind);
+    }
+  }
+
+  async updateNgxAnnotation(id: string, patch: NgxAnnotationPatch): Promise<void> {
+    const list = this.pdfViewer.getSerializedAnnotations();
+    const current = list?.find((a) => (a as { id?: string }).id === id);
+    if (!current) {
+      return;
+    }
+    const next = { ...current } as Record<string, unknown>;
+    if (patch.color !== undefined) {
+      next['color'] = hexToRgbArray(patch.color);
+    }
+    if (patch.opacity !== undefined) {
+      next['opacity'] = patch.opacity;
+    }
+    if (patch.fontSize !== undefined) {
+      next['fontSize'] = patch.fontSize;
+    }
+    if (patch.thickness !== undefined) {
+      next['thickness'] = patch.thickness;
+    }
+    if (patch.text !== undefined) {
+      if (next['annotationType'] === 3) {
+        next['value'] = patch.text;
+      } else if (next['annotationType'] === 16) {
+        next['content'] = patch.text;
+      }
+    }
+    this.pdfViewer.removeEditorAnnotations(
+      (a: object) => (a as { id?: string }).id === id,
+    );
+    await this.pdfViewer.addEditorAnnotation(next as unknown as EditorAnnotation);
+    const refreshed = this.pdfViewer.getSerializedAnnotations() ?? [];
+    const match = refreshed.find(
+      (a) =>
+        (a as { annotationType?: number }).annotationType ===
+          (current as { annotationType?: number }).annotationType &&
+        (a as { pageIndex?: number }).pageIndex ===
+          (current as { pageIndex?: number }).pageIndex &&
+        ((a as { value?: string }).value ?? (a as { content?: string }).content) ===
+          ((next['value'] as string) ??
+            (next['content'] as string) ??
+            (current as { value?: string }).value ??
+            (current as { content?: string }).content),
+    );
+    this.selectedNgxId.set(match?.id ?? null);
+    this.refreshAnnotations();
+  }
+
+  deleteNgxAnnotation(id: string): void {
+    this.pdfViewer.removeEditorAnnotations(
+      (a: object) => (a as { id?: string }).id === id,
+    );
+    if (this.selectedNgxId() === id) {
+      this.selectedNgxId.set(null);
+    }
+    this.scheduleAnnotationRefresh();
+  }
+
+  private refreshAnnotations(): void {
+    const raw = this.pdfViewer.getSerializedAnnotations();
+    if (!raw) {
+      this.ngxAnnotations.set([]);
+      return;
+    }
+    const views = raw
+      .map((a) => toNgxView(a as Record<string, unknown>))
+      .filter((v): v is NgxAnnotationView => v !== null);
+    this.ngxAnnotations.set(views);
+  }
+
+  private refreshTimer?: ReturnType<typeof setTimeout>;
+  private scheduleAnnotationRefresh(): void {
+    clearTimeout(this.refreshTimer);
+    this.refreshTimer = setTimeout(() => this.refreshAnnotations(), 120);
   }
 
   private async load(file: LoadedFile): Promise<void> {
@@ -344,6 +807,7 @@ export class EditorComponent {
       this.history.reset();
       this.clearSearch();
       this.loadedRef = file;
+      this.setPdfSrc(file.data);
       void this.prefetch(count);
       this.toasts.success(`Opened ${file.name}`);
     } catch (err) {
@@ -484,6 +948,20 @@ export class EditorComponent {
     }
     this.exporting.set(true);
     try {
+      let baseBytes = new Uint8Array(file.data.slice(0));
+      if (this.ngxReady()) {
+        const annotations = this.pdfViewer.getSerializedAnnotations();
+        if (annotations && annotations.length) {
+          try {
+            const blob = await this.pdfViewer.getCurrentDocumentAsBlob();
+            if (blob) {
+              baseBytes = new Uint8Array(await blob.arrayBuffer());
+            }
+          } catch {
+            /* keep original bytes if the serialized export fails */
+          }
+        }
+      }
       const display = this.displaySize();
       const scale = display?.scale ?? 1;
       const pages = this.pagesStore.pages().map((p) => {
@@ -494,15 +972,13 @@ export class EditorComponent {
           width: base?.width ?? 0,
           height: base?.height ?? 0,
           scale,
-          annotations: this.state.annotationsFor(p.id),
+          annotations: [],
         };
       });
-      const textEdits = await this.buildTextEdits();
-      let bytes = await this.exporter.exportDocument(
-        new Uint8Array(file.data.slice(0)),
-        pages,
-        { title: file.name.replace(/\.pdf$/i, ''), textEdits },
-      );
+      let bytes = await this.exporter.exportDocument(baseBytes, pages, {
+        title: file.name.replace(/\.pdf$/i, ''),
+        textEdits: [],
+      });
       const digital = this.state.digitalSignature();
       if (digital) {
         bytes = await this.signer.sign(bytes, digital);
@@ -591,67 +1067,75 @@ export class EditorComponent {
     this.state.resetZoom();
   }
 
-  /* Search */
+  /* Search (delegated to ngx-extended-pdf-viewer's FindController) */
   onSearch(value: string): void {
     this.searchQuery.set(value);
     clearTimeout(this.searchTimer);
-    this.searchTimer = setTimeout(() => void this.runSearch(value), 300);
+    this.searchTimer = setTimeout(() => this.runSearch(value), 300);
   }
 
-  private async runSearch(query: string): Promise<void> {
-    const q = query.trim().toLowerCase();
+  private runSearch(query: string): void {
+    const q = query.trim();
     if (!q) {
       this.clearSearch();
       return;
     }
-    const pages = this.pagesStore.pages();
-    const hits: number[] = [];
-    let total = 0;
-    for (let i = 0; i < pages.length; i++) {
-      const text = (await this.viewer.getPageText(pages[i].sourceIndex)).toLowerCase();
-      let found = 0;
-      let pos = text.indexOf(q);
-      while (pos !== -1) {
-        found++;
-        pos = text.indexOf(q, pos + q.length);
-      }
-      if (found > 0) {
-        hits.push(i);
-        total += found;
-      }
-    }
-    this.searchHits.set(hits);
-    this.searchTotal.set(total);
-    this.searchHitIndex.set(hits.length ? 0 : -1);
-    if (hits.length) {
-      this.pagesStore.setCurrent(pages[hits[0]].id);
+    this.searchQuery.set(q);
+    if (this.ngxReady()) {
+      this.pdfViewer.find(q, { findMultiple: true, highlightAll: true });
+    } else {
+      this.pendingSearch.set(q);
     }
   }
 
   searchNext(): void {
-    const hits = this.searchHits();
-    if (!hits.length) {
-      return;
-    }
-    const idx = (this.searchHitIndex() + 1) % hits.length;
-    this.searchHitIndex.set(idx);
-    this.pagesStore.setCurrent(this.pagesStore.pages()[hits[idx]].id);
+    this.pdfViewer.findNext();
   }
 
   searchPrev(): void {
-    const hits = this.searchHits();
-    if (!hits.length) {
-      return;
-    }
-    const idx = (this.searchHitIndex() - 1 + hits.length) % hits.length;
-    this.searchHitIndex.set(idx);
-    this.pagesStore.setCurrent(this.pagesStore.pages()[hits[idx]].id);
+    this.pdfViewer.findPrevious();
   }
 
   clearSearch(): void {
     this.searchQuery.set('');
-    this.searchHits.set([]);
+    this.pendingSearch.set(null);
     this.searchTotal.set(0);
+    this.searchHits.set([]);
     this.searchHitIndex.set(-1);
+    if (this.ngxReady()) {
+      this.pdfViewer.find('');
+    }
+  }
+
+  /* ngx-extended-pdf-viewer integration */
+  onNgxLoaded(): void {
+    this.ngxReady.set(true);
+    this.refreshAnnotations();
+    // Re-apply the active tool's style defaults once the viewer is ready.
+    const active = this.state.tool();
+    if (active === 'text' || active === 'highlight' || active === 'pen' || active === 'freehand' || active === 'comment') {
+      this.applyStyleToEditor(active as AnnotationStyleKind);
+    }
+    const pending = this.pendingSearch();
+    if (pending) {
+      this.pendingSearch.set(null);
+      this.runSearch(pending);
+    }
+  }
+
+  onNgxPageChange(page: number): void {
+    const target = this.pagesStore
+      .pages()
+      .find((p) => p.sourceIndex === page - 1);
+    if (target) {
+      this.pagesStore.setCurrent(target.id);
+    }
+  }
+
+  onFindCount(event: FindResultMatchesCount): void {
+    this.searchTotal.set(event.total);
+    this.searchHits.set(Array.isArray(event.matches) ? event.matches : []);
+    const current = event.current ?? -1;
+    this.searchHitIndex.set(current > 0 ? current : -1);
   }
 }
