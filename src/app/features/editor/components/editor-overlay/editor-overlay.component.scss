@@ -1,0 +1,60 @@
+:host {
+  display: block;
+  position: absolute;
+  inset: 0;
+}
+
+.overlay {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  user-select: none;
+}
+
+.sel {
+  fill: none;
+  stroke: #2563eb;
+  stroke-dasharray: 4 3;
+  stroke-width: 1.5;
+}
+
+.handle {
+  fill: #ffffff;
+  stroke: #2563eb;
+  stroke-width: 1.5;
+  pointer-events: all;
+}
+
+.handle:hover {
+  fill: #2563eb;
+}
+
+.draft {
+  fill: rgba(37, 99, 235, 0.12);
+  stroke: #2563eb;
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+}
+
+.comment {
+  cursor: pointer;
+}
+
+.text-editor {
+  position: absolute;
+  margin: 0;
+  padding: 8px 10px;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.92);
+  resize: none;
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+  line-height: 1.35;
+  white-space: pre;
+  overflow: hidden;
+  z-index: 5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}

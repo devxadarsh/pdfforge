@@ -16,25 +16,8 @@ import {
   selector: 'app-pdf-page',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<div class="pdf-page" #host><canvas #canvas></canvas></div>`,
-  styles: [
-    `
-      :host {
-        display: block;
-        width: 100%;
-        height: 100%;
-      }
-      .pdf-page {
-        display: block;
-        width: 100%;
-        height: 100%;
-      }
-      canvas {
-        display: block;
-        background: #ffffff;
-      }
-    `,
-  ],
+  templateUrl: './pdf-page.component.html',
+  styleUrl: './pdf-page.component.scss',
 })
 export class PdfPageComponent {
   private readonly viewer = inject(PdfViewerService);

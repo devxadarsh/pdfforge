@@ -1,0 +1,258 @@
+<div class="props">
+  <header class="props__head">
+    <span class="props__icon"><i class="fa-solid fa-sliders"></i></span>
+    <span class="props__title">Properties</span>
+    <span class="props__tool-badge" [title]="toolLabel() + ' tool active'">
+      <i [class]="toolIcon()"></i>{{ toolLabel() }}
+    </span>
+  </header>
+
+  @if (selected(); as ann) {
+    <app-panel-section [title]="titleOf(ann)" [icon]="iconOf(ann)">
+      <button
+        type="button"
+        class="props__delete"
+        (click)="delete(ann)"
+        title="Delete annotation"
+        aria-label="Delete annotation"
+        psec-actions
+      >
+        <i class="fa-solid fa-trash"></i>
+      </button>
+
+      @if (ann.type === 'text') {
+        <app-panel-section title="Content" icon="fa-solid fa-font" [bare]="true">
+          <label class="props__field">
+            <span>Text</span>
+            <input
+              class="pf-input"
+              type="text"
+              [value]="ann.text"
+              (input)="setText(ann, $any($event.target).value)"
+            />
+          </label>
+          <label class="props__field">
+            <span>Font</span>
+            <select
+              class="pf-input"
+              [value]="ann.fontFamily"
+              (change)="setFontFamily(ann, $any($event.target).value)"
+              aria-label="Font family"
+            >
+              @for (opt of fontOptions; track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+              }
+            </select>
+          </label>
+          <label class="props__field">
+            <span>Font size</span>
+            <input
+              class="pf-input"
+              type="number"
+              min="8"
+              max="120"
+              [value]="ann.fontSize"
+              (input)="setFontSize(ann, $any($event.target).value)"
+            />
+          </label>
+          <label class="props__field">
+            <span>Color</span>
+            <input
+              class="pf-color"
+              type="color"
+              [value]="ann.color"
+              (input)="setColor(ann, $any($event.target).value)"
+            />
+          </label>
+        </app-panel-section>
+
+        <app-panel-section title="Style" icon="fa-solid fa-text-height" [bare]="true">
+          <div class="props__row">
+            <button
+              type="button"
+              class="props__toggle"
+              [class.props__toggle--on]="ann.fontWeight >= 700"
+              (click)="toggleBold(ann)"
+              title="Bold"
+              aria-label="Bold"
+            >
+              <i class="fa-solid fa-bold"></i>
+            </button>
+            <button
+              type="button"
+              class="props__toggle"
+              [class.props__toggle--on]="ann.italic"
+              (click)="toggleItalic(ann)"
+              title="Italic"
+              aria-label="Italic"
+            >
+              <i class="fa-solid fa-italic"></i>
+            </button>
+            <button
+              type="button"
+              class="props__toggle"
+              [class.props__toggle--on]="ann.underline"
+              (click)="toggleUnderline(ann)"
+              title="Underline"
+              aria-label="Underline"
+            >
+              <i class="fa-solid fa-underline"></i>
+            </button>
+          </div>
+          <div class="props__row">
+            <button
+              type="button"
+              class="props__toggle"
+              [class.props__toggle--on]="ann.align === 'left'"
+              (click)="setAlign(ann, 'left')"
+              title="Align left"
+              aria-label="Align left"
+            >
+              <i class="fa-solid fa-align-left"></i>
+            </button>
+            <button
+              type="button"
+              class="props__toggle"
+              [class.props__toggle--on]="ann.align === 'center'"
+              (click)="setAlign(ann, 'center')"
+              title="Align center"
+              aria-label="Align center"
+            >
+              <i class="fa-solid fa-align-center"></i>
+            </button>
+            <button
+              type="button"
+              class="props__toggle"
+              [class.props__toggle--on]="ann.align === 'right'"
+              (click)="setAlign(ann, 'right')"
+              title="Align right"
+              aria-label="Align right"
+            >
+              <i class="fa-solid fa-align-right"></i>
+            </button>
+          </div>
+        </app-panel-section>
+      }
+
+      @if (ann.type === 'shape') {
+        <app-panel-section title="Stroke & fill" icon="fa-solid fa-palette" [bare]="true">
+          <label class="props__field">
+            <span>Stroke</span>
+            <input
+              class="pf-color"
+              type="color"
+              [value]="ann.strokeColor"
+              (input)="setStroke(ann, $any($event.target).value)"
+            />
+          </label>
+          @if (ann.kind !== 'arrow') {
+            <label class="props__field">
+              <span>Fill</span>
+              <input
+                class="pf-color"
+                type="color"
+                [value]="toColor(ann.fillColor)"
+                (input)="setFill(ann, $any($event.target).value)"
+              />
+            </label>
+          }
+          <label class="props__field">
+            <span>Stroke width</span>
+            <input
+              class="pf-input"
+              type="range"
+              min="1"
+              max="24"
+              [value]="ann.strokeWidth"
+              (input)="setStrokeWidth(ann, $any($event.target).value)"
+            />
+          </label>
+        </app-panel-section>
+      }
+
+      @if (
+        ann.type === 'highlight' ||
+        ann.type === 'underline' ||
+        ann.type === 'strikethrough'
+      ) {
+        <app-panel-section title="Appearance" icon="fa-solid fa-eye-dropper" [bare]="true">
+          <label class="props__field">
+            <span>Color</span>
+            <input
+              class="pf-color"
+              type="color"
+              [value]="ann.color"
+              (input)="setHighlightColor(ann, $any($event.target).value)"
+            />
+          </label>
+        </app-panel-section>
+      }
+
+      @if (ann.type === 'comment') {
+        <app-panel-section title="Comment" icon="fa-solid fa-comment" [bare]="true">
+          <label class="props__field">
+            <span>Comment</span>
+            <textarea
+              class="pf-input"
+              rows="3"
+              [value]="ann.text"
+              (input)="setComment(ann, $any($event.target).value)"
+            ></textarea>
+          </label>
+          <label class="props__field">
+            <span>Author</span>
+            <input
+              class="pf-input"
+              type="text"
+              [value]="ann.author"
+              (input)="setAuthor(ann, $any($event.target).value)"
+            />
+          </label>
+        </app-panel-section>
+      }
+
+      <app-panel-section title="Layer" icon="fa-solid fa-layer-group" [bare]="true">
+        <label class="props__field">
+          <span>Opacity</span>
+          <input
+            class="pf-input"
+            type="range"
+            min="0.1"
+            max="1"
+            step="0.1"
+            [value]="ann.opacity"
+            (input)="setOpacity(ann, $any($event.target).value)"
+          />
+        </label>
+      </app-panel-section>
+    </app-panel-section>
+  } @else {
+    <app-panel-section
+      title="Getting started"
+      icon="fa-solid fa-hand-pointer"
+    >
+      <p class="pf-text-muted props__empty-text">
+        Select an object on the page to edit its properties, or pick a tool
+        from the toolbar to add a new annotation.
+      </p>
+    </app-panel-section>
+    @if (docName()) {
+      <app-panel-section title="Document" icon="fa-solid fa-file-pdf">
+        <dl class="props__meta">
+          <div>
+            <dt>Document</dt>
+            <dd>{{ docName() }}</dd>
+          </div>
+          <div>
+            <dt>Pages</dt>
+            <dd>{{ pageCount() }}</dd>
+          </div>
+          <div>
+            <dt>Active tool</dt>
+            <dd><span class="props__tool-badge props__tool-badge--sm">{{ toolLabel() }}</span></dd>
+          </div>
+        </dl>
+      </app-panel-section>
+    }
+  }
+</div>

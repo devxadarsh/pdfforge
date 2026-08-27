@@ -1,0 +1,192 @@
+:host {
+  display: block;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.props {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.props__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 2px 0;
+}
+
+.props__icon {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--pf-radius);
+  background: var(--pf-primary-container);
+  color: var(--pf-on-primary-container);
+  font-size: 12px;
+}
+
+.props__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--pf-on-surface);
+}
+
+.props__tool-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--pf-primary);
+  color: var(--pf-on-primary);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.props__tool-badge i {
+  font-size: 11px;
+}
+
+.props__tool-badge--sm {
+  margin-left: 0;
+}
+
+.props__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--pf-on-surface-variant);
+}
+
+.props__field .pf-input,
+.props__field .pf-color {
+  width: 100%;
+}
+
+.pf-input {
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--pf-outline-variant);
+  border-radius: var(--pf-radius);
+  background: var(--pf-surface-container-lowest);
+  color: var(--pf-on-surface);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.props__field textarea.pf-input {
+  height: auto;
+  padding: 6px 10px;
+  resize: vertical;
+}
+
+select.pf-input {
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 28px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M3 4.5 6 8l3-3.5' fill='none' stroke='%236b7280' stroke-width='1.5'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.props__row {
+  display: flex;
+  gap: 4px;
+}
+
+.props__toggle {
+  width: 30px;
+  height: 28px;
+  border: 1px solid var(--pf-outline-variant);
+  background: var(--pf-surface-container);
+  color: var(--pf-on-surface-variant);
+  border-radius: var(--pf-radius);
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.15s ease, color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.props__toggle--on {
+  background: var(--pf-primary);
+  color: var(--pf-on-primary);
+  border-color: var(--pf-primary);
+}
+
+.pf-color {
+  height: 30px;
+  padding: 2px;
+  border: 1px solid var(--pf-outline-variant);
+  border-radius: var(--pf-radius);
+  background: var(--pf-surface-container-lowest);
+}
+
+.props__delete {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--pf-outline-variant);
+  border-radius: var(--pf-radius);
+  background: var(--pf-surface-container-lowest);
+  color: var(--pf-error);
+  cursor: pointer;
+  font-size: 12px;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.props__delete:hover {
+  background: var(--pf-error-container);
+  color: var(--pf-on-error-container);
+  border-color: var(--pf-error-container);
+}
+
+.props__empty-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.props__meta {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.props__meta div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.props__meta dt {
+  color: var(--pf-on-surface-variant);
+}
+
+.props__meta dd {
+  margin: 0;
+  font-weight: 600;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 60%;
+}
+
+.props__meta dd:has(.props__tool-badge) {
+  max-width: none;
+  overflow: visible;
+  white-space: normal;
+}

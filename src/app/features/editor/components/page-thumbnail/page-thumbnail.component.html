@@ -1,0 +1,10 @@
+<button
+  type="button"
+  class="thumb"
+  [class.thumb--active]="active()"
+  [class.thumb--current]="current()"
+  [attr.aria-label]="'Go to page ' + (pageIndex() + 1)"
+>
+  <canvas #canvas></canvas>
+  <span class="thumb__page">{{ pageIndex() + 1 }}</span>
+</button>

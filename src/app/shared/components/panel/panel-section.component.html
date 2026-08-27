@@ -1,0 +1,48 @@
+@if (bare()) {
+  <div class="psec__group">
+    <div class="psec__subtitle">
+      @if (icon()) {
+        <i [ngClass]="icon()" class="psec__subicon"></i>
+      }
+      <span>{{ title() }}</span>
+      @if (count() !== null) {
+        <span class="psec__count">{{ count() }}</span>
+      }
+    </div>
+    <div class="psec__body psec__body--bare">
+      <ng-content />
+    </div>
+  </div>
+} @else {
+  <div class="psec" [class.psec--collapsed]="collapsible() && collapsed()">
+    <button
+      type="button"
+      class="psec__head"
+      [class.psec__head--static]="!collapsible()"
+      [attr.aria-expanded]="collapsible() ? !collapsed() : null"
+      [disabled]="!collapsible()"
+      (click)="toggle()"
+    >
+      <span class="psec__title">
+        @if (icon()) {
+          <i [ngClass]="icon()" class="psec__icon"></i>
+        }
+        <span class="psec__label">{{ title() }}</span>
+        @if (count() !== null) {
+          <span class="psec__count">{{ count() }}</span>
+        }
+      </span>
+      <span class="psec__actions">
+        <ng-content select="[psec-actions]" />
+        @if (collapsible()) {
+          <i class="fa-solid fa-chevron-down psec__chev"></i>
+        }
+      </span>
+    </button>
+    @if (!collapsible() || !collapsed()) {
+      <div class="psec__body">
+        <ng-content />
+      </div>
+    }
+  </div>
+}
