@@ -7,11 +7,10 @@ import { LoadedFile } from '../../core/models/file.models';
 import { FileDropzoneComponent } from '../../shared/components/dropzone/file-dropzone.component';
 
 @Component({
-  selector: 'app-home',
-  standalone: true,
-  imports: [RouterLink, NgClass, FileDropzoneComponent],
-  templateUrl: './home.component.html',
-  styleUrl: './home.component.scss',
+    selector: 'app-home',
+    imports: [RouterLink, NgClass, FileDropzoneComponent],
+    templateUrl: './home.component.html',
+    styleUrl: './home.component.scss'
 })
 export class HomeComponent {
   private readonly router = inject(Router);

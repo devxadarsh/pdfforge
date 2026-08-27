@@ -3,11 +3,10 @@ import { NgClass } from '@angular/common';
 import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
-  selector: 'app-toast-container',
-  standalone: true,
-  imports: [NgClass],
-  templateUrl: './toast-container.component.html',
-  styleUrl: './toast-container.component.scss',
+    selector: 'app-toast-container',
+    imports: [NgClass],
+    templateUrl: './toast-container.component.html',
+    styleUrl: './toast-container.component.scss'
 })
 export class ToastContainerComponent {
   private readonly toasts = inject(ToastService);

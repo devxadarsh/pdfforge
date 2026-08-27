@@ -118,6 +118,23 @@ export class EditorStateService {
     this._selectedId.set(null);
   }
 
+  /** Drop annotations whose page is no longer present (e.g. after deletion). */
+  pruneAnnotations(validPageIds: ReadonlySet<string>): void {
+    const map = this._annotations();
+    let changed = false;
+    const next = new Map<string, PdfAnnotation[]>();
+    for (const [pageId, list] of map) {
+      if (!validPageIds.has(pageId)) {
+        changed = true;
+        continue;
+      }
+      next.set(pageId, list);
+    }
+    if (changed) {
+      this._annotations.set(next);
+    }
+  }
+
   getSelected(pageId: string | null): PdfAnnotation | null {
     if (!pageId) {
       return null;

@@ -1,0 +1,78 @@
+<div class="editor-shell">
+  <header class="editor-shell__header">
+    <div class="editor-shell__header-left">
+      <button
+        class="pf-icon-btn"
+        type="button"
+        (click)="back()"
+        title="Back to home"
+        aria-label="Back to home"
+      >
+        <i class="fa-solid fa-arrow-left"></i>
+      </button>
+      <div class="editor-shell__doc">
+        <span class="editor-shell__doc-name">Untitled document</span>
+        <span class="editor-shell__doc-status">
+          <i class="fa-solid fa-cloud-arrow-down"></i> Saved locally
+        </span>
+      </div>
+    </div>
+
+    <nav class="editor-shell__nav" aria-label="Editor sections">
+      @for (item of editorNav; track item.path) {
+        <a
+          class="editor-shell__nav-link"
+          [routerLink]="item.path"
+          routerLinkActive="editor-shell__nav-link--active"
+          [routerLinkActiveOptions]="{ exact: item.path === '/editor' }"
+        >
+          {{ item.label }}
+        </a>
+      }
+    </nav>
+
+    <div class="editor-shell__header-right">
+      <button class="pf-icon-btn" type="button" disabled title="Undo (coming soon)" aria-label="Undo">
+        <i class="fa-solid fa-rotate-left"></i>
+      </button>
+      <button class="pf-icon-btn" type="button" disabled title="Redo (coming soon)" aria-label="Redo">
+        <i class="fa-solid fa-rotate-right"></i>
+      </button>
+      <button class="pf-icon-btn" type="button" disabled title="Search (coming soon)" aria-label="Search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+      </button>
+      <button
+        class="pf-icon-btn"
+        type="button"
+        (click)="cycleTheme()"
+        [title]="'Theme: ' + theme.theme()"
+        [attr.aria-label]="'Theme: ' + theme.theme()"
+      >
+        <i class="fa-solid" [ngClass]="themeIcon()"></i>
+      </button>
+      <button class="pf-btn pf-btn--primary" type="button" disabled title="Download (coming soon)">
+        <i class="fa-solid fa-download"></i> Download
+      </button>
+    </div>
+  </header>
+
+  <div class="editor-shell__body">
+    <router-outlet />
+  </div>
+
+  <footer class="editor-shell__footer">
+    <span class="editor-shell__page">Page — of —</span>
+    <div class="editor-shell__zoom">
+      <button class="pf-icon-btn" type="button" disabled title="Zoom out" aria-label="Zoom out">
+        <i class="fa-solid fa-magnifying-glass-minus"></i>
+      </button>
+      <span class="editor-shell__zoom-label">100%</span>
+      <button class="pf-icon-btn" type="button" disabled title="Zoom in" aria-label="Zoom in">
+        <i class="fa-solid fa-magnifying-glass-plus"></i>
+      </button>
+      <button class="pf-btn pf-btn--ghost" type="button" disabled title="Fit width">
+        Fit width
+      </button>
+    </div>
+  </footer>
+</div>

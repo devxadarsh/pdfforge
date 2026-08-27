@@ -5,11 +5,10 @@ import { ThemeService } from '../../core/services/theme.service';
 import { EditorTheme } from '../../core/models/pdf.models';
 
 @Component({
-  selector: 'app-settings',
-  standalone: true,
-  imports: [FormsModule, NgClass],
-  templateUrl: './settings.component.html',
-  styleUrl: './settings.component.scss',
+    selector: 'app-settings',
+    imports: [FormsModule],
+    templateUrl: './settings.component.html',
+    styleUrl: './settings.component.scss'
 })
 export class SettingsComponent {
   private readonly themeSvc = inject(ThemeService);

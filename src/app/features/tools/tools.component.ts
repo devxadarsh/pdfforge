@@ -5,11 +5,10 @@ import { NgClass } from '@angular/common';
 import { TOOL_CATEGORIES, ToolCard } from '../../core/constants/tools';
 
 @Component({
-  selector: 'app-tools',
-  standalone: true,
-  imports: [RouterLink, FormsModule, NgClass],
-  templateUrl: './tools.component.html',
-  styleUrl: './tools.component.scss',
+    selector: 'app-tools',
+    imports: [RouterLink, FormsModule, NgClass],
+    templateUrl: './tools.component.html',
+    styleUrl: './tools.component.scss'
 })
 export class ToolsComponent {
   readonly categories = TOOL_CATEGORIES;

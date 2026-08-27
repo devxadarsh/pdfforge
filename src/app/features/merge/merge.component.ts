@@ -12,11 +12,10 @@ interface MergeItem {
 }
 
 @Component({
-  selector: 'app-merge',
-  standalone: true,
-  imports: [RouterLink, NgClass, FileDropzoneComponent],
-  templateUrl: './merge.component.html',
-  styleUrl: './merge.component.scss',
+    selector: 'app-merge',
+    imports: [RouterLink, FileDropzoneComponent],
+    templateUrl: './merge.component.html',
+    styleUrl: './merge.component.scss'
 })
 export class MergeComponent {
   readonly items = signal<MergeItem[]>([]);

@@ -2,6 +2,20 @@
   display: block;
 }
 
+/* ngx-extended-pdf-viewer hosts the single pdf.js worker + document. It is kept
+   off-screen (with real dimensions so the viewer initialises and fires
+   pagesLoaded) while our own canvas + annotation overlay provide the visible UI. */
+.editor__pdf-loader {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 320px;
+  height: 420px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
 .editor {
   display: flex;
   flex-direction: column;
@@ -57,7 +71,7 @@
 
 .editor__body {
   display: grid;
-  grid-template-columns: 220px 1fr 260px;
+  grid-template-columns: 248px 1fr 288px;
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -66,7 +80,10 @@
 .editor__properties {
   background: var(--pf-surface-container-low);
   padding: 10px;
-  overflow-y: auto;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .editor__sidebar {
@@ -75,61 +92,6 @@
 
 .editor__properties {
   border-left: 1px solid var(--pf-outline-variant);
-}
-
-.editor__sidebar-head,
-.editor__properties-head {
-  margin-bottom: 12px;
-}
-
-.editor__sidebar-count {
-  margin-left: auto;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--pf-on-surface-variant);
-  background: var(--pf-surface-container);
-  border-radius: 9999px;
-  padding: 2px 10px;
-}
-
-.editor__page-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 12px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--pf-outline-variant);
-}
-
-.icon-btn--danger:hover {
-  background: var(--pf-error-container);
-  color: var(--pf-on-error-container);
-}
-
-.editor__selection-hint {
-  flex: 1 1 100%;
-  font-size: 12px;
-  color: var(--pf-on-surface-variant);
-}
-
-.editor__thumb-wrap {
-  cursor: grab;
-  border-radius: var(--pf-radius);
-  transition: box-shadow 0.15s ease;
-}
-
-.editor__thumb-wrap:active {
-  cursor: grabbing;
-}
-
-.editor__thumb-wrap:hover {
-  box-shadow: 0 0 0 2px var(--pf-primary-container);
-}
-
-.editor__pages-hint,
-.editor__properties p {
-  font-size: 13px;
 }
 
 .editor__workspace {
@@ -267,17 +229,6 @@
   white-space: nowrap;
 }
 
-/* Page list */
-.editor__pages {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.editor__pages-hint {
-  font-size: 13px;
-}
-
 .pf-btn--sm {
   padding: 3px 6px;
   font-size: 11px;
@@ -285,7 +236,7 @@
 
 @media (max-width: 1024px) {
   .editor__body {
-    grid-template-columns: 200px 1fr;
+    grid-template-columns: 220px 1fr;
   }
   .editor__properties {
     display: none;

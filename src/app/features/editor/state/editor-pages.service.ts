@@ -91,18 +91,22 @@ export class EditorPagesService {
     this._lastSelectedId = null;
   }
 
-  deleteSelected(): void {
+  deleteSelected(): string[] {
     const sel = this._selected();
     if (!sel.size) {
-      return;
+      return [];
     }
     const remaining = this._pages().filter((p) => !sel.has(p.id));
+    const removed = this._pages()
+      .filter((p) => sel.has(p.id))
+      .map((p) => p.id);
     this._pages.set(remaining);
     this._selected.set(new Set());
     this._lastSelectedId = null;
     if (!remaining.some((p) => p.id === this._currentId())) {
       this._currentId.set(remaining.length ? remaining[0].id : null);
     }
+    return removed;
   }
 
   duplicateSelected(): void {
@@ -147,8 +151,15 @@ export class EditorPagesService {
     }
     const next = [...pages];
     const [moved] = next.splice(from, 1);
-    const clamped = Math.max(0, Math.min(toIndex, next.length));
-    next.splice(clamped, 0, moved);
+    // Insert before the drop target. When moving an item down, removing it
+    // shifts the trailing indices left by one, so the target's slot is
+    // `toIndex - 1` in the shortened array.
+    let insert = toIndex;
+    if (from < toIndex) {
+      insert = toIndex - 1;
+    }
+    insert = Math.max(0, Math.min(insert, next.length));
+    next.splice(insert, 0, moved);
     this._pages.set(next);
   }
 

@@ -13,16 +13,33 @@ import {
   PdfAnnotation,
   ShapeAnnotation,
   TextAnnotation,
+  HighlightAnnotation,
+  CommentAnnotation,
 } from '../../../../core/models/pdf.models';
 import { EditorStateService } from '../../state/editor-state.service';
 
-interface DraftShape {
-  kind: 'rectangle' | 'circle' | 'arrow';
+type MarkType =
+  | 'rectangle'
+  | 'circle'
+  | 'arrow'
+  | 'highlight'
+  | 'underline'
+  | 'strikethrough';
+
+type Handle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
+
+interface DraftMark {
+  type: MarkType;
   x: number;
   y: number;
   width: number;
   height: number;
 }
+
+/** Padding (in overlay/SVG units == CSS px) around text annotations. */
+const TEXT_PAD_X = 10;
+const TEXT_PAD_Y = 8;
+const TEXT_LINE_HEIGHT = 1.35;
 
 @Component({
   selector: 'app-editor-overlay',
@@ -41,6 +58,7 @@ interface DraftShape {
       (pointerdown)="onPointerDown($event)"
       (pointermove)="onPointerMove($event)"
       (pointerup)="onPointerUp($event)"
+      (dblclick)="onDblClick($event)"
     >
       <defs>
         @for (a of arrowMarkers(); track a.id) {
@@ -59,95 +77,306 @@ interface DraftShape {
       </defs>
 
       @for (a of annotations(); track a.id) {
-        @if (a.type === 'shape') {
-          @if (a.kind === 'rectangle') {
+        @switch (a.type) {
+          @case ('shape') {
+            @switch (a.kind) {
+              @case ('rectangle') {
+                <rect
+                  [attr.x]="a.rect.x"
+                  [attr.y]="a.rect.y"
+                  [attr.width]="a.rect.width"
+                  [attr.height]="a.rect.height"
+                  [attr.fill]="a.fillColor"
+                  [attr.stroke]="a.strokeColor"
+                  [attr.stroke-width]="a.strokeWidth"
+                  [attr.opacity]="a.opacity"
+                />
+              }
+              @case ('circle') {
+                <ellipse
+                  [attr.cx]="a.rect.x + a.rect.width / 2"
+                  [attr.cy]="a.rect.y + a.rect.height / 2"
+                  [attr.rx]="a.rect.width / 2"
+                  [attr.ry]="a.rect.height / 2"
+                  [attr.fill]="a.fillColor"
+                  [attr.stroke]="a.strokeColor"
+                  [attr.stroke-width]="a.strokeWidth"
+                  [attr.opacity]="a.opacity"
+                />
+              }
+              @case ('arrow') {
+                <line
+                  [attr.x1]="a.rect.x"
+                  [attr.y1]="a.rect.y"
+                  [attr.x2]="a.rect.x + a.rect.width"
+                  [attr.y2]="a.rect.y + a.rect.height"
+                  [attr.stroke]="a.strokeColor"
+                  [attr.stroke-width]="a.strokeWidth"
+                  [attr.opacity]="a.opacity"
+                  [attr.marker-end]="'url(#ah-' + a.id + ')'"
+                />
+              }
+            }
+          }
+          @case ('text') {
+            <text
+              [attr.font-size]="a.fontSize"
+              [attr.font-family]="a.fontFamily"
+              [attr.font-weight]="a.fontWeight"
+              [attr.font-style]="a.italic ? 'italic' : 'normal'"
+              [attr.text-decoration]="a.underline ? 'underline' : 'none'"
+              [attr.fill]="a.color"
+              [attr.opacity]="a.opacity"
+              [attr.text-anchor]="
+                a.align === 'center'
+                  ? 'middle'
+                  : a.align === 'right'
+                    ? 'end'
+                    : 'start'
+              "
+            >
+              @for (line of textLines(a.text); track $index) {
+                <tspan
+                  [attr.x]="textAnchorX(a)"
+                  [attr.y]="lineBaselineY(a, $index)"
+                  >{{ line }}</tspan
+                >
+              }
+            </text>
+          }
+          @case ('highlight') {
             <rect
               [attr.x]="a.rect.x"
               [attr.y]="a.rect.y"
               [attr.width]="a.rect.width"
               [attr.height]="a.rect.height"
-              [attr.fill]="a.fillColor"
-              [attr.stroke]="a.strokeColor"
-              [attr.stroke-width]="a.strokeWidth"
+              [attr.fill]="a.color"
+              [attr.fill-opacity]="0.4"
               [attr.opacity]="a.opacity"
-            />
-          } @else if (a.kind === 'circle') {
-            <ellipse
-              [attr.cx]="a.rect.x + a.rect.width / 2"
-              [attr.cy]="a.rect.y + a.rect.height / 2"
-              [attr.rx]="a.rect.width / 2"
-              [attr.ry]="a.rect.height / 2"
-              [attr.fill]="a.fillColor"
-              [attr.stroke]="a.strokeColor"
-              [attr.stroke-width]="a.strokeWidth"
-              [attr.opacity]="a.opacity"
-            />
-          } @else if (a.kind === 'arrow') {
-            <line
-              [attr.x1]="a.rect.x"
-              [attr.y1]="a.rect.y"
-              [attr.x2]="a.rect.x + a.rect.width"
-              [attr.y2]="a.rect.y + a.rect.height"
-              [attr.stroke]="a.strokeColor"
-              [attr.stroke-width]="a.strokeWidth"
-              [attr.opacity]="a.opacity"
-              [attr.marker-end]="'url(#ah-' + a.id + ')'"
             />
           }
-        } @else if (a.type === 'text') {
-          <text
-            [attr.x]="a.rect.x"
-            [attr.y]="a.rect.y + a.fontSize"
-            [attr.font-size]="a.fontSize"
-            [attr.fill]="a.color"
-            [attr.opacity]="a.opacity"
-            [attr.font-style]="a.italic ? 'italic' : 'normal'"
-            [attr.text-decoration]="a.underline ? 'underline' : 'none'"
-            font-family="sans-serif"
-          >
-            {{ a.text }}
-          </text>
+          @case ('underline') {
+            <line
+              [attr.x1]="a.rect.x"
+              [attr.y1]="a.rect.y + a.rect.height - 2"
+              [attr.x2]="a.rect.x + a.rect.width"
+              [attr.y2]="a.rect.y + a.rect.height - 2"
+              [attr.stroke]="a.color"
+              [attr.stroke-width]="2"
+              [attr.opacity]="a.opacity"
+            />
+          }
+          @case ('strikethrough') {
+            <line
+              [attr.x1]="a.rect.x"
+              [attr.y1]="a.rect.y + a.rect.height / 2"
+              [attr.x2]="a.rect.x + a.rect.width"
+              [attr.y2]="a.rect.y + a.rect.height / 2"
+              [attr.stroke]="a.color"
+              [attr.stroke-width]="2"
+              [attr.opacity]="a.opacity"
+            />
+          }
+          @case ('comment') {
+            <g class="comment">
+              <circle
+                [attr.cx]="a.rect.x + a.rect.width / 2"
+                [attr.cy]="a.rect.y + a.rect.height / 2"
+                [attr.r]="a.rect.width / 2"
+                fill="#f59e0b"
+                [attr.opacity]="a.opacity"
+              />
+              <text
+                [attr.x]="a.rect.x + a.rect.width / 2"
+                [attr.y]="a.rect.y + a.rect.height / 2 + 4"
+                text-anchor="middle"
+                fill="#ffffff"
+                font-size="12"
+                font-weight="700"
+                >!</text
+              >
+              @if (a.id === selectedId()) {
+                <g
+                  class="comment__bubble"
+                  [attr.transform]="
+                    'translate(' + (a.rect.x + a.rect.width + 6) + ',' + a.rect.y + ')'
+                  "
+                >
+                  <rect
+                    width="170"
+                    height="48"
+                    rx="6"
+                    fill="#fffbeb"
+                    stroke="#f59e0b"
+                    stroke-width="1"
+                  />
+                  <text x="8" y="18" font-size="11" fill="#1f2937">{{ a.text }}</text>
+                  <text x="8" y="36" font-size="10" fill="#92400e">
+                    {{ a.author }}
+                  </text>
+                </g>
+              }
+            </g>
+          }
         }
 
         @if (a.id === selectedId()) {
           <rect
             class="sel"
-            [attr.x]="a.rect.x - 3"
-            [attr.y]="a.rect.y - 3"
-            [attr.width]="a.rect.width + 6"
-            [attr.height]="a.rect.height + 6"
+            [attr.x]="a.rect.x"
+            [attr.y]="a.rect.y"
+            [attr.width]="a.rect.width"
+            [attr.height]="a.rect.height"
           />
+          <g class="handles">
+            <rect
+              class="handle"
+              [attr.x]="a.rect.x - 5"
+              [attr.y]="a.rect.y - 5"
+              width="10"
+              height="10"
+              rx="2"
+              [style.cursor]="handleCursor('nw')"
+              (pointerdown)="onHandleDown($event, 'nw')"
+            />
+            <rect
+              class="handle"
+              [attr.x]="a.rect.x + a.rect.width / 2 - 5"
+              [attr.y]="a.rect.y - 5"
+              width="10"
+              height="10"
+              rx="2"
+              [style.cursor]="handleCursor('n')"
+              (pointerdown)="onHandleDown($event, 'n')"
+            />
+            <rect
+              class="handle"
+              [attr.x]="a.rect.x + a.rect.width - 5"
+              [attr.y]="a.rect.y - 5"
+              width="10"
+              height="10"
+              rx="2"
+              [style.cursor]="handleCursor('ne')"
+              (pointerdown)="onHandleDown($event, 'ne')"
+            />
+            <rect
+              class="handle"
+              [attr.x]="a.rect.x + a.rect.width - 5"
+              [attr.y]="a.rect.y + a.rect.height / 2 - 5"
+              width="10"
+              height="10"
+              rx="2"
+              [style.cursor]="handleCursor('e')"
+              (pointerdown)="onHandleDown($event, 'e')"
+            />
+            <rect
+              class="handle"
+              [attr.x]="a.rect.x + a.rect.width - 5"
+              [attr.y]="a.rect.y + a.rect.height - 5"
+              width="10"
+              height="10"
+              rx="2"
+              [style.cursor]="handleCursor('se')"
+              (pointerdown)="onHandleDown($event, 'se')"
+            />
+            <rect
+              class="handle"
+              [attr.x]="a.rect.x + a.rect.width / 2 - 5"
+              [attr.y]="a.rect.y + a.rect.height - 5"
+              width="10"
+              height="10"
+              rx="2"
+              [style.cursor]="handleCursor('s')"
+              (pointerdown)="onHandleDown($event, 's')"
+            />
+            <rect
+              class="handle"
+              [attr.x]="a.rect.x - 5"
+              [attr.y]="a.rect.y + a.rect.height - 5"
+              width="10"
+              height="10"
+              rx="2"
+              [style.cursor]="handleCursor('sw')"
+              (pointerdown)="onHandleDown($event, 'sw')"
+            />
+            <rect
+              class="handle"
+              [attr.x]="a.rect.x - 5"
+              [attr.y]="a.rect.y + a.rect.height / 2 - 5"
+              width="10"
+              height="10"
+              rx="2"
+              [style.cursor]="handleCursor('w')"
+              (pointerdown)="onHandleDown($event, 'w')"
+            />
+          </g>
         }
       }
 
       @if (draft(); as d) {
-        @if (d.kind === 'rectangle') {
-          <rect
-            class="draft"
-            [attr.x]="d.x"
-            [attr.y]="d.y"
-            [attr.width]="d.width"
-            [attr.height]="d.height"
-          />
-        } @else if (d.kind === 'circle') {
-          <ellipse
-            class="draft"
-            [attr.cx]="d.x + d.width / 2"
-            [attr.cy]="d.y + d.height / 2"
-            [attr.rx]="d.width / 2"
-            [attr.ry]="d.height / 2"
-          />
-        } @else if (d.kind === 'arrow') {
-          <line
-            class="draft"
-            [attr.x1]="d.x"
-            [attr.y1]="d.y"
-            [attr.x2]="d.x + d.width"
-            [attr.y2]="d.y + d.height"
-          />
+        @switch (d.type) {
+          @case ('rectangle') {
+            <rect
+              class="draft"
+              [attr.x]="d.x"
+              [attr.y]="d.y"
+              [attr.width]="d.width"
+              [attr.height]="d.height"
+            />
+          }
+          @case ('circle') {
+            <ellipse
+              class="draft"
+              [attr.cx]="d.x + d.width / 2"
+              [attr.cy]="d.y + d.height / 2"
+              [attr.rx]="d.width / 2"
+              [attr.ry]="d.height / 2"
+            />
+          }
+          @case ('arrow') {
+            <line
+              class="draft"
+              [attr.x1]="d.x"
+              [attr.y1]="d.y"
+              [attr.x2]="d.x + d.width"
+              [attr.y2]="d.y + d.height"
+            />
+          }
+          @default {
+            <rect
+              class="draft"
+              [attr.x]="d.x"
+              [attr.y]="d.y"
+              [attr.width]="d.width"
+              [attr.height]="d.height"
+            />
+          }
         }
       }
     </svg>
+
+    @if (editingText(); as t) {
+      <textarea
+        #textEditor
+        class="text-editor"
+        wrap="off"
+        spellcheck="false"
+        [style.left.px]="t.rect.x"
+        [style.top.px]="t.rect.y"
+        [style.width.px]="t.rect.width"
+        [style.height.px]="t.rect.height"
+        [style.font-size.px]="t.fontSize"
+        [style.font-family]="t.fontFamily"
+        [style.font-weight]="t.fontWeight"
+        [style.font-style]="t.italic ? 'italic' : 'normal'"
+        [style.text-decoration]="t.underline ? 'underline' : 'none'"
+        [style.color]="t.color"
+        [style.text-align]="t.align"
+        (input)="onEditInput($event)"
+        (blur)="stopEditing()"
+        (keydown)="onEditKeydown($event)"
+      ></textarea>
+    }
   `,
   styles: [
     `
@@ -169,11 +398,40 @@ interface DraftShape {
         stroke-dasharray: 4 3;
         stroke-width: 1.5;
       }
+      .handle {
+        fill: #ffffff;
+        stroke: #2563eb;
+        stroke-width: 1.5;
+        pointer-events: all;
+      }
+      .handle:hover {
+        fill: #2563eb;
+      }
       .draft {
         fill: rgba(37, 99, 235, 0.12);
         stroke: #2563eb;
         stroke-width: 2;
         stroke-dasharray: 5 4;
+      }
+      .comment {
+        cursor: pointer;
+      }
+      .text-editor {
+        position: absolute;
+        margin: 0;
+        padding: 8px 10px;
+        box-sizing: border-box;
+        border: none;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.92);
+        resize: none;
+        outline: 2px solid #2563eb;
+        outline-offset: -2px;
+        line-height: 1.35;
+        white-space: pre;
+        overflow: hidden;
+        z-index: 5;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
       }
     `,
   ],
@@ -181,6 +439,8 @@ interface DraftShape {
 export class EditorOverlayComponent {
   private readonly state = inject(EditorStateService);
   private readonly svgRef = viewChild<ElementRef<SVGSVGElement>>('svg');
+  private readonly textEditorRef =
+    viewChild<ElementRef<HTMLTextAreaElement>>('textEditor');
 
   readonly pageId = input.required<string>();
   readonly pageIndex = input.required<number>();
@@ -190,10 +450,25 @@ export class EditorOverlayComponent {
   readonly width = input.required<number>();
   readonly height = input.required<number>();
 
-  readonly draft = signal<DraftShape | null>(null);
+  /** Text annotation currently being edited inline. */
+  readonly editingId = signal<string | null>(null);
+  readonly editingText = computed(() => {
+    const id = this.editingId();
+    const a = this.annotations().find((it) => it.id === id);
+    return a && a.type === 'text' ? a : null;
+  });
+
+  readonly draft = signal<DraftMark | null>(null);
   private start: { x: number; y: number } | null = null;
   private dragId: string | null = null;
   private dragOffset = { x: 0, y: 0 };
+  private resizeId: string | null = null;
+  private resizeHandle: Handle | null = null;
+  private resizeStart: {
+    x: number;
+    y: number;
+    rect: { x: number; y: number; width: number; height: number };
+  } | null = null;
 
   readonly arrowMarkers = computed(() =>
     this.annotations().filter(
@@ -251,6 +526,10 @@ export class EditorOverlayComponent {
     const { x, y } = this.localPoint(event);
     const t = this.tool();
 
+    if (this.editingId()) {
+      this.stopEditing();
+    }
+
     if (t === 'select' || t === 'hand') {
       const hit = this.hitTest(x, y);
       if (hit) {
@@ -264,16 +543,96 @@ export class EditorOverlayComponent {
       return;
     }
 
-    if (t === 'rectangle' || t === 'circle' || t === 'arrow') {
+    if (
+      t === 'rectangle' ||
+      t === 'circle' ||
+      t === 'arrow' ||
+      t === 'highlight' ||
+      t === 'underline' ||
+      t === 'strikethrough'
+    ) {
       this.start = { x, y };
-      this.draft.set({ kind: t, x, y, width: 0, height: 0 });
+      this.draft.set({ type: t, x, y, width: 0, height: 0 });
       this.svgRef()?.nativeElement.setPointerCapture?.(event.pointerId);
     } else if (t === 'text') {
       this.createText(x, y);
+    } else if (t === 'comment') {
+      this.createComment(x, y);
+    }
+  }
+
+  onHandleDown(event: PointerEvent, handle: Handle): void {
+    event.stopPropagation();
+    const ann = this.annotations().find((it) => it.id === this.selectedId());
+    if (!ann) {
+      return;
+    }
+    const p = this.localPoint(event);
+    this.resizeId = ann.id;
+    this.resizeHandle = handle;
+    this.resizeStart = {
+      x: p.x,
+      y: p.y,
+      rect: { ...ann.rect },
+    };
+    this.svgRef()?.nativeElement.setPointerCapture?.(event.pointerId);
+  }
+
+  /** Maps a resize handle to the correct directional cursor (drag icon). */
+  handleCursor(h: Handle): string {
+    switch (h) {
+      case 'nw':
+      case 'se':
+        return 'nwse-resize';
+      case 'ne':
+      case 'sw':
+        return 'nesw-resize';
+      case 'n':
+      case 's':
+        return 'ns-resize';
+      case 'e':
+      case 'w':
+        return 'ew-resize';
     }
   }
 
   onPointerMove(event: PointerEvent): void {
+    if (this.resizeId && this.resizeHandle && this.resizeStart) {
+      const a = this.annotations().find((it) => it.id === this.resizeId);
+      if (!a) {
+        return;
+      }
+      const { x, y } = this.localPoint(event);
+      const dx = x - this.resizeStart.x;
+      const dy = y - this.resizeStart.y;
+      const h = this.resizeHandle;
+      let { x: rx, y: ry, width: rw, height: rh } = this.resizeStart.rect;
+      if (h.includes('w')) {
+        rx += dx;
+        rw -= dx;
+      }
+      if (h.includes('e')) {
+        rw += dx;
+      }
+      if (h.includes('n')) {
+        ry += dy;
+        rh -= dy;
+      }
+      if (h.includes('s')) {
+        rh += dy;
+      }
+      if (rw < 8) {
+        rw = 8;
+      }
+      if (rh < 8) {
+        rh = 8;
+      }
+      this.state.updateAnnotation(a.id, {
+        rect: { x: rx, y: ry, width: rw, height: rh },
+      });
+      return;
+    }
+
     if (this.dragId) {
       const a = this.annotations().find((it) => it.id === this.dragId);
       if (!a) {
@@ -300,6 +659,12 @@ export class EditorOverlayComponent {
 
   onPointerUp(event: PointerEvent): void {
     this.svgRef()?.nativeElement.releasePointerCapture?.(event.pointerId);
+    if (this.resizeId) {
+      this.resizeId = null;
+      this.resizeHandle = null;
+      this.resizeStart = null;
+      return;
+    }
     if (this.dragId) {
       this.dragId = null;
       return;
@@ -308,25 +673,185 @@ export class EditorOverlayComponent {
       const d = this.draft()!;
       this.draft.set(null);
       this.start = null;
-      if (d.width < 3 && d.height < 3) {
+      if (d.width < 4 && d.height < 4) {
         return;
       }
-      this.commitShape(d);
+      if (
+        d.type === 'highlight' ||
+        d.type === 'underline' ||
+        d.type === 'strikethrough'
+      ) {
+        this.commitHighlight(d);
+      } else {
+        this.commitShape(d);
+      }
     }
   }
 
+  /** Double-click a text annotation to edit it inline at the cursor. */
+  onDblClick(event: MouseEvent): void {
+    const { x, y } = this.localPoint(event as unknown as PointerEvent);
+    const hit = this.hitTest(x, y);
+    if (hit && hit.type === 'text') {
+      const caret = this.caretIndexFromX(hit.text, x, hit);
+      this.startEditing(hit, caret);
+    }
+  }
+
+  private startEditing(
+    a: TextAnnotation,
+    caret: number,
+    selectAll = false,
+  ): void {
+    this.editingId.set(a.id);
+    this.state.selectAnnotation(a.id);
+    setTimeout(() => {
+      const el = this.textEditorRef()?.nativeElement;
+      if (!el) {
+        return;
+      }
+      el.value = a.text;
+      el.focus();
+      if (selectAll) {
+        el.setSelectionRange(0, a.text.length);
+      } else {
+        const pos = Math.max(0, Math.min(caret, a.text.length));
+        el.setSelectionRange(pos, pos);
+      }
+    });
+  }
+
+  onEditInput(event: Event): void {
+    const el = event.target as HTMLTextAreaElement;
+    const id = this.editingId();
+    if (!id) {
+      return;
+    }
+    const text = el.value;
+    const cur = this.annotations().find((it) => it.id === id);
+    if (!cur || cur.type !== 'text') {
+      return;
+    }
+    const m = this.measureText(
+      text,
+      cur.fontSize,
+      cur.fontWeight >= 700,
+      cur.fontFamily,
+      cur.italic,
+    );
+    this.state.updateAnnotation(id, {
+      text,
+      rect: { ...cur.rect, width: m.width, height: m.height },
+    });
+  }
+
+  stopEditing(): void {
+    this.editingId.set(null);
+  }
+
+  onEditKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.stopEditing();
+    }
+  }
+
+  private caretIndexFromX(
+    text: string,
+    clickX: number,
+    a: TextAnnotation,
+  ): number {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const rel = clickX - (a.rect.x + TEXT_PAD_X);
+    if (!ctx) {
+      return 0;
+    }
+    ctx.font = `${a.italic ? 'italic ' : ''}${a.fontWeight >= 700 ? 'bold ' : ''}${a.fontSize}px ${a.fontFamily}`;
+    let acc = 0;
+    for (let i = 0; i < text.length; i++) {
+      const w = ctx.measureText(text[i]).width;
+      if (acc + w / 2 >= rel) {
+        return i;
+      }
+      acc += w;
+    }
+    return text.length;
+  }
+
+  private measureText(
+    text: string,
+    fontSize: number,
+    bold: boolean,
+    fontFamily = 'sans-serif',
+    italic = false,
+  ): { width: number; height: number } {
+    const lines = text.split('\n');
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.font = `${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}${fontSize}px ${fontFamily}`;
+      let maxW = 0;
+      for (const line of lines) {
+        const w = ctx.measureText(line || ' ').width;
+        if (w > maxW) {
+          maxW = w;
+        }
+      }
+      return {
+        width: Math.max(20, Math.ceil(maxW) + TEXT_PAD_X * 2),
+        height: Math.ceil(
+          lines.length * fontSize * TEXT_LINE_HEIGHT + TEXT_PAD_Y * 2,
+        ),
+      };
+    }
+    const approx = Math.max(...lines.map((l) => l.length)) * fontSize * 0.6;
+    return {
+      width: Math.max(20, Math.ceil(approx) + TEXT_PAD_X * 2),
+      height: Math.ceil(
+        lines.length * fontSize * TEXT_LINE_HEIGHT + TEXT_PAD_Y * 2,
+      ),
+    };
+  }
+
+  /** Split a text annotation's content into rendered lines. */
+  textLines(text: string): string[] {
+    return text.split('\n');
+  }
+
+  /** X coordinate of the text anchor for the given alignment/padding. */
+  textAnchorX(a: TextAnnotation): number {
+    if (a.align === 'center') {
+      return a.rect.x + a.rect.width / 2;
+    }
+    if (a.align === 'right') {
+      return a.rect.x + a.rect.width - TEXT_PAD_X;
+    }
+    return a.rect.x + TEXT_PAD_X;
+  }
+
+  /** Baseline Y for the line at `lineIndex` (0-based) within the box. */
+  lineBaselineY(a: TextAnnotation, lineIndex: number): number {
+    return (
+      a.rect.y + TEXT_PAD_Y + a.fontSize + lineIndex * a.fontSize * TEXT_LINE_HEIGHT
+    );
+  }
+
   private createText(x: number, y: number): void {
+    const text = 'Text';
+    const fontSize = 16;
+    const m = this.measureText(text, fontSize, false, 'sans-serif');
     const ann: TextAnnotation = {
       id: crypto.randomUUID(),
       type: 'text',
       pageIndex: this.pageIndex(),
-      rect: { x, y, width: 180, height: 40 },
+      rect: { x, y, width: m.width, height: m.height },
       rotation: 0,
       opacity: 1,
       createdAt: Date.now(),
-      text: 'Text',
+      text,
       fontFamily: 'sans-serif',
-      fontSize: 16,
+      fontSize,
       fontWeight: 400,
       italic: false,
       underline: false,
@@ -334,21 +859,62 @@ export class EditorOverlayComponent {
       color: '#111111',
     };
     this.state.addAnnotation(this.pageId(), ann);
+    // Drop straight into inline editing at the drop point, and revert to the
+    // select tool so the next click commits rather than spawning another text.
+    this.state.setTool('select');
+    this.startEditing(ann, ann.text.length, true);
   }
 
-  private commitShape(d: DraftShape): void {
+  private createComment(x: number, y: number): void {
+    const size = 22;
+    const ann: CommentAnnotation = {
+      id: crypto.randomUUID(),
+      type: 'comment',
+      pageIndex: this.pageIndex(),
+      rect: { x: x - size / 2, y: y - size / 2, width: size, height: size },
+      rotation: 0,
+      opacity: 1,
+      createdAt: Date.now(),
+      text: 'New comment',
+      author: 'You',
+    };
+    this.state.addAnnotation(this.pageId(), ann);
+  }
+
+  private commitShape(d: DraftMark): void {
     const ann: ShapeAnnotation = {
       id: crypto.randomUUID(),
       type: 'shape',
-      kind: d.kind,
+      kind: d.type as ShapeAnnotation['kind'],
       pageIndex: this.pageIndex(),
       rect: { x: d.x, y: d.y, width: d.width, height: d.height },
       rotation: 0,
       opacity: 1,
       createdAt: Date.now(),
       strokeColor: '#2563eb',
-      fillColor: d.kind === 'arrow' ? 'transparent' : 'rgba(37,99,235,0.12)',
+      fillColor: d.type === 'arrow' ? 'transparent' : 'rgba(37,99,235,0.12)',
       strokeWidth: 2,
+    };
+    this.state.addAnnotation(this.pageId(), ann);
+  }
+
+  private commitHighlight(d: DraftMark): void {
+    const color =
+      d.type === 'highlight'
+        ? '#fde047'
+        : d.type === 'underline'
+          ? '#2563eb'
+          : '#ef4444';
+    const ann: HighlightAnnotation = {
+      id: crypto.randomUUID(),
+      type: d.type as HighlightAnnotation['type'],
+      pageIndex: this.pageIndex(),
+      rect: { x: d.x, y: d.y, width: d.width, height: d.height },
+      rotation: 0,
+      opacity: 1,
+      createdAt: Date.now(),
+      color,
+      quote: '',
     };
     this.state.addAnnotation(this.pageId(), ann);
   }

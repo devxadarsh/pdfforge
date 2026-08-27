@@ -7,9 +7,15 @@ import {
   viewChild,
   ElementRef,
   ChangeDetectionStrategy,
+  OnDestroy,
+  HostListener,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { NgClass, KeyValuePipe } from '@angular/common';
+import {
+  NgxExtendedPdfViewerModule,
+  PagesLoadedEvent,
+} from 'ngx-extended-pdf-viewer';
 import { EDITOR_TOOLS } from '../../core/constants/tools';
 import { PdfToolId } from '../../core/models/pdf.models';
 import { LoadedFile } from '../../core/models/file.models';
@@ -20,30 +26,30 @@ import { PdfViewerService, PageSize } from '../../core/services/pdf/pdf-viewer.s
 import { PdfExportService } from '../../core/services/pdf/pdf-export.service';
 import { ToastService } from '../../core/services/toast.service';
 import { PdfPageComponent } from './components/pdf-page/pdf-page.component';
-import { PageThumbnailComponent } from './components/page-thumbnail/page-thumbnail.component';
 import { EditorOverlayComponent } from './components/editor-overlay/editor-overlay.component';
 import { PropertiesPanelComponent } from './components/properties-panel/properties-panel.component';
+import { PagesPanelComponent } from './components/pages-panel/pages-panel.component';
 import { EditorPagesService } from './state/editor-pages.service';
 import { EditorStateService } from './state/editor-state.service';
 
 @Component({
-  selector: 'app-editor',
-  standalone: true,
+    selector: 'app-editor',
   imports: [
     RouterLink,
     NgClass,
     KeyValuePipe,
+    NgxExtendedPdfViewerModule,
     FileDropzoneComponent,
     PdfPageComponent,
-    PageThumbnailComponent,
     EditorOverlayComponent,
     PropertiesPanelComponent,
+    PagesPanelComponent,
   ],
   templateUrl: './editor.component.html',
   styleUrl: './editor.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class EditorComponent {
+export class EditorComponent implements OnDestroy {
   private readonly files = inject(FileService);
   private readonly viewer = inject(PdfViewerService);
   private readonly exporter = inject(PdfExportService);
@@ -53,6 +59,10 @@ export class EditorComponent {
   readonly state = inject(EditorStateService);
 
   readonly exporting = signal(false);
+
+  /** Blob URL handed to ngx-extended-pdf-viewer to load the document. */
+  readonly docSrc = signal<string | null>(null);
+  private docUrl: string | null = null;
 
   readonly tools = EDITOR_TOOLS;
 
@@ -79,10 +89,8 @@ export class EditorComponent {
 
   private loadedRef: LoadedFile | null = null;
   private searchTimer?: ReturnType<typeof setTimeout>;
-  private dragId: string | null = null;
   private ro?: ResizeObserver;
 
-  readonly pagesList = this.pagesStore.pages;
   readonly totalPages = this.pagesStore.pagesCount;
   readonly currentPageNumber = computed(() => this.pagesStore.currentIndex() + 1);
   readonly currentSourceIndex = computed(
@@ -91,7 +99,6 @@ export class EditorComponent {
   readonly currentRotation = computed(
     () => this.pagesStore.currentPage()?.rotation ?? 0,
   );
-  readonly selectedCount = this.pagesStore.selectedCount;
 
   readonly currentPageId = computed(() => this.pagesStore.currentId());
   readonly currentAnnotations = computed(() =>
@@ -156,28 +163,32 @@ export class EditorComponent {
   });
 
   constructor() {
-    effect(
-      () => {
-        const file = this.files.currentFiles()[0];
-        if (!file || this.loadedRef === file) {
-          return;
-        }
-        void this.load(file);
-      },
-      { allowSignalWrites: true },
-    );
+    effect(() => {
+      const file = this.files.currentFiles()[0];
+      if (!file || this.loadedRef === file) {
+        return;
+      }
+      void this.load(file);
+    });
 
-    effect(
-      () => {
-        this.pagesStore.currentId();
-        this.state.clearSelection();
-      },
-      { allowSignalWrites: true },
-    );
+    effect(() => {
+      this.pagesStore.currentId();
+      this.state.clearSelection();
+    });
+
+    // The canvas stage is conditionally rendered only once a document is open,
+    // so it does not exist at ngAfterViewInit. Re-create the ResizeObserver
+    // whenever the stage element appears or disappears.
+    effect(() => {
+      this.stageRef();
+      this.observeStage();
+    });
   }
 
-  ngAfterViewInit(): void {
+  private observeStage(): void {
     const stage = this.stageRef()?.nativeElement;
+    this.ro?.disconnect();
+    this.ro = undefined;
     if (!stage) {
       return;
     }
@@ -196,6 +207,11 @@ export class EditorComponent {
 
   ngOnDestroy(): void {
     this.ro?.disconnect();
+    if (this.docUrl) {
+      URL.revokeObjectURL(this.docUrl);
+      this.docUrl = null;
+    }
+    this.viewer.reset();
   }
 
   selectTool(id: PdfToolId): void {
@@ -203,24 +219,33 @@ export class EditorComponent {
   }
 
   private async load(file: LoadedFile): Promise<void> {
+    this.loadedRef = file;
     this.loading.set(true);
     this.state.reset();
-    try {
-      const count = await this.viewer.load(file.data);
-      this.docName.set(file.name);
-      this.pagesStore.init(count);
-      this.clearSearch();
-      this.loadedRef = file;
-      void this.prefetch(count);
-      this.toasts.success(`Opened ${file.name}`);
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Could not open the PDF.';
-      this.toasts.error(message);
-      this.docName.set(null);
-    } finally {
-      this.loading.set(false);
+    this.viewer.reset();
+    if (this.docUrl) {
+      URL.revokeObjectURL(this.docUrl);
     }
+    this.docUrl = URL.createObjectURL(
+      new File([file.data], file.name, { type: 'application/pdf' }),
+    );
+    this.docName.set(null);
+    this.docSrc.set(this.docUrl);
+  }
+
+  onPagesLoaded(event: PagesLoadedEvent): void {
+    const doc = (event as unknown as { source: { pdfDocument: unknown } })
+      .source.pdfDocument;
+    this.viewer.setDocument(doc);
+    const count = event.pagesCount;
+    this.docName.set(this.loadedRef?.name ?? null);
+    this.pagesStore.init(count);
+    this.clearSearch();
+    void this.prefetch(count);
+    if (this.loadedRef) {
+      this.toasts.success(`Opened ${this.loadedRef.name}`);
+    }
+    this.loading.set(false);
   }
 
   private async prefetch(count: number): Promise<void> {
@@ -235,10 +260,6 @@ export class EditorComponent {
   }
 
   /* Page navigation */
-  selectPage(id: string, event?: MouseEvent): void {
-    this.pagesStore.select(id, event);
-  }
-
   nextPage(): void {
     const idx = this.pagesStore.currentIndex();
     const pages = this.pagesStore.pages();
@@ -252,35 +273,6 @@ export class EditorComponent {
     if (idx > 0) {
       this.pagesStore.setCurrent(this.pagesStore.pages()[idx - 1].id);
     }
-  }
-
-  /* Page management actions */
-  selectAll(): void {
-    this.pagesStore.selectAll();
-  }
-
-  clearSelection(): void {
-    this.pagesStore.clearSelection();
-  }
-
-  deleteSelected(): void {
-    this.pagesStore.deleteSelected();
-  }
-
-  duplicateSelected(): void {
-    this.pagesStore.duplicateSelected();
-  }
-
-  rotateLeft(): void {
-    this.pagesStore.rotateSelected(-90);
-  }
-
-  rotateRight(): void {
-    this.pagesStore.rotateSelected(90);
-  }
-
-  extractSelected(): void {
-    void this.pagesStore.extractSelected();
   }
 
   async exportPdf(): Promise<void> {
@@ -314,27 +306,6 @@ export class EditorComponent {
     }
   }
 
-  /* Drag and drop reordering */
-  onDragStart(id: string): void {
-    this.dragId = id;
-  }
-
-  onDragOver(event: DragEvent): void {
-    event.preventDefault();
-  }
-
-  onDrop(id: string): void {
-    if (this.dragId && this.dragId !== id) {
-      const targetIndex = this.pagesStore
-        .pages()
-        .findIndex((p) => p.id === id);
-      if (targetIndex >= 0) {
-        this.pagesStore.move(this.dragId, targetIndex);
-      }
-    }
-    this.dragId = null;
-  }
-
   /* Zoom */
   zoomIn(): void {
     this.state.zoomIn();
@@ -350,6 +321,28 @@ export class EditorComponent {
 
   resetZoom(): void {
     this.state.resetZoom();
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'Delete' && event.key !== 'Backspace') {
+      return;
+    }
+    const target = event.target as HTMLElement | null;
+    if (
+      target &&
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable)
+    ) {
+      return;
+    }
+    const id = this.state.selectedId();
+    if (!id) {
+      return;
+    }
+    event.preventDefault();
+    this.state.removeAnnotation(id);
   }
 
   /* Search */

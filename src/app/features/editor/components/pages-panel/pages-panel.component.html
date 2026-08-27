@@ -1,0 +1,123 @@
+<div class="ppanel">
+  <header class="ppanel__head">
+    <span class="ppanel__icon"><i class="fa-solid fa-layer-group"></i></span>
+    <span class="ppanel__title">Pages</span>
+    <span class="ppanel__count">{{ pages.pagesCount() }}</span>
+  </header>
+
+  @if (pages.pagesCount() > 0) {
+    <app-panel-section
+      class="ppanel__tools"
+      title="Page tools"
+      icon="fa-solid fa-screwdriver-wrench"
+      [count]="pages.selectedCount() || null"
+    >
+      <div class="ppanel__actions">
+        <button
+          type="button"
+          class="ptool"
+          (click)="rotateLeft()"
+          [disabled]="pages.selectedCount() === 0"
+          title="Rotate left"
+          aria-label="Rotate selected pages left"
+        >
+          <i class="fa-solid fa-rotate-left"></i>
+        </button>
+        <button
+          type="button"
+          class="ptool"
+          (click)="rotateRight()"
+          [disabled]="pages.selectedCount() === 0"
+          title="Rotate right"
+          aria-label="Rotate selected pages right"
+        >
+          <i class="fa-solid fa-rotate-right"></i>
+        </button>
+        <button
+          type="button"
+          class="ptool"
+          (click)="duplicate()"
+          [disabled]="pages.selectedCount() === 0"
+          title="Duplicate"
+          aria-label="Duplicate selected pages"
+        >
+          <i class="fa-solid fa-copy"></i>
+        </button>
+        <button
+          type="button"
+          class="ptool ptool--danger"
+          (click)="deleteSelected()"
+          [disabled]="pages.selectedCount() === 0"
+          title="Delete"
+          aria-label="Delete selected pages"
+        >
+          <i class="fa-solid fa-trash"></i>
+        </button>
+        <button
+          type="button"
+          class="ptool"
+          (click)="extract()"
+          [disabled]="pages.selectedCount() === 0"
+          title="Extract to new PDF"
+          aria-label="Extract selected pages to a new PDF"
+        >
+          <i class="fa-solid fa-file-export"></i>
+        </button>
+      </div>
+
+      <div class="ppanel__select">
+        <span class="ppanel__sel">{{
+          pages.selectedCount()
+            ? pages.selectedCount() + ' selected'
+            : 'No selection'
+        }}</span>
+        <div class="ppanel__chips">
+          <button
+            type="button"
+            class="pf-chip"
+            (click)="selectAll()"
+            [disabled]="pages.pagesCount() === 0"
+          >
+            All
+          </button>
+          <button
+            type="button"
+            class="pf-chip"
+            (click)="clearSelection()"
+            [disabled]="pages.selectedCount() === 0"
+          >
+            Clear
+          </button>
+        </div>
+      </div>
+    </app-panel-section>
+
+    <div class="ppanel__scroll">
+      <div class="ppanel__list">
+        @for (page of pages.pages(); track page.id) {
+          <div
+            class="ppanel__item"
+            draggable="true"
+            [class.ppanel__item--selected]="pages.isSelected(page.id)"
+            (dragstart)="onDragStart(page.id)"
+            (dragover)="onDragOver($event)"
+            (drop)="onDrop(page.id)"
+            (click)="selectPage(page.id, $event)"
+          >
+            <app-page-thumbnail
+              [pageIndex]="page.sourceIndex"
+              [rotation]="page.rotation"
+              [active]="pages.isSelected(page.id)"
+              [current]="pages.currentId() === page.id"
+            ></app-page-thumbnail>
+          </div>
+        }
+      </div>
+    </div>
+  } @else {
+    <div class="ppanel__empty">
+      <i class="fa-solid fa-file-lines"></i>
+      <p>No document loaded.</p>
+    </div>
+  }
+</div>

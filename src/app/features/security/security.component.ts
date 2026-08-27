@@ -4,11 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { FileDropzoneComponent } from '../../shared/components/dropzone/file-dropzone.component';
 
 @Component({
-  selector: 'app-security',
-  standalone: true,
-  imports: [RouterLink, FormsModule, FileDropzoneComponent],
-  templateUrl: './security.component.html',
-  styleUrl: './security.component.scss',
+    selector: 'app-security',
+    imports: [RouterLink, FormsModule, FileDropzoneComponent],
+    templateUrl: './security.component.html',
+    styleUrl: './security.component.scss'
 })
 export class SecurityComponent {
   private readonly router = inject(Router);

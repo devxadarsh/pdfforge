@@ -36,39 +36,8 @@
   margin-bottom: 16px;
 }
 
-.pf-input {
-  height: 40px;
-  padding: 0 12px;
-  border: 1px solid var(--pf-outline-variant);
-  border-radius: var(--pf-radius);
-  background-color: var(--pf-surface);
-  color: var(--pf-on-surface);
-  font-size: 14px;
-}
-
 .pf-dialog__actions {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-}
-
-.pf-btn--ghost {
-  background-color: transparent;
-  border-color: var(--pf-outline-variant);
-  color: var(--pf-on-surface);
-}
-
-.pf-btn--ghost:hover {
-  background-color: var(--pf-surface-container);
-  text-decoration: none;
-}
-
-.pf-btn--danger {
-  background-color: var(--pf-error);
-  color: var(--pf-on-error);
-}
-
-.pf-btn--danger:hover {
-  filter: brightness(0.94);
-  text-decoration: none;
 }

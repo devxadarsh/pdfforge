@@ -1,0 +1,140 @@
+:host {
+  display: block;
+}
+
+.editor-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ---- Header (48px) ---- */
+.editor-shell__header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 48px;
+  flex-shrink: 0;
+  padding-inline: 12px;
+  background-color: var(--pf-surface-container-lowest);
+  border-bottom: 1px solid var(--pf-outline-variant);
+}
+
+.editor-shell__header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.editor-shell__doc {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.editor-shell__doc-name {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--pf-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.editor-shell__doc-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  line-height: 1.1;
+  color: var(--pf-success);
+}
+
+.editor-shell__nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+.editor-shell__nav-link {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 12px;
+  border-radius: var(--pf-radius);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--pf-on-surface-variant);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.editor-shell__nav-link:hover {
+  background-color: var(--pf-surface-container);
+  color: var(--pf-on-surface);
+  text-decoration: none;
+}
+
+.editor-shell__nav-link--active {
+  background-color: var(--pf-primary-container);
+  color: var(--pf-on-primary-container);
+}
+
+.editor-shell__header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ---- Body ---- */
+.editor-shell__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ---- Footer (32px) ---- */
+.editor-shell__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 32px;
+  flex-shrink: 0;
+  padding-inline: 16px;
+  background-color: var(--pf-surface-container-lowest);
+  border-top: 1px solid var(--pf-outline-variant);
+  font-size: 12px;
+  color: var(--pf-on-surface-variant);
+}
+
+.editor-shell__zoom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editor-shell__zoom-label {
+  min-width: 44px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1024px) {
+  .editor-shell__nav {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .editor-shell__doc-status {
+    display: none;
+  }
+}

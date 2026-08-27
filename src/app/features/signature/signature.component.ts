@@ -13,11 +13,10 @@ import { NgClass } from '@angular/common';
 import { FileDropzoneComponent } from '../../shared/components/dropzone/file-dropzone.component';
 
 @Component({
-  selector: 'app-signature',
-  standalone: true,
-  imports: [RouterLink, FormsModule, NgClass, FileDropzoneComponent],
-  templateUrl: './signature.component.html',
-  styleUrl: './signature.component.scss',
+    selector: 'app-signature',
+    imports: [RouterLink, FormsModule, NgClass, FileDropzoneComponent],
+    templateUrl: './signature.component.html',
+    styleUrl: './signature.component.scss'
 })
 export class SignatureComponent {
   private readonly zone = inject(NgZone);

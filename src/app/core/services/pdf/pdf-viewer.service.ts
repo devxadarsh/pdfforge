@@ -1,41 +1,66 @@
-import * as pdfjsLib from 'pdfjs-dist';
-import type {
-  PDFDocumentProxy,
-  PDFPageProxy,
-  PDFDocumentLoadingTask,
-} from 'pdfjs-dist';
 import { Injectable } from '@angular/core';
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.mjs';
-
-export interface Cancellable {
-  cancel(): void;
-  readonly promise: Promise<unknown>;
-}
 
 export interface PageSize {
   readonly width: number;
   readonly height: number;
 }
 
+export interface Cancellable {
+  cancel(): void;
+  readonly promise: Promise<unknown>;
+}
+
+// Structural types for the pdf.js document / page proxy that ngx-extended-pdf-viewer
+// hands to us via its `pagesLoaded` event. ngx owns the single pdf.js instance at
+// runtime (the only pdf.js used by the app). These minimal shapes are enough
+// for sizing, text extraction and canvas rendering.
+interface PdfjsViewport {
+  readonly width: number;
+  readonly height: number;
+}
+interface PdfjsTextItem {
+  readonly str?: string;
+}
+interface PdfjsRenderTask {
+  cancel(): void;
+  readonly promise: Promise<void>;
+}
+interface PdfjsPage {
+  getViewport(params: { scale: number; rotation?: number }): PdfjsViewport;
+  getTextContent(): Promise<{ items: readonly PdfjsTextItem[] }>;
+  render(params: {
+    canvas: HTMLCanvasElement;
+    canvasContext: CanvasRenderingContext2D;
+    viewport: PdfjsViewport;
+  }): PdfjsRenderTask;
+}
+interface PdfjsDocument {
+  readonly numPages: number;
+  getPage(index: number): Promise<PdfjsPage>;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PdfViewerService {
-  private doc: PDFDocumentProxy | null = null;
-  private task: PDFDocumentLoadingTask | null = null;
+  private doc: PdfjsDocument | null = null;
 
   get pageCount(): number {
     return this.doc?.numPages ?? 0;
   }
 
-  async load(data: ArrayBuffer): Promise<number> {
-    this.destroy();
-    const task = pdfjsLib.getDocument({ data: data.slice(0) });
-    this.task = task;
-    this.doc = await task.promise;
-    return this.doc.numPages;
+  get loaded(): boolean {
+    return this.doc !== null;
   }
 
-  private async getPage(pageIndex: number): Promise<PDFPageProxy> {
+  /** Called from the editor once ngx-extended-pdf-viewer has loaded the document. */
+  setDocument(doc: unknown): void {
+    this.doc = doc as PdfjsDocument;
+  }
+
+  reset(): void {
+    this.doc = null;
+  }
+
+  private async getPage(pageIndex: number): Promise<PdfjsPage> {
     if (!this.doc) {
       throw new Error('No PDF document is loaded.');
     }
@@ -94,7 +119,9 @@ export class PdfViewerService {
     canvas.width = Math.max(1, Math.floor(viewport.width));
     canvas.height = Math.max(1, Math.floor(viewport.height));
     try {
-      await page.render({ canvas, canvasContext: ctx, viewport }).promise;
+      await page
+        .render({ canvas, canvasContext: ctx, viewport })
+        .promise.catch(() => undefined);
     } catch {
       /* render cancelled or failed */
     }
@@ -103,16 +130,9 @@ export class PdfViewerService {
   async getPageText(pageIndex: number): Promise<string> {
     const page = await this.getPage(pageIndex);
     const content = await page.getTextContent();
-    const items = content.items as Array<{ str?: string }>;
-    return items
+    return content.items
       .filter((it) => typeof it.str === 'string')
       .map((it) => it.str ?? '')
       .join(' ');
-  }
-
-  destroy(): void {
-    void this.task?.destroy();
-    this.task = null;
-    this.doc = null;
   }
 }

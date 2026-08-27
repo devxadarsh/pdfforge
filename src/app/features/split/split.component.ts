@@ -5,11 +5,10 @@ import { NgClass } from '@angular/common';
 import { FileDropzoneComponent } from '../../shared/components/dropzone/file-dropzone.component';
 
 @Component({
-  selector: 'app-split',
-  standalone: true,
-  imports: [RouterLink, FormsModule, NgClass, FileDropzoneComponent],
-  templateUrl: './split.component.html',
-  styleUrl: './split.component.scss',
+    selector: 'app-split',
+    imports: [RouterLink, FormsModule, FileDropzoneComponent],
+    templateUrl: './split.component.html',
+    styleUrl: './split.component.scss'
 })
 export class SplitComponent {
   readonly mode = signal<'every' | 'range'>('every');
