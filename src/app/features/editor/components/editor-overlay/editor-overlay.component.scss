@@ -19,6 +19,11 @@
   stroke-width: 1.5;
 }
 
+.sel--locked {
+  stroke: #f59e0b;
+  stroke-dasharray: 2 2;
+}
+
 .handle {
   fill: #ffffff;
   stroke: #2563eb;

@@ -7,7 +7,7 @@
 .props {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   height: 100%;
   overflow-y: auto;
   padding-right: 2px;
@@ -21,18 +21,18 @@
 }
 
 .props__icon {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   display: grid;
   place-items: center;
   border-radius: var(--pf-radius);
   background: var(--pf-primary-container);
   color: var(--pf-on-primary-container);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .props__title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--pf-on-surface);
 }
@@ -40,31 +40,67 @@
 .props__tool-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   margin-left: auto;
-  padding: 3px 10px;
+  padding: 2px 8px;
   border-radius: 999px;
   background: var(--pf-primary);
   color: var(--pf-on-primary);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   line-height: 1;
 }
 
 .props__tool-badge i {
-  font-size: 11px;
+  font-size: 10px;
 }
 
 .props__tool-badge--sm {
   margin-left: 0;
 }
 
-.props__field {
+.props__group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 12px;
+  gap: 6px;
+}
+
+.props__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
   color: var(--pf-on-surface-variant);
+  margin: 0;
+}
+
+.props__sublabel {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--pf-on-surface-variant);
+  width: 48px;
+  flex: none;
+}
+
+.props__divider {
+  height: 1px;
+  background: var(--pf-outline-variant);
+  margin: 2px 0;
+  opacity: 0.6;
+}
+
+.props__row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.props__row--inline {
+  align-items: center;
+}
+
+.props__row--between {
+  justify-content: space-between;
 }
 
 .props__field--grow {
@@ -72,151 +108,128 @@
   min-width: 0;
 }
 
-.props__field--narrow {
-  width: 64px;
-  flex: 0 0 auto;
-}
-
-.props__field--color {
-  width: 50px;
-  flex: 0 0 auto;
-}
-
-.props__field .pf-input,
-.props__field .pf-color {
-  width: 100%;
-}
-
+/* Inputs & selects */
 .pf-input {
-  height: 30px;
-  padding: 0 10px;
+  height: 28px;
+  padding: 0 8px;
   border: 1px solid var(--pf-outline-variant);
   border-radius: var(--pf-radius);
   background: var(--pf-surface-container-lowest);
   color: var(--pf-on-surface);
-  font-size: 13px;
+  font-size: 12px;
   font-family: inherit;
 }
 
-.props__field textarea.pf-input {
-  height: auto;
-  padding: 6px 10px;
-  resize: vertical;
+.pf-input:focus {
+  outline: none;
+  border-color: var(--pf-primary);
+  box-shadow: 0 0 0 2px var(--pf-primary-container);
 }
 
-select.pf-input {
+.props__textarea {
+  height: auto;
+  min-height: 48px;
+  padding: 5px 8px;
+  resize: vertical;
+  line-height: 1.35;
+}
+
+.props__select-font {
+  flex: 1 1 auto;
+  min-width: 0;
   cursor: pointer;
   appearance: none;
   -webkit-appearance: none;
-  padding-right: 28px;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M3 4.5 6 8l3-3.5' fill='none' stroke='%236b7280' stroke-width='1.5'/></svg>");
+  padding-right: 22px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'><path d='M3 4.5 6 8l3-3.5' fill='none' stroke='%236b7280' stroke-width='1.5'/></svg>");
   background-repeat: no-repeat;
-  background-position: right 10px center;
+  background-position: right 6px center;
 }
 
-.props__row {
-  display: flex;
-  gap: 4px;
+.props__input-size {
+  width: 52px;
+  flex: none;
+  text-align: center;
 }
 
-.props__row--inline {
-  align-items: flex-end;
-}
-
-.props__row--wrap {
-  flex-wrap: wrap;
-}
-
-.props__grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.props__toggle {
-  width: 30px;
+.props__color-picker {
+  width: 28px;
   height: 28px;
+  padding: 1px;
+  flex: none;
   border: 1px solid var(--pf-outline-variant);
-  background: var(--pf-surface-container);
-  color: var(--pf-on-surface-variant);
   border-radius: var(--pf-radius);
+  background: var(--pf-surface-container-lowest);
   cursor: pointer;
-  font-size: 12px;
-  transition: background-color 0.15s ease, color 0.15s ease,
-    border-color 0.15s ease;
 }
 
-.props__toggle--on {
-  background: var(--pf-primary);
-  color: var(--pf-on-primary);
-  border-color: var(--pf-primary);
-}
-
-.props__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 26px;
-  padding: 0 10px;
-  border: 1px solid var(--pf-outline-variant);
-  background: var(--pf-surface-container);
-  color: var(--pf-on-surface-variant);
-  border-radius: var(--pf-radius);
-  cursor: pointer;
+.props__value-badge {
   font-size: 11px;
   font-weight: 600;
-  line-height: 1;
-  transition: background-color 0.15s ease, color 0.15s ease,
-    border-color 0.15s ease;
+  color: var(--pf-on-surface-variant);
+  min-width: 36px;
+  text-align: right;
+  flex: none;
 }
 
-.props__chip:hover:not(:disabled) {
+.props__hint-inline {
+  font-size: 11px;
+  color: var(--pf-on-surface-variant);
+}
+
+/* Segmented button groups (Figma / Adobe style) */
+.props__seg-group {
+  display: inline-flex;
+  align-items: stretch;
+  border-radius: var(--pf-radius);
+  border: 1px solid var(--pf-outline-variant);
+  overflow: hidden;
+  background: var(--pf-surface-container);
+}
+
+.props__seg-group--full {
+  display: flex;
+  width: 100%;
+}
+
+.props__seg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 5px;
+  border: none;
+  border-right: 1px solid var(--pf-outline-variant);
+  background: transparent;
+  color: var(--pf-on-surface-variant);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+  white-space: nowrap;
+}
+
+.props__seg-btn:last-child {
+  border-right: none;
+}
+
+.props__seg-btn:hover:not(:disabled) {
   background: var(--pf-surface-container-high);
   color: var(--pf-on-surface);
 }
 
-.props__chip:disabled {
-  opacity: 0.4;
+.props__seg-btn:disabled {
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
-.props__chip--on {
-  background: var(--pf-primary);
-  color: var(--pf-on-primary);
-  border-color: var(--pf-primary);
+.props__seg-btn--on {
+  background: var(--pf-primary) !important;
+  color: var(--pf-on-primary) !important;
 }
 
-.props__iconbtn {
-  display: inline-grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border: 1px solid var(--pf-outline-variant);
-  background: var(--pf-surface-container-lowest);
-  color: var(--pf-on-surface-variant);
-  border-radius: var(--pf-radius);
-  cursor: pointer;
-  font-size: 12px;
-  transition: background-color 0.15s ease, color 0.15s ease,
-    border-color 0.15s ease;
-}
-
-.props__iconbtn:hover:not(:disabled) {
-  background: var(--pf-surface-container);
-  color: var(--pf-on-surface);
-}
-
-.props__iconbtn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.props__hint {
-  margin: 4px 0 0;
-  font-size: 11px;
-  color: var(--pf-on-surface-variant);
-}
-
+/* Swatches */
 .props__swatches {
   display: flex;
   flex-wrap: wrap;
@@ -225,9 +238,9 @@ select.pf-input {
 }
 
 .props__swatch {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
   border: 2px solid transparent;
   cursor: pointer;
   padding: 0;
@@ -237,7 +250,7 @@ select.pf-input {
 }
 
 .props__swatch:hover {
-  transform: scale(1.08);
+  transform: scale(1.12);
 }
 
 .props__swatch--on {
@@ -246,29 +259,22 @@ select.pf-input {
 }
 
 .props__swatch-input {
-  width: 28px;
-  height: 24px;
+  width: 24px;
+  height: 20px;
 }
 
-.pf-color {
-  height: 30px;
-  padding: 2px;
-  border: 1px solid var(--pf-outline-variant);
-  border-radius: var(--pf-radius);
-  background: var(--pf-surface-container-lowest);
-}
-
+/* Delete / Copy actions */
 .props__delete {
   display: inline-grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border: 1px solid var(--pf-outline-variant);
   border-radius: var(--pf-radius);
   background: var(--pf-surface-container-lowest);
   color: var(--pf-error);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
@@ -278,9 +284,20 @@ select.pf-input {
   border-color: var(--pf-error-container);
 }
 
+.props__delete:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.props__delete--active {
+  background: var(--pf-primary-container);
+  color: var(--pf-on-primary-container);
+  border-color: var(--pf-primary);
+}
+
 .props__delete--ghost {
   color: var(--pf-on-surface-variant);
-  margin-left: 4px;
+  margin-left: 2px;
 }
 
 .props__delete--ghost:hover {
@@ -291,22 +308,22 @@ select.pf-input {
 
 .props__empty-text {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .props__meta {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .props__meta div {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .props__meta dt {

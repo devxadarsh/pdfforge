@@ -12,12 +12,13 @@
       <button
         type="button"
         class="props__delete"
-        (click)="delete(ann)"
-        title="Delete annotation"
-        aria-label="Delete annotation"
+        [class.props__delete--active]="ann.locked"
+        (click)="toggleLock(ann)"
+        [title]="ann.locked ? 'Unlock annotation' : 'Lock annotation'"
+        [attr.aria-label]="ann.locked ? 'Unlock annotation' : 'Lock annotation'"
         psec-actions
       >
-        <i class="fa-solid fa-trash"></i>
+        <i [class]="ann.locked ? 'fa-solid fa-lock' : 'fa-solid fa-lock-open'"></i>
       </button>
       <button
         type="button"
@@ -29,168 +30,40 @@
       >
         <i class="fa-solid fa-copy"></i>
       </button>
-
-      <app-panel-section
-        title="Position & size"
-        icon="fa-solid fa-up-right-and-down-left-from-center"
-        [bare]="true"
+      <button
+        type="button"
+        class="props__delete"
+        [disabled]="ann.locked"
+        (click)="delete(ann)"
+        title="Delete annotation"
+        aria-label="Delete annotation"
+        psec-actions
       >
-        <div class="props__grid">
-          <label class="props__field">
-            <span>X</span>
-            <input
-              class="pf-input"
-              type="number"
-              [value]="ann.rect.x"
-              (change)="setX(ann, $any($event.target).value)"
-              aria-label="X position"
-            />
-          </label>
-          <label class="props__field">
-            <span>Y</span>
-            <input
-              class="pf-input"
-              type="number"
-              [value]="ann.rect.y"
-              (change)="setY(ann, $any($event.target).value)"
-              aria-label="Y position"
-            />
-          </label>
-          <label class="props__field">
-            <span>W</span>
-            <input
-              class="pf-input"
-              type="number"
-              min="1"
-              [value]="ann.rect.width"
-              (change)="setWidth(ann, $any($event.target).value)"
-              aria-label="Width"
-            />
-          </label>
-          <label class="props__field">
-            <span>H</span>
-            <input
-              class="pf-input"
-              type="number"
-              min="1"
-              [value]="ann.rect.height"
-              (change)="setHeight(ann, $any($event.target).value)"
-              aria-label="Height"
-            />
-          </label>
-        </div>
-        <div class="props__row props__row--inline">
-          <label class="props__field props__field--grow">
-            <span>Rotation (°)</span>
-            <input
-              class="pf-input"
-              type="number"
-              step="15"
-              [value]="ann.rotation"
-              (change)="setRotation(ann, $any($event.target).value)"
-              aria-label="Rotation in degrees"
-            />
-          </label>
-          <button
-            type="button"
-            class="props__iconbtn"
-            (click)="rotateNeg90(ann)"
-            title="Rotate 90° counter-clockwise"
-            aria-label="Rotate 90° counter-clockwise"
-          >
-            <i class="fa-solid fa-rotate-left"></i>
-          </button>
-          <button
-            type="button"
-            class="props__iconbtn"
-            (click)="rotate90(ann)"
-            title="Rotate 90° clockwise"
-            aria-label="Rotate 90° clockwise"
-          >
-            <i class="fa-solid fa-rotate-right"></i>
-          </button>
-          <button
-            type="button"
-            class="props__iconbtn"
-            (click)="resetRotation(ann)"
-            title="Reset rotation"
-            aria-label="Reset rotation"
-            [disabled]="ann.rotation === 0"
-          >
-            <i class="fa-solid fa-arrow-rotate-backward"></i>
-          </button>
-        </div>
-      </app-panel-section>
+        <i class="fa-solid fa-trash"></i>
+      </button>
 
-      <app-panel-section
-        title="Arrange"
-        icon="fa-solid fa-layer-group"
-        [bare]="true"
-      >
-        <div class="props__row props__row--wrap">
-          <button
-            type="button"
-            class="props__chip"
-            (click)="sendToBack(ann)"
-            [disabled]="!canSendBackward()"
-            title="Send to back"
-            aria-label="Send to back"
-          >
-            <i class="fa-solid fa-backward-step"></i> Back
-          </button>
-          <button
-            type="button"
-            class="props__chip"
-            (click)="sendBackward(ann)"
-            [disabled]="!canSendBackward()"
-            title="Send backward"
-            aria-label="Send backward"
-          >
-            <i class="fa-solid fa-chevron-down"></i> Backward
-          </button>
-          <button
-            type="button"
-            class="props__chip"
-            (click)="bringForward(ann)"
-            [disabled]="!canBringForward()"
-            title="Bring forward"
-            aria-label="Bring forward"
-          >
-            <i class="fa-solid fa-chevron-up"></i> Forward
-          </button>
-          <button
-            type="button"
-            class="props__chip"
-            (click)="bringToFront(ann)"
-            [disabled]="!canBringForward()"
-            title="Bring to front"
-            aria-label="Bring to front"
-          >
-            <i class="fa-solid fa-forward-step"></i> Front
-          </button>
-        </div>
-        <p class="props__hint">
-          Layer {{ selectionIndex() + 1 }} of {{ selectionTotal() }}
-        </p>
-      </app-panel-section>
-
+      <!-- TEXT CONTROLS -->
       @if (ann.type === 'text') {
-        <app-panel-section title="Content" icon="fa-solid fa-font" [bare]="true">
-          <label class="props__field">
-            <span>Text</span>
-            <textarea
-              class="pf-input"
-              rows="2"
-              [value]="ann.text"
-              (input)="setText(ann, $any($event.target).value)"
-              aria-label="Text content"
-            ></textarea>
-          </label>
-          <label class="props__field">
-            <span>Font</span>
+        <div class="props__group">
+          <label class="props__label">Text</label>
+          <textarea
+            class="pf-input props__textarea"
+            rows="2"
+            [value]="ann.text"
+            [disabled]="ann.locked"
+            (input)="setText(ann, $any($event.target).value)"
+            placeholder="Type text…"
+            aria-label="Text content"
+          ></textarea>
+        </div>
+
+        <div class="props__group">
+          <label class="props__label">Typography</label>
+          <div class="props__row props__row--inline">
             <select
-              class="pf-input"
+              class="pf-input props__select-font"
               [value]="ann.fontFamily"
+              [disabled]="ann.locked"
               (change)="setFontFamily(ann, $any($event.target).value)"
               aria-label="Font family"
             >
@@ -198,105 +71,243 @@
                 <option [value]="opt.value">{{ opt.label }}</option>
               }
             </select>
-          </label>
-          <div class="props__row">
-            <label class="props__field props__field--grow">
-              <span>Size</span>
-              <input
-                class="pf-input"
-                type="number"
-                min="8"
-                max="120"
-                [value]="ann.fontSize"
-                (input)="setFontSize(ann, $any($event.target).value)"
-                aria-label="Font size"
-              />
-            </label>
-            <label class="props__field props__field--color">
-              <span>Color</span>
-              <input
-                class="pf-color"
-                type="color"
-                [value]="ann.color"
-                (input)="setColor(ann, $any($event.target).value)"
-                aria-label="Text color"
-              />
-            </label>
+            <input
+              class="pf-input props__input-size"
+              type="number"
+              min="8"
+              max="120"
+              [value]="ann.fontSize"
+              [disabled]="ann.locked"
+              (input)="setFontSize(ann, $any($event.target).value)"
+              title="Font size"
+              aria-label="Font size"
+            />
+            <input
+              class="pf-color props__color-picker"
+              type="color"
+              [value]="ann.color"
+              [disabled]="ann.locked"
+              (input)="setColor(ann, $any($event.target).value)"
+              title="Text color"
+              aria-label="Text color"
+            />
           </div>
-        </app-panel-section>
 
-        <app-panel-section title="Style" icon="fa-solid fa-text-height" [bare]="true">
-          <div class="props__row">
-            <button
-              type="button"
-              class="props__toggle"
-              [class.props__toggle--on]="ann.fontWeight >= 700"
-              (click)="toggleBold(ann)"
-              title="Bold"
-              aria-label="Bold"
-            >
-              <i class="fa-solid fa-bold"></i>
-            </button>
-            <button
-              type="button"
-              class="props__toggle"
-              [class.props__toggle--on]="ann.italic"
-              (click)="toggleItalic(ann)"
-              title="Italic"
-              aria-label="Italic"
-            >
-              <i class="fa-solid fa-italic"></i>
-            </button>
-            <button
-              type="button"
-              class="props__toggle"
-              [class.props__toggle--on]="ann.underline"
-              (click)="toggleUnderline(ann)"
-              title="Underline"
-              aria-label="Underline"
-            >
-              <i class="fa-solid fa-underline"></i>
-            </button>
+          <div class="props__row props__row--between">
+            <div class="props__seg-group">
+              <button
+                type="button"
+                class="props__seg-btn"
+                [class.props__seg-btn--on]="ann.fontWeight >= 700"
+                [disabled]="ann.locked"
+                (click)="toggleBold(ann)"
+                title="Bold"
+                aria-label="Bold"
+              >
+                <i class="fa-solid fa-bold"></i>
+              </button>
+              <button
+                type="button"
+                class="props__seg-btn"
+                [class.props__seg-btn--on]="ann.italic"
+                [disabled]="ann.locked"
+                (click)="toggleItalic(ann)"
+                title="Italic"
+                aria-label="Italic"
+              >
+                <i class="fa-solid fa-italic"></i>
+              </button>
+              <button
+                type="button"
+                class="props__seg-btn"
+                [class.props__seg-btn--on]="ann.underline"
+                [disabled]="ann.locked"
+                (click)="toggleUnderline(ann)"
+                title="Underline"
+                aria-label="Underline"
+              >
+                <i class="fa-solid fa-underline"></i>
+              </button>
+            </div>
+
+            <div class="props__seg-group">
+              <button
+                type="button"
+                class="props__seg-btn"
+                [class.props__seg-btn--on]="ann.align === 'left'"
+                [disabled]="ann.locked"
+                (click)="setAlign(ann, 'left')"
+                title="Align left"
+                aria-label="Align left"
+              >
+                <i class="fa-solid fa-align-left"></i>
+              </button>
+              <button
+                type="button"
+                class="props__seg-btn"
+                [class.props__seg-btn--on]="ann.align === 'center'"
+                [disabled]="ann.locked"
+                (click)="setAlign(ann, 'center')"
+                title="Align center"
+                aria-label="Align center"
+              >
+                <i class="fa-solid fa-align-center"></i>
+              </button>
+              <button
+                type="button"
+                class="props__seg-btn"
+                [class.props__seg-btn--on]="ann.align === 'right'"
+                [disabled]="ann.locked"
+                (click)="setAlign(ann, 'right')"
+                title="Align right"
+                aria-label="Align right"
+              >
+                <i class="fa-solid fa-align-right"></i>
+              </button>
+            </div>
+
+            <div class="props__seg-group">
+              <button
+                type="button"
+                class="props__seg-btn"
+                [class.props__seg-btn--on]="ann.transform === 'uppercase'"
+                [disabled]="ann.locked"
+                (click)="setTransform(ann, 'uppercase')"
+                title="Uppercase (AA)"
+                aria-label="Uppercase"
+              >
+                AA
+              </button>
+              <button
+                type="button"
+                class="props__seg-btn"
+                [class.props__seg-btn--on]="ann.transform === 'lowercase'"
+                [disabled]="ann.locked"
+                (click)="setTransform(ann, 'lowercase')"
+                title="Lowercase (aa)"
+                aria-label="Lowercase"
+              >
+                aa
+              </button>
+              <button
+                type="button"
+                class="props__seg-btn"
+                [class.props__seg-btn--on]="ann.transform === 'capitalize'"
+                [disabled]="ann.locked"
+                (click)="setTransform(ann, 'capitalize')"
+                title="Capitalize (Aa)"
+                aria-label="Capitalize"
+              >
+                Aa
+              </button>
+            </div>
           </div>
-          <div class="props__row">
-            <button
-              type="button"
-              class="props__toggle"
-              [class.props__toggle--on]="ann.align === 'left'"
-              (click)="setAlign(ann, 'left')"
-              title="Align left"
-              aria-label="Align left"
-            >
-              <i class="fa-solid fa-align-left"></i>
-            </button>
-            <button
-              type="button"
-              class="props__toggle"
-              [class.props__toggle--on]="ann.align === 'center'"
-              (click)="setAlign(ann, 'center')"
-              title="Align center"
-              aria-label="Align center"
-            >
-              <i class="fa-solid fa-align-center"></i>
-            </button>
-            <button
-              type="button"
-              class="props__toggle"
-              [class.props__toggle--on]="ann.align === 'right'"
-              (click)="setAlign(ann, 'right')"
-              title="Align right"
-              aria-label="Align right"
-            >
-              <i class="fa-solid fa-align-right"></i>
-            </button>
+
+          <div class="props__row props__row--inline">
+            <span class="props__sublabel">Spacing</span>
+            <input
+              class="pf-input props__field--grow"
+              type="range"
+              min="1"
+              max="2.5"
+              step="0.1"
+              [value]="ann.lineHeight ?? 1.35"
+              [disabled]="ann.locked"
+              (input)="setLineHeight(ann, $any($event.target).value)"
+              title="Line height"
+              aria-label="Line height"
+            />
+            <span class="props__value-badge">{{ (ann.lineHeight ?? 1.35) | number: '1.1-1' }}x</span>
+            <input
+              class="pf-input props__input-size"
+              type="number"
+              min="-2"
+              max="20"
+              [value]="ann.letterSpacing ?? 0"
+              [disabled]="ann.locked"
+              (input)="setLetterSpacing(ann, $any($event.target).value)"
+              title="Letter spacing in pixels"
+              placeholder="0px"
+              aria-label="Letter spacing"
+            />
           </div>
-        </app-panel-section>
+        </div>
+
+        <div class="props__group">
+          <div class="props__row props__row--between">
+            <label class="props__label">Highlight Fill</label>
+            <div class="props__seg-group">
+              <button
+                type="button"
+                class="props__seg-btn"
+                [class.props__seg-btn--on]="hasTextBackground(ann)"
+                [disabled]="ann.locked"
+                (click)="setTextBackgroundEnabled(ann, true)"
+                title="Enable text background"
+              >
+                <i class="fa-solid fa-fill"></i> On
+              </button>
+              <button
+                type="button"
+                class="props__seg-btn"
+                [class.props__seg-btn--on]="!hasTextBackground(ann)"
+                [disabled]="ann.locked"
+                (click)="setTextBackgroundEnabled(ann, false)"
+                title="Disable text background"
+              >
+                <i class="fa-solid fa-ban"></i> None
+              </button>
+            </div>
+          </div>
+
+          @if (hasTextBackground(ann)) {
+            <div class="props__swatches">
+              @for (s of highlightSwatches; track s.value) {
+                <button
+                  type="button"
+                  class="props__swatch"
+                  [class.props__swatch--on]="ann.backgroundColor === s.value"
+                  [style.background]="s.value"
+                  [title]="s.label"
+                  [disabled]="ann.locked"
+                  [attr.aria-label]="'Set background to ' + s.label"
+                  (click)="setTextBackground(ann, s.value)"
+                ></button>
+              }
+              <input
+                class="pf-color props__swatch-input"
+                type="color"
+                [value]="toColor(ann.backgroundColor || '#fef08a')"
+                [disabled]="ann.locked"
+                (input)="setTextBackground(ann, $any($event.target).value)"
+                title="Custom background color"
+                aria-label="Custom background color"
+              />
+            </div>
+            <div class="props__row props__row--inline">
+              <span class="props__sublabel">Padding</span>
+              <input
+                class="pf-input props__field--grow"
+                type="range"
+                min="0"
+                max="24"
+                step="1"
+                [value]="ann.backgroundPadding ?? 6"
+                [disabled]="ann.locked"
+                (input)="setTextBackgroundPadding(ann, $any($event.target).value)"
+                aria-label="Text background padding"
+              />
+              <span class="props__value-badge">{{ ann.backgroundPadding ?? 6 }}px</span>
+            </div>
+          }
+        </div>
       }
 
+      <!-- SHAPE CONTROLS -->
       @if (ann.type === 'shape') {
-        <app-panel-section title="Stroke & fill" icon="fa-solid fa-palette" [bare]="true">
-          <label class="props__field">
-            <span>Stroke</span>
+        <div class="props__group">
+          <label class="props__label">Stroke</label>
+          <div class="props__row props__row--inline">
             <div class="props__swatches">
               @for (s of shapeSwatches; track s.value) {
                 <button
@@ -314,42 +325,35 @@
                 type="color"
                 [value]="toColor(ann.strokeColor)"
                 (input)="setStroke(ann, $any($event.target).value)"
+                title="Custom stroke color"
                 aria-label="Stroke color"
               />
             </div>
-          </label>
-          <label class="props__field">
-            <span>Stroke width</span>
-            <div class="props__row props__row--inline">
-              <input
-                class="pf-input props__field--grow"
-                type="range"
-                min="1"
-                max="24"
-                [value]="ann.strokeWidth"
-                (input)="setStrokeWidth(ann, $any($event.target).value)"
-                aria-label="Stroke width slider"
-              />
-              <input
-                class="pf-input props__field--narrow"
-                type="number"
-                min="1"
-                max="24"
-                [value]="ann.strokeWidth"
-                (change)="setStrokeWidth(ann, $any($event.target).value)"
-                aria-label="Stroke width"
-              />
-            </div>
-          </label>
+          </div>
+
+          <div class="props__row props__row--inline">
+            <span class="props__sublabel">Width</span>
+            <input
+              class="pf-input props__field--grow"
+              type="range"
+              min="1"
+              max="24"
+              [value]="ann.strokeWidth"
+              (input)="setStrokeWidth(ann, $any($event.target).value)"
+              aria-label="Stroke width slider"
+            />
+            <span class="props__value-badge">{{ ann.strokeWidth }}px</span>
+          </div>
+
           @if (canStrokeStyle()) {
-            <div class="props__field">
-              <span>Style</span>
-              <div class="props__row">
+            <div class="props__row props__row--inline">
+              <span class="props__sublabel">Style</span>
+              <div class="props__seg-group props__field--grow">
                 @for (s of strokeStyles; track s.value) {
                   <button
                     type="button"
-                    class="props__chip"
-                    [class.props__chip--on]="strokeStyleOf(ann) === s.value"
+                    class="props__seg-btn props__field--grow"
+                    [class.props__seg-btn--on]="strokeStyleOf(ann) === s.value"
                     (click)="setStrokeStyle(ann, s.value)"
                   >
                     {{ s.label }}
@@ -358,14 +362,17 @@
               </div>
             </div>
           }
-          @if (canFill()) {
-            <label class="props__field">
-              <span>Fill</span>
-              <div class="props__row props__row--inline">
+        </div>
+
+        @if (canFill()) {
+          <div class="props__group">
+            <div class="props__row props__row--between">
+              <label class="props__label">Fill</label>
+              <div class="props__seg-group">
                 <button
                   type="button"
-                  class="props__chip"
-                  [class.props__chip--on]="hasFill()"
+                  class="props__seg-btn"
+                  [class.props__seg-btn--on]="hasFill()"
                   (click)="setFillEnabled(ann, true)"
                   title="Enable fill"
                 >
@@ -373,113 +380,207 @@
                 </button>
                 <button
                   type="button"
-                  class="props__chip"
-                  [class.props__chip--on]="!hasFill()"
+                  class="props__seg-btn"
+                  [class.props__seg-btn--on]="!hasFill()"
                   (click)="setFillEnabled(ann, false)"
                   title="Disable fill"
                 >
                   <i class="fa-solid fa-ban"></i> None
                 </button>
               </div>
-              @if (hasFill()) {
-                <div class="props__swatches">
-                  @for (s of shapeSwatches; track s.value) {
-                    <button
-                      type="button"
-                      class="props__swatch"
-                      [class.props__swatch--on]="ann.fillColor === s.value"
-                      [style.background]="s.value"
-                      [title]="s.label"
-                      [attr.aria-label]="'Set fill to ' + s.label"
-                      (click)="setFill(ann, s.value)"
-                    ></button>
-                  }
-                  <input
-                    class="pf-color props__swatch-input"
-                    type="color"
-                    [value]="toColor(ann.fillColor)"
-                    (input)="setFill(ann, $any($event.target).value)"
-                    aria-label="Fill color"
-                  />
-                </div>
-              }
-            </label>
-          }
-        </app-panel-section>
+            </div>
+
+            @if (hasFill()) {
+              <div class="props__swatches">
+                @for (s of shapeSwatches; track s.value) {
+                  <button
+                    type="button"
+                    class="props__swatch"
+                    [class.props__swatch--on]="ann.fillColor === s.value"
+                    [style.background]="s.value"
+                    [title]="s.label"
+                    [attr.aria-label]="'Set fill to ' + s.label"
+                    (click)="setFill(ann, s.value)"
+                  ></button>
+                }
+                <input
+                  class="pf-color props__swatch-input"
+                  type="color"
+                  [value]="toColor(ann.fillColor)"
+                  (input)="setFill(ann, $any($event.target).value)"
+                  title="Custom fill color"
+                  aria-label="Fill color"
+                />
+              </div>
+            }
+          </div>
+        }
       }
 
+      <!-- HIGHLIGHT / UNDERLINE / STRIKETHROUGH -->
       @if (
         ann.type === 'highlight' ||
         ann.type === 'underline' ||
         ann.type === 'strikethrough'
       ) {
-        <app-panel-section title="Appearance" icon="fa-solid fa-eye-dropper" [bare]="true">
-          <label class="props__field">
-            <span>Color</span>
-            <div class="props__swatches">
-              @for (s of highlightSwatches; track s.value) {
-                <button
-                  type="button"
-                  class="props__swatch"
-                  [class.props__swatch--on]="ann.color === s.value"
-                  [style.background]="s.value"
-                  [title]="s.label"
-                  [attr.aria-label]="'Set color to ' + s.label"
-                  (click)="setHighlightColor(ann, s.value)"
-                ></button>
-              }
-              <input
-                class="pf-color props__swatch-input"
-                type="color"
-                [value]="ann.color"
-                (input)="setHighlightColor(ann, $any($event.target).value)"
-                aria-label="Custom color"
-              />
-            </div>
-          </label>
-        </app-panel-section>
-      }
-
-      @if (ann.type === 'comment') {
-        <app-panel-section title="Comment" icon="fa-solid fa-comment" [bare]="true">
-          <label class="props__field">
-            <span>Comment</span>
-            <textarea
-              class="pf-input"
-              rows="3"
-              [value]="ann.text"
-              (input)="setComment(ann, $any($event.target).value)"
-              aria-label="Comment text"
-            ></textarea>
-          </label>
-          <label class="props__field">
-            <span>Author</span>
+        <div class="props__group">
+          <label class="props__label">Color</label>
+          <div class="props__swatches">
+            @for (s of highlightSwatches; track s.value) {
+              <button
+                type="button"
+                class="props__swatch"
+                [class.props__swatch--on]="ann.color === s.value"
+                [style.background]="s.value"
+                [title]="s.label"
+                [attr.aria-label]="'Set color to ' + s.label"
+                (click)="setHighlightColor(ann, s.value)"
+              ></button>
+            }
             <input
-              class="pf-input"
-              type="text"
-              [value]="ann.author"
-              (input)="setAuthor(ann, $any($event.target).value)"
-              aria-label="Comment author"
+              class="pf-color props__swatch-input"
+              type="color"
+              [value]="ann.color"
+              (input)="setHighlightColor(ann, $any($event.target).value)"
+              title="Custom color"
+              aria-label="Custom color"
             />
-          </label>
-        </app-panel-section>
+          </div>
+        </div>
       }
 
-      <app-panel-section title="Layer" icon="fa-solid fa-droplet" [bare]="true">
-        <label class="props__field">
-          <span>Opacity ({{ (ann.opacity * 100) | number: '1.0-0' }}%)</span>
+      <!-- COMMENT -->
+      @if (ann.type === 'comment') {
+        <div class="props__group">
+          <label class="props__label">Comment</label>
+          <textarea
+            class="pf-input props__textarea"
+            rows="2"
+            [value]="ann.text"
+            (input)="setComment(ann, $any($event.target).value)"
+            placeholder="Comment text…"
+            aria-label="Comment text"
+          ></textarea>
+          <label class="props__label">Author</label>
           <input
             class="pf-input"
+            type="text"
+            [value]="ann.author"
+            (input)="setAuthor(ann, $any($event.target).value)"
+            placeholder="Author name"
+            aria-label="Comment author"
+          />
+        </div>
+      }
+
+      <div class="props__divider"></div>
+
+      <!-- COMMON: OPACITY & ROTATION -->
+      <div class="props__group">
+        <div class="props__row props__row--inline">
+          <span class="props__sublabel">Opacity</span>
+          <input
+            class="pf-input props__field--grow"
             type="range"
             min="0.1"
             max="1"
-            step="0.1"
+            step="0.05"
             [value]="ann.opacity"
             (input)="setOpacity(ann, $any($event.target).value)"
-            aria-label="Opacity"
+            aria-label="Opacity slider"
           />
-        </label>
-      </app-panel-section>
+          <span class="props__value-badge">{{ (ann.opacity * 100) | number: '1.0-0' }}%</span>
+        </div>
+
+        <div class="props__row props__row--inline">
+          <span class="props__sublabel">Rotate</span>
+          <div class="props__seg-group props__field--grow">
+            <button
+              type="button"
+              class="props__seg-btn props__field--grow"
+              (click)="rotateNeg90(ann)"
+              title="Rotate 90° counter-clockwise"
+              aria-label="Rotate 90° counter-clockwise"
+            >
+              <i class="fa-solid fa-rotate-left"></i> -90°
+            </button>
+            <button
+              type="button"
+              class="props__seg-btn props__field--grow"
+              (click)="rotate90(ann)"
+              title="Rotate 90° clockwise"
+              aria-label="Rotate 90° clockwise"
+            >
+              <i class="fa-solid fa-rotate-right"></i> +90°
+            </button>
+            <button
+              type="button"
+              class="props__seg-btn"
+              (click)="resetRotation(ann)"
+              title="Reset rotation to 0°"
+              aria-label="Reset rotation"
+              [disabled]="ann.rotation === 0"
+            >
+              <i class="fa-solid fa-arrow-rotate-backward"></i>
+            </button>
+          </div>
+          @if (ann.rotation !== 0) {
+            <span class="props__value-badge">{{ ann.rotation }}°</span>
+          }
+        </div>
+      </div>
+
+      <!-- COMMON: ARRANGE / ORDER -->
+      <div class="props__group">
+        <div class="props__row props__row--between">
+          <span class="props__sublabel">Layer</span>
+          <span class="props__hint-inline">
+            {{ selectionIndex() + 1 }} of {{ selectionTotal() }}
+          </span>
+        </div>
+        <div class="props__seg-group props__seg-group--full">
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            (click)="sendToBack(ann)"
+            [disabled]="!canSendBackward()"
+            title="Send to back"
+            aria-label="Send to back"
+          >
+            <i class="fa-solid fa-backward-step"></i> Back
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            (click)="sendBackward(ann)"
+            [disabled]="!canSendBackward()"
+            title="Send backward"
+            aria-label="Send backward"
+          >
+            <i class="fa-solid fa-chevron-down"></i> Down
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            (click)="bringForward(ann)"
+            [disabled]="!canBringForward()"
+            title="Bring forward"
+            aria-label="Bring forward"
+          >
+            <i class="fa-solid fa-chevron-up"></i> Up
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            (click)="bringToFront(ann)"
+            [disabled]="!canBringForward()"
+            title="Bring to front"
+            aria-label="Bring to front"
+          >
+            <i class="fa-solid fa-forward-step"></i> Front
+          </button>
+        </div>
+      </div>
     </app-panel-section>
   } @else {
     <app-panel-section

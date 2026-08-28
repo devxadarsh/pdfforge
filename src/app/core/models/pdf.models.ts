@@ -66,7 +66,10 @@ export interface BaseAnnotation {
   rotation: number;
   opacity: number;
   createdAt: number;
+  locked?: boolean;
 }
+
+export type TextTransform = 'none' | 'uppercase' | 'lowercase' | 'capitalize';
 
 export interface TextAnnotation extends BaseAnnotation {
   type: 'text';
@@ -78,6 +81,12 @@ export interface TextAnnotation extends BaseAnnotation {
   underline: boolean;
   align: 'left' | 'center' | 'right';
   color: string;
+  backgroundColor?: string;
+  /** Extra breathing room, in overlay pixels, around a visible text background. */
+  backgroundPadding?: number;
+  transform?: TextTransform;
+  lineHeight?: number;
+  letterSpacing?: number;
 }
 
 export interface HighlightAnnotation extends BaseAnnotation {

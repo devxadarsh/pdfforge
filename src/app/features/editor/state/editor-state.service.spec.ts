@@ -116,6 +116,34 @@ describe('EditorStateService', () => {
     expect(state.annotationsFor('page-1').map((x) => x.id)).toEqual(['c', 'b', 'a']);
   });
 
+  it('nudges an annotation by delta x and y', () => {
+    const text = makeText({ rect: { x: 50, y: 50, width: 100, height: 30 } });
+    state.addAnnotation('page-1', text);
+    state.nudgeAnnotation(text.id, 5, -10);
+    const updated = state.annotationsFor('page-1')[0];
+    expect(updated.rect.x).toBe(55);
+    expect(updated.rect.y).toBe(40);
+  });
+
+  it('locks an annotation against updates, nudges, and deletion', () => {
+    const text = makeText({ id: 'locked-text' });
+    state.addAnnotation('page-1', text);
+    expect(state.toggleLock(text.id)).toBeTrue();
+
+    state.updateAnnotation(text.id, { text: 'Changed' });
+    state.nudgeAnnotation(text.id, 20, 20);
+    state.removeAnnotation(text.id);
+
+    const locked = state.annotationsFor('page-1')[0] as TextAnnotation;
+    expect(locked.text).toBe('Hello');
+    expect(locked.rect).toEqual(text.rect);
+    expect(locked.locked).toBeTrue();
+
+    expect(state.toggleLock(text.id)).toBeFalse();
+    state.removeAnnotation(text.id);
+    expect(state.annotationsFor('page-1')).toHaveSize(0);
+  });
+
   it('returns null from duplicate when the id is missing', () => {
     expect(state.duplicateAnnotation('missing')).toBeNull();
   });

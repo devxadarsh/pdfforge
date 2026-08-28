@@ -83,6 +83,11 @@ export class EditorStateService {
       if (idx < 0) {
         continue;
       }
+      // A locked object is immutable through all state entry points. Unlocking
+      // remains intentionally available through `toggleLock()`.
+      if (list[idx].locked) {
+        return;
+      }
       const updated = { ...list[idx], ...patch } as PdfAnnotation;
       const next = [...list];
       next[idx] = updated;
@@ -93,9 +98,61 @@ export class EditorStateService {
     }
   }
 
+  nudgeAnnotation(id: string, dx: number, dy: number): void {
+    const map = new Map(this._annotations());
+    for (const [pageId, list] of map) {
+      const idx = list.findIndex((a) => a.id === id);
+      if (idx < 0) {
+        continue;
+      }
+      const cur = list[idx];
+      if (cur.locked) {
+        return;
+      }
+      const updated = {
+        ...cur,
+        rect: {
+          ...cur.rect,
+          x: Math.round(cur.rect.x + dx),
+          y: Math.round(cur.rect.y + dy),
+        },
+      } as PdfAnnotation;
+      const next = [...list];
+      next[idx] = updated;
+      map.set(pageId, next);
+      this._annotations.set(map);
+      this._modified.set(true);
+      return;
+    }
+  }
+
+  toggleLock(id: string): boolean {
+    const map = new Map(this._annotations());
+    for (const [pageId, list] of map) {
+      const idx = list.findIndex((a) => a.id === id);
+      if (idx < 0) {
+        continue;
+      }
+      const cur = list[idx];
+      const locked = !cur.locked;
+      const updated = { ...cur, locked } as PdfAnnotation;
+      const next = [...list];
+      next[idx] = updated;
+      map.set(pageId, next);
+      this._annotations.set(map);
+      this._modified.set(true);
+      return locked;
+    }
+    return false;
+  }
+
   removeAnnotation(id: string): void {
     const map = new Map(this._annotations());
     for (const [pageId, list] of map) {
+      const cur = list.find((a) => a.id === id);
+      if (cur?.locked) {
+        return;
+      }
       const next = list.filter((a) => a.id !== id);
       if (next.length === list.length) {
         continue;

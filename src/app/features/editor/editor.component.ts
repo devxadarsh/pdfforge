@@ -326,9 +326,6 @@ export class EditorComponent implements OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
-    if (event.key !== 'Delete' && event.key !== 'Backspace') {
-      return;
-    }
     const target = event.target as HTMLElement | null;
     if (
       target &&
@@ -342,8 +339,29 @@ export class EditorComponent implements OnDestroy {
     if (!id) {
       return;
     }
-    event.preventDefault();
-    this.state.removeAnnotation(id);
+
+    if (event.key === 'Delete' || event.key === 'Backspace') {
+      event.preventDefault();
+      this.state.removeAnnotation(id);
+      return;
+    }
+
+    if (
+      event.key === 'ArrowLeft' ||
+      event.key === 'ArrowRight' ||
+      event.key === 'ArrowUp' ||
+      event.key === 'ArrowDown'
+    ) {
+      event.preventDefault();
+      const step = event.shiftKey ? 10 : 1;
+      let dx = 0;
+      let dy = 0;
+      if (event.key === 'ArrowLeft') dx = -step;
+      if (event.key === 'ArrowRight') dx = step;
+      if (event.key === 'ArrowUp') dy = -step;
+      if (event.key === 'ArrowDown') dy = step;
+      this.state.nudgeAnnotation(id, dx, dy);
+    }
   }
 
   /* Search */

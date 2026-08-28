@@ -292,6 +292,55 @@ export class PropertiesPanelComponent {
     this.state.updateAnnotation(ann.id, { align });
   }
 
+  toggleLock(ann: PdfAnnotation): void {
+    this.state.toggleLock(ann.id);
+  }
+
+  setTransform(ann: TextAnnotation, transform: 'none' | 'uppercase' | 'lowercase' | 'capitalize'): void {
+    const next = ann.transform === transform ? 'none' : transform;
+    this.state.updateAnnotation(ann.id, { transform: next });
+  }
+
+  hasTextBackground(ann: TextAnnotation): boolean {
+    return !!ann.backgroundColor && ann.backgroundColor !== 'transparent';
+  }
+
+  setTextBackgroundEnabled(ann: TextAnnotation, enabled: boolean): void {
+    if (!enabled) {
+      this.state.updateAnnotation(ann.id, { backgroundColor: 'transparent' });
+      return;
+    }
+    this.state.updateAnnotation(ann.id, {
+      backgroundColor: ann.backgroundColor && ann.backgroundColor !== 'transparent' ? ann.backgroundColor : '#fef08a',
+      backgroundPadding: ann.backgroundPadding ?? 6,
+    });
+  }
+
+  setTextBackground(ann: TextAnnotation, color: string): void {
+    this.state.updateAnnotation(ann.id, { backgroundColor: color });
+  }
+
+  setTextBackgroundPadding(ann: TextAnnotation, value: string): void {
+    const padding = Number(value);
+    if (!Number.isNaN(padding) && padding >= 0 && padding <= 24) {
+      this.state.updateAnnotation(ann.id, { backgroundPadding: padding });
+    }
+  }
+
+  setLineHeight(ann: TextAnnotation, value: string): void {
+    const n = Number(value);
+    if (!Number.isNaN(n) && n >= 1 && n <= 3) {
+      this.state.updateAnnotation(ann.id, { lineHeight: n });
+    }
+  }
+
+  setLetterSpacing(ann: TextAnnotation, value: string): void {
+    const n = Number(value);
+    if (!Number.isNaN(n)) {
+      this.state.updateAnnotation(ann.id, { letterSpacing: n });
+    }
+  }
+
   setStroke(ann: PdfAnnotation, value: string): void {
     this.state.updateAnnotation(ann.id, {
       strokeColor: value,
@@ -350,41 +399,7 @@ export class PropertiesPanelComponent {
     }
   }
 
-  setX(ann: PdfAnnotation, value: string): void {
-    const n = Number(value);
-    if (!Number.isNaN(n)) {
-      this.state.updateAnnotation(ann.id, {
-        rect: { ...ann.rect, x: n },
-      });
-    }
-  }
 
-  setY(ann: PdfAnnotation, value: string): void {
-    const n = Number(value);
-    if (!Number.isNaN(n)) {
-      this.state.updateAnnotation(ann.id, {
-        rect: { ...ann.rect, y: n },
-      });
-    }
-  }
-
-  setWidth(ann: PdfAnnotation, value: string): void {
-    const n = Number(value);
-    if (!Number.isNaN(n) && n >= 1) {
-      this.state.updateAnnotation(ann.id, {
-        rect: { ...ann.rect, width: n },
-      });
-    }
-  }
-
-  setHeight(ann: PdfAnnotation, value: string): void {
-    const n = Number(value);
-    if (!Number.isNaN(n) && n >= 1) {
-      this.state.updateAnnotation(ann.id, {
-        rect: { ...ann.rect, height: n },
-      });
-    }
-  }
 
   setRotation(ann: PdfAnnotation, value: string): void {
     const n = Number(value);

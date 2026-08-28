@@ -77,12 +77,25 @@
         }
       }
       @case ('text') {
+        @if (a.backgroundColor && a.backgroundColor !== 'transparent') {
+          <rect
+            [attr.x]="a.rect.x - textBackgroundPadding(a)"
+            [attr.y]="a.rect.y - textBackgroundPadding(a)"
+            [attr.width]="a.rect.width + textBackgroundPadding(a) * 2"
+            [attr.height]="a.rect.height + textBackgroundPadding(a) * 2"
+            [attr.fill]="a.backgroundColor"
+            rx="4"
+            [attr.opacity]="a.opacity"
+            [attr.transform]="rotateTransform(a)"
+          />
+        }
         <text
           [attr.font-size]="a.fontSize"
           [attr.font-family]="a.fontFamily"
           [attr.font-weight]="a.fontWeight"
           [attr.font-style]="a.italic ? 'italic' : 'normal'"
           [attr.text-decoration]="a.underline ? 'underline' : 'none'"
+          [attr.letter-spacing]="a.letterSpacing ? a.letterSpacing + 'px' : null"
           [attr.fill]="a.color"
           [attr.opacity]="a.opacity"
           [attr.text-anchor]="
@@ -94,7 +107,7 @@
           "
           [attr.transform]="rotateTransform(a)"
         >
-          @for (line of textLines(a.text); track $index) {
+          @for (line of textLines(transformText(a.text, a.transform)); track $index) {
             <tspan
               [attr.x]="textAnchorX(a)"
               [attr.y]="lineBaselineY(a, $index)"
@@ -182,93 +195,108 @@
     @if (a.id === selectedId()) {
       <rect
         class="sel"
+        [class.sel--locked]="a.locked"
         [attr.x]="a.rect.x"
         [attr.y]="a.rect.y"
         [attr.width]="a.rect.width"
         [attr.height]="a.rect.height"
       />
-      <g class="handles">
-        <rect
-          class="handle"
-          [attr.x]="a.rect.x - 5"
-          [attr.y]="a.rect.y - 5"
-          width="10"
-          height="10"
-          rx="2"
-          [style.cursor]="handleCursor('nw')"
-          (pointerdown)="onHandleDown($event, 'nw')"
-        />
-        <rect
-          class="handle"
-          [attr.x]="a.rect.x + a.rect.width / 2 - 5"
-          [attr.y]="a.rect.y - 5"
-          width="10"
-          height="10"
-          rx="2"
-          [style.cursor]="handleCursor('n')"
-          (pointerdown)="onHandleDown($event, 'n')"
-        />
-        <rect
-          class="handle"
-          [attr.x]="a.rect.x + a.rect.width - 5"
-          [attr.y]="a.rect.y - 5"
-          width="10"
-          height="10"
-          rx="2"
-          [style.cursor]="handleCursor('ne')"
-          (pointerdown)="onHandleDown($event, 'ne')"
-        />
-        <rect
-          class="handle"
-          [attr.x]="a.rect.x + a.rect.width - 5"
-          [attr.y]="a.rect.y + a.rect.height / 2 - 5"
-          width="10"
-          height="10"
-          rx="2"
-          [style.cursor]="handleCursor('e')"
-          (pointerdown)="onHandleDown($event, 'e')"
-        />
-        <rect
-          class="handle"
-          [attr.x]="a.rect.x + a.rect.width - 5"
-          [attr.y]="a.rect.y + a.rect.height - 5"
-          width="10"
-          height="10"
-          rx="2"
-          [style.cursor]="handleCursor('se')"
-          (pointerdown)="onHandleDown($event, 'se')"
-        />
-        <rect
-          class="handle"
-          [attr.x]="a.rect.x + a.rect.width / 2 - 5"
-          [attr.y]="a.rect.y + a.rect.height - 5"
-          width="10"
-          height="10"
-          rx="2"
-          [style.cursor]="handleCursor('s')"
-          (pointerdown)="onHandleDown($event, 's')"
-        />
-        <rect
-          class="handle"
-          [attr.x]="a.rect.x - 5"
-          [attr.y]="a.rect.y + a.rect.height - 5"
-          width="10"
-          height="10"
-          rx="2"
-          [style.cursor]="handleCursor('sw')"
-          (pointerdown)="onHandleDown($event, 'sw')"
-        />
-        <rect
-          class="handle"
-          [attr.x]="a.rect.x - 5"
-          [attr.y]="a.rect.y + a.rect.height / 2 - 5"
-          width="10"
-          height="10"
-          rx="2"
-          [style.cursor]="handleCursor('w')"
-          (pointerdown)="onHandleDown($event, 'w')"
-        />
-      </g>
+      @if (a.locked) {
+        <g
+          class="lock-badge"
+          [attr.transform]="'translate(' + (a.rect.x + a.rect.width - 20) + ',' + (a.rect.y - 10) + ')'"
+        >
+          <circle cx="9" cy="9" r="9" fill="#1f2937" />
+          <path
+            d="M6 7V5.5a3 3 0 0 1 6 0V7h.5A1.5 1.5 0 0 1 14 8.5v4a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 4 12.5v-4A1.5 1.5 0 0 1 5.5 7H6zm1.5 0h3V5.5a1.5 1.5 0 0 0-3 0V7z"
+            fill="#f59e0b"
+            transform="scale(0.8) translate(2, 2)"
+          />
+        </g>
+      } @else {
+        <g class="handles">
+          <rect
+            class="handle"
+            [attr.x]="a.rect.x - 5"
+            [attr.y]="a.rect.y - 5"
+            width="10"
+            height="10"
+            rx="2"
+            [style.cursor]="handleCursor('nw')"
+            (pointerdown)="onHandleDown($event, 'nw')"
+          />
+          <rect
+            class="handle"
+            [attr.x]="a.rect.x + a.rect.width / 2 - 5"
+            [attr.y]="a.rect.y - 5"
+            width="10"
+            height="10"
+            rx="2"
+            [style.cursor]="handleCursor('n')"
+            (pointerdown)="onHandleDown($event, 'n')"
+          />
+          <rect
+            class="handle"
+            [attr.x]="a.rect.x + a.rect.width - 5"
+            [attr.y]="a.rect.y - 5"
+            width="10"
+            height="10"
+            rx="2"
+            [style.cursor]="handleCursor('ne')"
+            (pointerdown)="onHandleDown($event, 'ne')"
+          />
+          <rect
+            class="handle"
+            [attr.x]="a.rect.x + a.rect.width - 5"
+            [attr.y]="a.rect.y + a.rect.height / 2 - 5"
+            width="10"
+            height="10"
+            rx="2"
+            [style.cursor]="handleCursor('e')"
+            (pointerdown)="onHandleDown($event, 'e')"
+          />
+          <rect
+            class="handle"
+            [attr.x]="a.rect.x + a.rect.width - 5"
+            [attr.y]="a.rect.y + a.rect.height - 5"
+            width="10"
+            height="10"
+            rx="2"
+            [style.cursor]="handleCursor('se')"
+            (pointerdown)="onHandleDown($event, 'se')"
+          />
+          <rect
+            class="handle"
+            [attr.x]="a.rect.x + a.rect.width / 2 - 5"
+            [attr.y]="a.rect.y + a.rect.height - 5"
+            width="10"
+            height="10"
+            rx="2"
+            [style.cursor]="handleCursor('s')"
+            (pointerdown)="onHandleDown($event, 's')"
+          />
+          <rect
+            class="handle"
+            [attr.x]="a.rect.x - 5"
+            [attr.y]="a.rect.y + a.rect.height - 5"
+            width="10"
+            height="10"
+            rx="2"
+            [style.cursor]="handleCursor('sw')"
+            (pointerdown)="onHandleDown($event, 'sw')"
+          />
+          <rect
+            class="handle"
+            [attr.x]="a.rect.x - 5"
+            [attr.y]="a.rect.y + a.rect.height / 2 - 5"
+            width="10"
+            height="10"
+            rx="2"
+            [style.cursor]="handleCursor('w')"
+            (pointerdown)="onHandleDown($event, 'w')"
+          />
+        </g>
+      }
     }
   }
 
@@ -331,6 +359,10 @@
     [style.text-decoration]="t.underline ? 'underline' : 'none'"
     [style.color]="t.color"
     [style.text-align]="t.align"
+    [style.text-transform]="t.transform ?? 'none'"
+    [style.line-height]="t.lineHeight ?? 1.35"
+    [style.letter-spacing.px]="t.letterSpacing ?? 0"
+    [style.background-color]="t.backgroundColor && t.backgroundColor !== 'transparent' ? t.backgroundColor : 'rgba(255, 255, 255, 0.92)'"
     (input)="onEditInput($event)"
     (blur)="stopEditing()"
     (keydown)="onEditKeydown($event)"

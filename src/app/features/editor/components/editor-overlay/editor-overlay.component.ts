@@ -15,6 +15,7 @@ import {
   TextAnnotation,
   HighlightAnnotation,
   CommentAnnotation,
+  TextTransform,
 } from '../../../../core/models/pdf.models';
 import { EditorStateService } from '../../state/editor-state.service';
 
@@ -40,6 +41,7 @@ interface DraftMark {
 const TEXT_PAD_X = 10;
 const TEXT_PAD_Y = 8;
 const TEXT_LINE_HEIGHT = 1.35;
+const TEXT_BACKGROUND_PADDING = 6;
 
 @Component({
   selector: 'app-editor-overlay',
@@ -145,8 +147,10 @@ export class EditorOverlayComponent {
     if (t === 'select' || t === 'hand') {
       const hit = this.hitTest(x, y);
       if (hit) {
-        this.dragId = hit.id;
-        this.dragOffset = { x: x - hit.rect.x, y: y - hit.rect.y };
+        if (!hit.locked) {
+          this.dragId = hit.id;
+          this.dragOffset = { x: x - hit.rect.x, y: y - hit.rect.y };
+        }
         this.state.selectAnnotation(hit.id);
         this.svgRef()?.nativeElement.setPointerCapture?.(event.pointerId);
       } else {
@@ -176,7 +180,7 @@ export class EditorOverlayComponent {
   onHandleDown(event: PointerEvent, handle: Handle): void {
     event.stopPropagation();
     const ann = this.annotations().find((it) => it.id === this.selectedId());
-    if (!ann) {
+    if (!ann || ann.locked) {
       return;
     }
     const p = this.localPoint(event);
@@ -304,7 +308,7 @@ export class EditorOverlayComponent {
   onDblClick(event: MouseEvent): void {
     const { x, y } = this.localPoint(event as unknown as PointerEvent);
     const hit = this.hitTest(x, y);
-    if (hit && hit.type === 'text') {
+    if (hit && hit.type === 'text' && !hit.locked) {
       const caret = this.caretIndexFromX(hit.text, x, hit);
       this.startEditing(hit, caret);
     }
@@ -350,6 +354,9 @@ export class EditorOverlayComponent {
       cur.fontWeight >= 700,
       cur.fontFamily,
       cur.italic,
+      cur.transform,
+      cur.lineHeight ?? TEXT_LINE_HEIGHT,
+      cur.letterSpacing ?? 0,
     );
     this.state.updateAnnotation(id, {
       text,
@@ -368,6 +375,22 @@ export class EditorOverlayComponent {
     }
   }
 
+  transformText(text: string, transform?: TextTransform): string {
+    if (!transform || transform === 'none') {
+      return text;
+    }
+    if (transform === 'uppercase') {
+      return text.toUpperCase();
+    }
+    if (transform === 'lowercase') {
+      return text.toLowerCase();
+    }
+    if (transform === 'capitalize') {
+      return text.replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+    return text;
+  }
+
   private caretIndexFromX(
     text: string,
     clickX: number,
@@ -382,7 +405,7 @@ export class EditorOverlayComponent {
     ctx.font = `${a.italic ? 'italic ' : ''}${a.fontWeight >= 700 ? 'bold ' : ''}${a.fontSize}px ${a.fontFamily}`;
     let acc = 0;
     for (let i = 0; i < text.length; i++) {
-      const w = ctx.measureText(text[i]).width;
+      const w = ctx.measureText(text[i]).width + (a.letterSpacing ?? 0);
       if (acc + w / 2 >= rel) {
         return i;
       }
@@ -397,15 +420,21 @@ export class EditorOverlayComponent {
     bold: boolean,
     fontFamily = 'sans-serif',
     italic = false,
+    transform?: TextTransform,
+    lineHeight = TEXT_LINE_HEIGHT,
+    letterSpacing = 0,
   ): { width: number; height: number } {
-    const lines = text.split('\n');
+    const transformed = this.transformText(text, transform);
+    const lines = transformed.split('\n');
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (ctx) {
       ctx.font = `${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}${fontSize}px ${fontFamily}`;
       let maxW = 0;
       for (const line of lines) {
-        const w = ctx.measureText(line || ' ').width;
+        const baseW = ctx.measureText(line || ' ').width;
+        const spacingExtra = letterSpacing * Math.max(0, line.length - 1);
+        const w = baseW + spacingExtra;
         if (w > maxW) {
           maxW = w;
         }
@@ -413,15 +442,15 @@ export class EditorOverlayComponent {
       return {
         width: Math.max(20, Math.ceil(maxW) + TEXT_PAD_X * 2),
         height: Math.ceil(
-          lines.length * fontSize * TEXT_LINE_HEIGHT + TEXT_PAD_Y * 2,
+          lines.length * fontSize * lineHeight + TEXT_PAD_Y * 2,
         ),
       };
     }
-    const approx = Math.max(...lines.map((l) => l.length)) * fontSize * 0.6;
+    const approx = Math.max(...lines.map((l) => l.length)) * (fontSize * 0.6 + letterSpacing);
     return {
       width: Math.max(20, Math.ceil(approx) + TEXT_PAD_X * 2),
       height: Math.ceil(
-        lines.length * fontSize * TEXT_LINE_HEIGHT + TEXT_PAD_Y * 2,
+        lines.length * fontSize * lineHeight + TEXT_PAD_Y * 2,
       ),
     };
   }
@@ -440,6 +469,12 @@ export class EditorOverlayComponent {
       return a.rect.x + a.rect.width - TEXT_PAD_X;
     }
     return a.rect.x + TEXT_PAD_X;
+  }
+
+  textBackgroundPadding(a: TextAnnotation): number {
+    return a.backgroundColor && a.backgroundColor !== 'transparent'
+      ? a.backgroundPadding ?? TEXT_BACKGROUND_PADDING
+      : 0;
   }
 
   /** Line of dashes (or null) for the given shape's stroke style. */
@@ -466,8 +501,9 @@ export class EditorOverlayComponent {
 
   /** Baseline Y for the line at `lineIndex` (0-based) within the box. */
   lineBaselineY(a: TextAnnotation, lineIndex: number): number {
+    const lh = a.lineHeight ?? TEXT_LINE_HEIGHT;
     return (
-      a.rect.y + TEXT_PAD_Y + a.fontSize + lineIndex * a.fontSize * TEXT_LINE_HEIGHT
+      a.rect.y + TEXT_PAD_Y + a.fontSize + lineIndex * a.fontSize * lh
     );
   }
 
