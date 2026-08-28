@@ -1,5 +1,9 @@
 <div class="props">
   <header class="props__head">
+    <span class="props__title">Properties</span>
+    <span class="props__tool-badge" [title]="toolLabel() + ' tool active'">
+      <i [class]="toolIcon()"></i>{{ toolLabel() }}
+    </span>
     <button
       type="button"
       class="props__icon"
@@ -7,10 +11,6 @@
       title="Collapse properties panel"
       aria-label="Collapse properties panel"
     ><i class="fa-solid fa-sliders"></i></button>
-    <span class="props__title">Properties</span>
-    <span class="props__tool-badge" [title]="toolLabel() + ' tool active'">
-      <i [class]="toolIcon()"></i>{{ toolLabel() }}
-    </span>
   </header>
 
   @if (selected(); as ann) {
@@ -19,7 +19,7 @@
         type="button"
         class="props__delete"
         [class.props__delete--active]="ann.locked"
-        (click)="toggleLock(ann)"
+        (click)="toggleLock(ann, $event)"
         [title]="ann.locked ? 'Unlock annotation' : 'Lock annotation'"
         [attr.aria-label]="ann.locked ? 'Unlock annotation' : 'Lock annotation'"
         psec-actions

@@ -189,7 +189,11 @@
           </p>
         </div>
       } @else {
-        <div class="editor__canvas-stage" #stage>
+        <div
+          class="editor__canvas-stage"
+          #stage
+          (wheel)="onWorkspaceWheel($event)"
+        >
           <div
             class="editor__page-frame"
             [style.width.px]="displaySize()?.width"

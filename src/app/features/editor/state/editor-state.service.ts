@@ -126,6 +126,63 @@ export class EditorStateService {
     }
   }
 
+  /**
+   * Keep overlay coordinates anchored to their rendered PDF page when its
+   * viewport changes (for example, after collapsing an editor side panel).
+   * This is a presentation adjustment, not a document edit, so it does not
+   * mark the editor as modified and also applies to locked objects.
+   */
+  scaleAnnotations(pageId: string, scaleX: number, scaleY: number): void {
+    if (
+      !Number.isFinite(scaleX) ||
+      !Number.isFinite(scaleY) ||
+      scaleX <= 0 ||
+      scaleY <= 0 ||
+      (Math.abs(scaleX - 1) < 0.0001 && Math.abs(scaleY - 1) < 0.0001)
+    ) {
+      return;
+    }
+    const list = this._annotations().get(pageId);
+    if (!list?.length) {
+      return;
+    }
+    // PDF pages retain their aspect ratio, so these factors are normally
+    // identical. Averaging avoids a visible font jump from sub-pixel layout
+    // rounding while keeping text proportional if they differ slightly.
+    const textScale = (scaleX + scaleY) / 2;
+    const map = new Map(this._annotations());
+    map.set(
+      pageId,
+      list.map((annotation) => {
+        const scaled = {
+          ...annotation,
+          rect: {
+            x: annotation.rect.x * scaleX,
+            y: annotation.rect.y * scaleY,
+            width: annotation.rect.width * scaleX,
+            height: annotation.rect.height * scaleY,
+          },
+        };
+        if (annotation.type !== 'text') {
+          return scaled;
+        }
+        return {
+          ...scaled,
+          fontSize: annotation.fontSize * textScale,
+          letterSpacing:
+            annotation.letterSpacing === undefined
+              ? undefined
+              : annotation.letterSpacing * textScale,
+          backgroundPadding:
+            annotation.backgroundPadding === undefined
+              ? undefined
+              : annotation.backgroundPadding * textScale,
+        };
+      }) as PdfAnnotation[],
+    );
+    this._annotations.set(map);
+  }
+
   toggleLock(id: string): boolean {
     const map = new Map(this._annotations());
     for (const [pageId, list] of map) {

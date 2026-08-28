@@ -94,6 +94,9 @@ export class EditorComponent implements OnDestroy {
   private loadedRef: LoadedFile | null = null;
   private searchTimer?: ReturnType<typeof setTimeout>;
   private ro?: ResizeObserver;
+  private lastAnnotationViewport:
+    | { pageId: string; width: number; height: number }
+    | null = null;
 
   readonly totalPages = this.pagesStore.pagesCount;
   readonly currentPageNumber = computed(() => this.pagesStore.currentIndex() + 1);
@@ -178,6 +181,31 @@ export class EditorComponent implements OnDestroy {
     effect(() => {
       this.pagesStore.currentId();
       this.state.clearSelection();
+    });
+
+    // Annotation rectangles use the same coordinate system as the PDF overlay.
+    // Reproject them whenever fit-width/fit-page changes the rendered page.
+    effect(() => {
+      const pageId = this.currentPageId();
+      const size = this.displaySize();
+      if (!pageId || !size) {
+        this.lastAnnotationViewport = null;
+        return;
+      }
+
+      const previous = this.lastAnnotationViewport;
+      if (previous?.pageId === pageId) {
+        this.state.scaleAnnotations(
+          pageId,
+          size.width / previous.width,
+          size.height / previous.height,
+        );
+      }
+      this.lastAnnotationViewport = {
+        pageId,
+        width: size.width,
+        height: size.height,
+      };
     });
 
     // The canvas stage is conditionally rendered only once a document is open,
@@ -320,11 +348,30 @@ export class EditorComponent implements OnDestroy {
 
   /* Zoom */
   zoomIn(): void {
-    this.state.zoomIn();
+    this.zoomBy(1.1);
   }
 
   zoomOut(): void {
-    this.state.zoomOut();
+    this.zoomBy(1 / 1.1);
+  }
+
+  /** Applies a relative zoom from the current rendered page scale. */
+  private zoomBy(factor: number): void {
+    const current = this.displaySize()?.scale ?? this.state.zoom();
+    this.state.setZoom(current * factor);
+  }
+
+  /** Ctrl/Cmd + wheel also receives trackpad pinch gestures in modern browsers. */
+  onWorkspaceWheel(event: WheelEvent): void {
+    if (!event.ctrlKey && !event.metaKey) {
+      return;
+    }
+    event.preventDefault();
+    const factor = Math.min(
+      1.2,
+      Math.max(0.8, Math.exp(-event.deltaY * 0.001)),
+    );
+    this.zoomBy(factor);
   }
 
   setFit(mode: 'width' | 'page'): void {
@@ -337,6 +384,15 @@ export class EditorComponent implements OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
+    const hasZoomModifier = event.ctrlKey || event.metaKey;
+    const isZoomIn = event.key === '+' || event.key === '=' || event.code === 'NumpadAdd';
+    const isZoomOut = event.key === '-' || event.key === '_' || event.code === 'NumpadSubtract';
+    if (hasZoomModifier && (isZoomIn || isZoomOut)) {
+      event.preventDefault();
+      this.zoomBy(isZoomIn ? 1.1 : 1 / 1.1);
+      return;
+    }
+
     const target = event.target as HTMLElement | null;
     if (
       target &&

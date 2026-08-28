@@ -125,6 +125,36 @@ describe('EditorStateService', () => {
     expect(updated.rect.y).toBe(40);
   });
 
+  it('scales annotation bounds with the rendered page viewport', () => {
+    const text = makeText({ rect: { x: 10, y: 20, width: 100, height: 30 } });
+    state.addAnnotation('page-1', text);
+
+    state.scaleAnnotations('page-1', 1.5, 2);
+
+    expect(state.annotationsFor('page-1')[0].rect).toEqual({
+      x: 15,
+      y: 40,
+      width: 150,
+      height: 60,
+    });
+  });
+
+  it('scales text typography with the rendered page viewport', () => {
+    const text = makeText({
+      fontSize: 16,
+      letterSpacing: 2,
+      backgroundPadding: 6,
+    });
+    state.addAnnotation('page-1', text);
+
+    state.scaleAnnotations('page-1', 1.5, 1.5);
+
+    const scaled = state.annotationsFor('page-1')[0] as TextAnnotation;
+    expect(scaled.fontSize).toBe(24);
+    expect(scaled.letterSpacing).toBe(3);
+    expect(scaled.backgroundPadding).toBe(9);
+  });
+
   it('locks an annotation against updates, nudges, and deletion', () => {
     const text = makeText({ id: 'locked-text' });
     state.addAnnotation('page-1', text);

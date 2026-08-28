@@ -294,7 +294,8 @@ export class PropertiesPanelComponent {
     this.state.updateAnnotation(ann.id, { align });
   }
 
-  toggleLock(ann: PdfAnnotation): void {
+  toggleLock(ann: PdfAnnotation, event?: MouseEvent): void {
+    event?.stopPropagation();
     this.state.toggleLock(ann.id);
   }
 
