@@ -60,6 +60,9 @@ export class EditorComponent implements OnDestroy {
   readonly state = inject(EditorStateService);
 
   readonly exporting = signal(false);
+  /** Session-level workspace preferences; collapsed panels remain as icon rails. */
+  readonly pagesPanelCollapsed = signal(false);
+  readonly propertiesPanelCollapsed = signal(false);
 
   /** Blob URL handed to ngx-extended-pdf-viewer to load the document. */
   readonly docSrc = signal<string | null>(null);
@@ -217,6 +220,14 @@ export class EditorComponent implements OnDestroy {
 
   selectTool(id: PdfToolId): void {
     this.state.setTool(id);
+  }
+
+  togglePagesPanel(): void {
+    this.pagesPanelCollapsed.update((collapsed) => !collapsed);
+  }
+
+  togglePropertiesPanel(): void {
+    this.propertiesPanelCollapsed.update((collapsed) => !collapsed);
   }
 
   private async load(file: LoadedFile): Promise<void> {

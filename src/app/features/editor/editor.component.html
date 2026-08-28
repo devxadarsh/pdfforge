@@ -145,9 +145,32 @@
     </div>
   }
 
-  <div class="editor__body">
-    <aside class="editor__sidebar" aria-label="Pages">
-      <app-pages-panel />
+  <div
+    class="editor__body"
+    [class.editor__body--pages-collapsed]="pagesPanelCollapsed()"
+    [class.editor__body--properties-collapsed]="propertiesPanelCollapsed()"
+  >
+    <aside
+      id="editor-pages-panel"
+      class="editor__sidebar"
+      [class.editor__sidebar--collapsed]="pagesPanelCollapsed()"
+      aria-label="Pages"
+    >
+      @if (pagesPanelCollapsed()) {
+        <button
+          type="button"
+          class="editor__panel-rail"
+          (click)="togglePagesPanel()"
+          [attr.aria-expanded]="false"
+          aria-controls="editor-pages-panel"
+          title="Expand pages panel"
+          aria-label="Expand pages panel"
+        >
+          <i class="fa-solid fa-layer-group"></i>
+        </button>
+      } @else {
+        <app-pages-panel (collapse)="togglePagesPanel()" />
+      }
     </aside>
 
     <section class="editor__workspace">
@@ -191,8 +214,30 @@
       }
     </section>
 
-    <aside class="editor__properties" aria-label="Properties">
-      <app-properties-panel [docName]="docName()" />
+    <aside
+      id="editor-properties-panel"
+      class="editor__properties"
+      [class.editor__properties--collapsed]="propertiesPanelCollapsed()"
+      aria-label="Properties"
+    >
+      @if (propertiesPanelCollapsed()) {
+        <button
+          type="button"
+          class="editor__panel-rail"
+          (click)="togglePropertiesPanel()"
+          [attr.aria-expanded]="false"
+          aria-controls="editor-properties-panel"
+          title="Expand properties panel"
+          aria-label="Expand properties panel"
+        >
+          <i class="fa-solid fa-sliders"></i>
+        </button>
+      } @else {
+        <app-properties-panel
+          [docName]="docName()"
+          (collapse)="togglePropertiesPanel()"
+        />
+      }
     </aside>
   </div>
 </div>

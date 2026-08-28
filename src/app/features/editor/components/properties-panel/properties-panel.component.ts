@@ -2,6 +2,7 @@ import {
   Component,
   inject,
   input,
+  output,
   computed,
   ChangeDetectionStrategy,
 } from '@angular/core';
@@ -74,6 +75,7 @@ const SHAPE_SWATCHES: ReadonlyArray<ColorSwatch> = [
 export class PropertiesPanelComponent {
   private readonly state = inject(EditorStateService);
   readonly pages = inject(EditorPagesService);
+  readonly collapse = output<void>();
 
   readonly docName = input<string | null>(null);
 

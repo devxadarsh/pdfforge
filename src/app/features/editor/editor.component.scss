@@ -76,6 +76,24 @@
   min-height: 0;
 }
 
+.editor__body--pages-collapsed {
+  grid-template-columns: 46px minmax(0, 1fr) 288px;
+}
+
+.editor__body--properties-collapsed {
+  grid-template-columns: 248px minmax(0, 1fr) 46px;
+}
+
+.editor__body--pages-collapsed.editor__body--properties-collapsed {
+  grid-template-columns: 46px minmax(0, 1fr) 46px;
+}
+
+.editor__sidebar--collapsed,
+.editor__properties--collapsed {
+  padding: 5px;
+  align-items: center;
+}
+
 .editor__sidebar,
 .editor__properties {
   background: var(--pf-surface-container-low);
@@ -92,6 +110,30 @@
 
 .editor__properties {
   border-left: 1px solid var(--pf-outline-variant);
+}
+
+.editor__panel-rail {
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--pf-outline-variant);
+  border-radius: var(--pf-radius);
+  background: var(--pf-surface-container-lowest);
+  color: var(--pf-on-surface-variant);
+  cursor: pointer;
+}
+
+.editor__panel-rail {
+  width: 34px;
+  height: 34px;
+  margin-top: 2px;
+  color: var(--pf-on-primary-container);
+  background: var(--pf-primary-container);
+  border-color: transparent;
+}
+
+.editor__panel-rail:hover {
+  border-color: var(--pf-primary);
+  color: var(--pf-on-primary-container);
 }
 
 .editor__workspace {
@@ -238,16 +280,29 @@
   .editor__body {
     grid-template-columns: 220px 1fr;
   }
+
+  .editor__body--pages-collapsed,
+  .editor__body--pages-collapsed.editor__body--properties-collapsed {
+    grid-template-columns: 46px minmax(0, 1fr);
+  }
   .editor__properties {
     display: none;
   }
+
 }
 
 @media (max-width: 768px) {
   .editor__body {
     grid-template-columns: 1fr;
   }
+
+  .editor__body--pages-collapsed,
+  .editor__body--properties-collapsed,
+  .editor__body--pages-collapsed.editor__body--properties-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .editor__sidebar {
     display: none;
   }
+
 }

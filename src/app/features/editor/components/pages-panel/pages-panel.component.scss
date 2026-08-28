@@ -24,10 +24,17 @@
   height: 26px;
   display: grid;
   place-items: center;
+  padding: 0;
+  border: none;
   border-radius: var(--pf-radius);
   background: var(--pf-primary-container);
   color: var(--pf-on-primary-container);
   font-size: 12px;
+  cursor: pointer;
+}
+
+.ppanel__icon:hover {
+  filter: brightness(0.94);
 }
 
 .ppanel__title {

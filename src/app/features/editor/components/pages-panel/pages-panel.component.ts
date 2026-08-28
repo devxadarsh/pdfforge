@@ -1,6 +1,7 @@
 import {
   Component,
   inject,
+  output,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { PanelSectionComponent } from '../../../../shared/components/panel/panel-section.component';
@@ -23,6 +24,7 @@ import { EditorStateService } from '../../state/editor-state.service';
 })
 export class PagesPanelComponent {
   readonly pages = inject(EditorPagesService);
+  readonly collapse = output<void>();
   private readonly state = inject(EditorStateService);
 
   private dragId: string | null = null;

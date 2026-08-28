@@ -1,6 +1,12 @@
 <div class="ppanel">
   <header class="ppanel__head">
-    <span class="ppanel__icon"><i class="fa-solid fa-layer-group"></i></span>
+    <button
+      type="button"
+      class="ppanel__icon"
+      (click)="collapse.emit()"
+      title="Collapse pages panel"
+      aria-label="Collapse pages panel"
+    ><i class="fa-solid fa-layer-group"></i></button>
     <span class="ppanel__title">Pages</span>
     <span class="ppanel__count">{{ pages.pagesCount() }}</span>
   </header>
