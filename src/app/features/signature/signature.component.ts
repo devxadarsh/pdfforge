@@ -14,6 +14,7 @@ import { FileDropzoneComponent } from '../../shared/components/dropzone/file-dro
 
 @Component({
     selector: 'app-signature',
+    standalone: true,
     imports: [RouterLink, FormsModule, NgClass, FileDropzoneComponent],
     templateUrl: './signature.component.html',
     styleUrl: './signature.component.scss'

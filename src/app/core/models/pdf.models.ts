@@ -100,6 +100,7 @@ export interface ShapeAnnotation extends BaseAnnotation {
   strokeColor: string;
   fillColor: string;
   strokeWidth: number;
+  strokeStyle: 'solid' | 'dashed' | 'dotted';
 }
 
 export interface ImageAnnotation extends BaseAnnotation {

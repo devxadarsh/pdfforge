@@ -6,6 +6,7 @@ import { EditorTheme } from '../../core/models/pdf.models';
 
 @Component({
     selector: 'app-settings',
+    standalone: true,
     imports: [FormsModule],
     templateUrl: './settings.component.html',
     styleUrl: './settings.component.scss'

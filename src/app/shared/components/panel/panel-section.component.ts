@@ -2,7 +2,6 @@ import {
   Component,
   input,
   signal,
-  OnInit,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { NgClass } from '@angular/common';
@@ -24,7 +23,7 @@ import { NgClass } from '@angular/common';
   templateUrl: './panel-section.component.html',
   styleUrl: './panel-section.component.scss',
 })
-export class PanelSectionComponent implements OnInit {
+export class PanelSectionComponent {
   readonly title = input.required<string>();
   readonly icon = input<string>('');
   readonly count = input<number | null>(null);
@@ -33,9 +32,14 @@ export class PanelSectionComponent implements OnInit {
   readonly bare = input(false);
 
   private readonly _collapsed = signal(false);
+  readonly isCollapsed = this._collapsed.asReadonly();
 
-  ngOnInit(): void {
-    this._collapsed.set(this.collapsed());
+  constructor() {
+    // Initialise the internal toggle state from the input on first render so
+    // the body is shown correctly the very first time the section is drawn
+    // (and so that later input changes do not silently override the user
+    // toggling the section open/closed).
+    queueMicrotask(() => this._collapsed.set(this.collapsed()));
   }
 
   toggle(): void {

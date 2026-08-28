@@ -19,17 +19,172 @@
       >
         <i class="fa-solid fa-trash"></i>
       </button>
+      <button
+        type="button"
+        class="props__delete props__delete--ghost"
+        (click)="duplicate(ann)"
+        title="Duplicate annotation"
+        aria-label="Duplicate annotation"
+        psec-actions
+      >
+        <i class="fa-solid fa-copy"></i>
+      </button>
+
+      <app-panel-section
+        title="Position & size"
+        icon="fa-solid fa-up-right-and-down-left-from-center"
+        [bare]="true"
+      >
+        <div class="props__grid">
+          <label class="props__field">
+            <span>X</span>
+            <input
+              class="pf-input"
+              type="number"
+              [value]="ann.rect.x"
+              (change)="setX(ann, $any($event.target).value)"
+              aria-label="X position"
+            />
+          </label>
+          <label class="props__field">
+            <span>Y</span>
+            <input
+              class="pf-input"
+              type="number"
+              [value]="ann.rect.y"
+              (change)="setY(ann, $any($event.target).value)"
+              aria-label="Y position"
+            />
+          </label>
+          <label class="props__field">
+            <span>W</span>
+            <input
+              class="pf-input"
+              type="number"
+              min="1"
+              [value]="ann.rect.width"
+              (change)="setWidth(ann, $any($event.target).value)"
+              aria-label="Width"
+            />
+          </label>
+          <label class="props__field">
+            <span>H</span>
+            <input
+              class="pf-input"
+              type="number"
+              min="1"
+              [value]="ann.rect.height"
+              (change)="setHeight(ann, $any($event.target).value)"
+              aria-label="Height"
+            />
+          </label>
+        </div>
+        <div class="props__row props__row--inline">
+          <label class="props__field props__field--grow">
+            <span>Rotation (°)</span>
+            <input
+              class="pf-input"
+              type="number"
+              step="15"
+              [value]="ann.rotation"
+              (change)="setRotation(ann, $any($event.target).value)"
+              aria-label="Rotation in degrees"
+            />
+          </label>
+          <button
+            type="button"
+            class="props__iconbtn"
+            (click)="rotateNeg90(ann)"
+            title="Rotate 90° counter-clockwise"
+            aria-label="Rotate 90° counter-clockwise"
+          >
+            <i class="fa-solid fa-rotate-left"></i>
+          </button>
+          <button
+            type="button"
+            class="props__iconbtn"
+            (click)="rotate90(ann)"
+            title="Rotate 90° clockwise"
+            aria-label="Rotate 90° clockwise"
+          >
+            <i class="fa-solid fa-rotate-right"></i>
+          </button>
+          <button
+            type="button"
+            class="props__iconbtn"
+            (click)="resetRotation(ann)"
+            title="Reset rotation"
+            aria-label="Reset rotation"
+            [disabled]="ann.rotation === 0"
+          >
+            <i class="fa-solid fa-arrow-rotate-backward"></i>
+          </button>
+        </div>
+      </app-panel-section>
+
+      <app-panel-section
+        title="Arrange"
+        icon="fa-solid fa-layer-group"
+        [bare]="true"
+      >
+        <div class="props__row props__row--wrap">
+          <button
+            type="button"
+            class="props__chip"
+            (click)="sendToBack(ann)"
+            [disabled]="!canSendBackward()"
+            title="Send to back"
+            aria-label="Send to back"
+          >
+            <i class="fa-solid fa-backward-step"></i> Back
+          </button>
+          <button
+            type="button"
+            class="props__chip"
+            (click)="sendBackward(ann)"
+            [disabled]="!canSendBackward()"
+            title="Send backward"
+            aria-label="Send backward"
+          >
+            <i class="fa-solid fa-chevron-down"></i> Backward
+          </button>
+          <button
+            type="button"
+            class="props__chip"
+            (click)="bringForward(ann)"
+            [disabled]="!canBringForward()"
+            title="Bring forward"
+            aria-label="Bring forward"
+          >
+            <i class="fa-solid fa-chevron-up"></i> Forward
+          </button>
+          <button
+            type="button"
+            class="props__chip"
+            (click)="bringToFront(ann)"
+            [disabled]="!canBringForward()"
+            title="Bring to front"
+            aria-label="Bring to front"
+          >
+            <i class="fa-solid fa-forward-step"></i> Front
+          </button>
+        </div>
+        <p class="props__hint">
+          Layer {{ selectionIndex() + 1 }} of {{ selectionTotal() }}
+        </p>
+      </app-panel-section>
 
       @if (ann.type === 'text') {
         <app-panel-section title="Content" icon="fa-solid fa-font" [bare]="true">
           <label class="props__field">
             <span>Text</span>
-            <input
+            <textarea
               class="pf-input"
-              type="text"
+              rows="2"
               [value]="ann.text"
               (input)="setText(ann, $any($event.target).value)"
-            />
+              aria-label="Text content"
+            ></textarea>
           </label>
           <label class="props__field">
             <span>Font</span>
@@ -44,26 +199,30 @@
               }
             </select>
           </label>
-          <label class="props__field">
-            <span>Font size</span>
-            <input
-              class="pf-input"
-              type="number"
-              min="8"
-              max="120"
-              [value]="ann.fontSize"
-              (input)="setFontSize(ann, $any($event.target).value)"
-            />
-          </label>
-          <label class="props__field">
-            <span>Color</span>
-            <input
-              class="pf-color"
-              type="color"
-              [value]="ann.color"
-              (input)="setColor(ann, $any($event.target).value)"
-            />
-          </label>
+          <div class="props__row">
+            <label class="props__field props__field--grow">
+              <span>Size</span>
+              <input
+                class="pf-input"
+                type="number"
+                min="8"
+                max="120"
+                [value]="ann.fontSize"
+                (input)="setFontSize(ann, $any($event.target).value)"
+                aria-label="Font size"
+              />
+            </label>
+            <label class="props__field props__field--color">
+              <span>Color</span>
+              <input
+                class="pf-color"
+                type="color"
+                [value]="ann.color"
+                (input)="setColor(ann, $any($event.target).value)"
+                aria-label="Text color"
+              />
+            </label>
+          </div>
         </app-panel-section>
 
         <app-panel-section title="Style" icon="fa-solid fa-text-height" [bare]="true">
@@ -138,35 +297,114 @@
         <app-panel-section title="Stroke & fill" icon="fa-solid fa-palette" [bare]="true">
           <label class="props__field">
             <span>Stroke</span>
-            <input
-              class="pf-color"
-              type="color"
-              [value]="ann.strokeColor"
-              (input)="setStroke(ann, $any($event.target).value)"
-            />
-          </label>
-          @if (ann.kind !== 'arrow') {
-            <label class="props__field">
-              <span>Fill</span>
+            <div class="props__swatches">
+              @for (s of shapeSwatches; track s.value) {
+                <button
+                  type="button"
+                  class="props__swatch"
+                  [class.props__swatch--on]="ann.strokeColor === s.value"
+                  [style.background]="s.value"
+                  [title]="s.label"
+                  [attr.aria-label]="'Set stroke to ' + s.label"
+                  (click)="setStroke(ann, s.value)"
+                ></button>
+              }
               <input
-                class="pf-color"
+                class="pf-color props__swatch-input"
                 type="color"
-                [value]="toColor(ann.fillColor)"
-                (input)="setFill(ann, $any($event.target).value)"
+                [value]="toColor(ann.strokeColor)"
+                (input)="setStroke(ann, $any($event.target).value)"
+                aria-label="Stroke color"
               />
-            </label>
-          }
+            </div>
+          </label>
           <label class="props__field">
             <span>Stroke width</span>
-            <input
-              class="pf-input"
-              type="range"
-              min="1"
-              max="24"
-              [value]="ann.strokeWidth"
-              (input)="setStrokeWidth(ann, $any($event.target).value)"
-            />
+            <div class="props__row props__row--inline">
+              <input
+                class="pf-input props__field--grow"
+                type="range"
+                min="1"
+                max="24"
+                [value]="ann.strokeWidth"
+                (input)="setStrokeWidth(ann, $any($event.target).value)"
+                aria-label="Stroke width slider"
+              />
+              <input
+                class="pf-input props__field--narrow"
+                type="number"
+                min="1"
+                max="24"
+                [value]="ann.strokeWidth"
+                (change)="setStrokeWidth(ann, $any($event.target).value)"
+                aria-label="Stroke width"
+              />
+            </div>
           </label>
+          @if (canStrokeStyle()) {
+            <div class="props__field">
+              <span>Style</span>
+              <div class="props__row">
+                @for (s of strokeStyles; track s.value) {
+                  <button
+                    type="button"
+                    class="props__chip"
+                    [class.props__chip--on]="strokeStyleOf(ann) === s.value"
+                    (click)="setStrokeStyle(ann, s.value)"
+                  >
+                    {{ s.label }}
+                  </button>
+                }
+              </div>
+            </div>
+          }
+          @if (canFill()) {
+            <label class="props__field">
+              <span>Fill</span>
+              <div class="props__row props__row--inline">
+                <button
+                  type="button"
+                  class="props__chip"
+                  [class.props__chip--on]="hasFill()"
+                  (click)="setFillEnabled(ann, true)"
+                  title="Enable fill"
+                >
+                  <i class="fa-solid fa-fill"></i> On
+                </button>
+                <button
+                  type="button"
+                  class="props__chip"
+                  [class.props__chip--on]="!hasFill()"
+                  (click)="setFillEnabled(ann, false)"
+                  title="Disable fill"
+                >
+                  <i class="fa-solid fa-ban"></i> None
+                </button>
+              </div>
+              @if (hasFill()) {
+                <div class="props__swatches">
+                  @for (s of shapeSwatches; track s.value) {
+                    <button
+                      type="button"
+                      class="props__swatch"
+                      [class.props__swatch--on]="ann.fillColor === s.value"
+                      [style.background]="s.value"
+                      [title]="s.label"
+                      [attr.aria-label]="'Set fill to ' + s.label"
+                      (click)="setFill(ann, s.value)"
+                    ></button>
+                  }
+                  <input
+                    class="pf-color props__swatch-input"
+                    type="color"
+                    [value]="toColor(ann.fillColor)"
+                    (input)="setFill(ann, $any($event.target).value)"
+                    aria-label="Fill color"
+                  />
+                </div>
+              }
+            </label>
+          }
         </app-panel-section>
       }
 
@@ -178,12 +416,26 @@
         <app-panel-section title="Appearance" icon="fa-solid fa-eye-dropper" [bare]="true">
           <label class="props__field">
             <span>Color</span>
-            <input
-              class="pf-color"
-              type="color"
-              [value]="ann.color"
-              (input)="setHighlightColor(ann, $any($event.target).value)"
-            />
+            <div class="props__swatches">
+              @for (s of highlightSwatches; track s.value) {
+                <button
+                  type="button"
+                  class="props__swatch"
+                  [class.props__swatch--on]="ann.color === s.value"
+                  [style.background]="s.value"
+                  [title]="s.label"
+                  [attr.aria-label]="'Set color to ' + s.label"
+                  (click)="setHighlightColor(ann, s.value)"
+                ></button>
+              }
+              <input
+                class="pf-color props__swatch-input"
+                type="color"
+                [value]="ann.color"
+                (input)="setHighlightColor(ann, $any($event.target).value)"
+                aria-label="Custom color"
+              />
+            </div>
           </label>
         </app-panel-section>
       }
@@ -197,6 +449,7 @@
               rows="3"
               [value]="ann.text"
               (input)="setComment(ann, $any($event.target).value)"
+              aria-label="Comment text"
             ></textarea>
           </label>
           <label class="props__field">
@@ -206,14 +459,15 @@
               type="text"
               [value]="ann.author"
               (input)="setAuthor(ann, $any($event.target).value)"
+              aria-label="Comment author"
             />
           </label>
         </app-panel-section>
       }
 
-      <app-panel-section title="Layer" icon="fa-solid fa-layer-group" [bare]="true">
+      <app-panel-section title="Layer" icon="fa-solid fa-droplet" [bare]="true">
         <label class="props__field">
-          <span>Opacity</span>
+          <span>Opacity ({{ (ann.opacity * 100) | number: '1.0-0' }}%)</span>
           <input
             class="pf-input"
             type="range"
@@ -222,6 +476,7 @@
             step="0.1"
             [value]="ann.opacity"
             (input)="setOpacity(ann, $any($event.target).value)"
+            aria-label="Opacity"
           />
         </label>
       </app-panel-section>

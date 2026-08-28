@@ -6,6 +6,7 @@ import { FileDropzoneComponent } from '../../shared/components/dropzone/file-dro
 
 @Component({
     selector: 'app-compress',
+    standalone: true,
     imports: [RouterLink, FormsModule, FileDropzoneComponent],
     templateUrl: './compress.component.html',
     styleUrl: './compress.component.scss'

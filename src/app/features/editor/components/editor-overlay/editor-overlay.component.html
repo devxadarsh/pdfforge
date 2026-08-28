@@ -41,7 +41,9 @@
               [attr.fill]="a.fillColor"
               [attr.stroke]="a.strokeColor"
               [attr.stroke-width]="a.strokeWidth"
+              [attr.stroke-dasharray]="strokeDashFor(a)"
               [attr.opacity]="a.opacity"
+              [attr.transform]="rotateTransform(a)"
             />
           }
           @case ('circle') {
@@ -53,7 +55,9 @@
               [attr.fill]="a.fillColor"
               [attr.stroke]="a.strokeColor"
               [attr.stroke-width]="a.strokeWidth"
+              [attr.stroke-dasharray]="strokeDashFor(a)"
               [attr.opacity]="a.opacity"
+              [attr.transform]="rotateTransform(a)"
             />
           }
           @case ('arrow') {
@@ -64,8 +68,10 @@
               [attr.y2]="a.rect.y + a.rect.height"
               [attr.stroke]="a.strokeColor"
               [attr.stroke-width]="a.strokeWidth"
+              [attr.stroke-dasharray]="strokeDashFor(a)"
               [attr.opacity]="a.opacity"
               [attr.marker-end]="'url(#ah-' + a.id + ')'"
+              [attr.transform]="rotateTransform(a)"
             />
           }
         }
@@ -86,6 +92,7 @@
                 ? 'end'
                 : 'start'
           "
+          [attr.transform]="rotateTransform(a)"
         >
           @for (line of textLines(a.text); track $index) {
             <tspan

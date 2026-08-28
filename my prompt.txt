@@ -1,0 +1,1591 @@
+PDFForge — Angular Frontend Implementation Master Prompt
+
+You are the lead frontend architect and senior Angular/TypeScript engineer responsible for implementing PDFForge, a professional browser-based PDF editor and PDF utility application.
+
+A complete UI/UX design has already been created in Google Stitch.
+
+Your job is to convert that UI design into a production-quality Angular application while preserving the Stitch design as closely as possible.
+
+1. NON-NEGOTIABLE PRODUCT REQUIREMENTS
+
+The application must be:
+
+Angular only
+
+TypeScript
+
+Frontend only
+
+No backend
+
+No REST API
+
+No database server
+
+No authentication
+
+No login/signup
+
+No cloud storage
+
+No file upload server
+
+No server-side PDF processing
+
+Completely client-side
+
+All PDF files must be processed locally in the browser.
+
+The application must clearly communicate:
+
+“Your files never leave your device.”
+
+“Processed locally in your browser.”
+
+The application should work even when there is no backend available.
+
+2. PRIMARY OBJECTIVE
+
+Build a professional PDF editor comparable in overall quality to modern PDF applications.
+
+The application must support the following major capabilities:
+
+PDF Editor
+
+Open PDF
+
+View PDF
+
+Zoom
+
+Pan
+
+Navigate pages
+
+Search PDF
+
+Select pages
+
+Add text
+
+Edit text where technically possible
+
+Highlight
+
+Underline
+
+Strikethrough
+
+Draw
+
+Pen
+
+Eraser
+
+Rectangle
+
+Circle
+
+Arrow
+
+Add image
+
+Add signature
+
+Add stamp
+
+Add comments/notes
+
+Delete pages
+
+Duplicate pages
+
+Rotate pages
+
+Reorder pages
+
+Extract pages
+
+PDF Utilities
+
+Merge PDF
+
+Split PDF
+
+Compress PDF
+
+PDF → Image
+
+Image → PDF
+
+PDF metadata viewer/editor where practical
+
+Protect PDF
+
+Unlock PDF where technically supported
+
+Flatten PDF
+
+Print PDF
+
+Local Browser Features
+
+Recent documents
+
+Local persistence
+
+Clear recent documents
+
+Clear application data
+
+Theme switching
+
+Keyboard shortcuts
+
+Responsive/mobile UI
+
+3. TECHNOLOGY STACK
+
+Use:
+
+Angular
+
+TypeScript
+
+RxJS
+
+Angular Router
+
+Angular Signals where appropriate
+
+SCSS or the project's existing styling system
+
+Strict TypeScript configuration
+
+For PDF functionality prefer mature browser-side libraries.
+
+Primary candidates:
+
+ngx-extended-pdf-viewer for PDF rendering and viewer functionality
+
+pdf-lib for PDF manipulation
+
+Use Web Workers for CPU-heavy operations where beneficial.
+
+Use IndexedDB for larger local browser data.
+
+Do not introduce a backend dependency.
+
+Do not introduce unnecessary libraries.
+
+Before installing any dependency, verify that it is actually needed.
+
+4. FIRST TASK — INSPECT THE EXISTING PROJECT
+
+Before writing implementation code:
+
+Inspect the entire repository.
+
+Identify the Angular version.
+
+Identify the existing application structure.
+
+Inspect package.json.
+
+Inspect existing routes.
+
+Inspect existing components.
+
+Inspect existing styles.
+
+Inspect assets.
+
+Inspect the Stitch-generated UI/source files available in the project.
+
+Identify which portions of the Stitch design are already implemented.
+
+Identify gaps between the Stitch design and the existing Angular application.
+
+Do NOT blindly overwrite the existing project.
+
+Reuse existing code where appropriate.
+
+Do not create duplicate components if an equivalent component already exists.
+
+5. DESIGN FIDELITY RULE
+
+The Stitch UI is the source of truth for visual design.
+
+Preserve:
+
+Layout
+
+Spacing
+
+Typography
+
+Colors
+
+Borders
+
+Shadows
+
+Icon placement
+
+Toolbar structure
+
+Sidebar structure
+
+Properties panel
+
+Responsive behavior
+
+Dialog appearance
+
+Empty states
+
+Loading states
+
+Success states
+
+Error states
+
+Do not replace the design with a generic Angular dashboard.
+
+If functionality requires a UI element that does not exist in the Stitch design, add it in a way that visually matches the existing design system.
+
+6. APPLICATION ARCHITECTURE
+
+Use a clean scalable Angular architecture.
+
+Recommended conceptual structure:
+
+src/
+  app/
+    core/
+      services/
+      models/
+      utilities/
+      workers/
+
+    shared/
+      components/
+      directives/
+      pipes/
+      dialogs/
+
+    features/
+      home/
+      tools/
+      editor/
+      merge/
+      split/
+      compress/
+      convert/
+      security/
+      recent/
+      settings/
+      help/
+
+    layout/
+      header/
+      sidebar/
+      footer/
+
+    app.routes.ts
+
+
+Adapt this structure to the existing project rather than forcing it blindly.
+
+Use feature-based architecture.
+
+Keep PDF processing logic separate from UI components.
+
+7. DOMAIN MODEL
+
+Create proper TypeScript models/interfaces.
+
+At minimum define concepts similar to:
+
+PdfDocument
+PdfPage
+PageSelection
+PdfAnnotation
+TextAnnotation
+HighlightAnnotation
+DrawingAnnotation
+ShapeAnnotation
+ImageAnnotation
+SignatureAnnotation
+StampAnnotation
+PdfTool
+PdfProcessingJob
+PdfProcessingResult
+RecentDocument
+EditorState
+ViewportState
+
+
+Do not use any unless absolutely unavoidable.
+
+Use strict typing.
+
+8. CENTRAL PDF DOCUMENT SERVICE
+
+Create a central PDF document abstraction/service.
+
+Responsibilities:
+
+Load PDF
+
+Track document state
+
+Track pages
+
+Track current page
+
+Track selected pages
+
+Track modifications
+
+Export PDF
+
+Reset document
+
+Manage undo/redo state
+
+Notify UI when document state changes
+
+Do not place all functionality inside the main editor component.
+
+The editor should orchestrate services rather than contain all PDF logic.
+
+9. PDF RENDERING ENGINE
+
+Use ngx-extended-pdf-viewer as the application's PDF viewing/rendering layer.
+
+Requirements specific to the viewer:
+
+Use the Angular component provided by ngx-extended-pdf-viewer instead of creating a custom PDF.js viewer.
+
+Use the library's supported inputs, outputs, APIs, and lifecycle events for page navigation, zoom, rotation, fullscreen, thumbnails/sidebar, find/search, and document lifecycle.
+
+Centralize common viewer configuration so behavior remains consistent across the application.
+
+Synchronize Angular editor state with the viewer through supported library events and APIs.
+
+Do not directly manipulate the viewer's internal PDF.js DOM or internals unless explicitly required by the library's documented API.
+
+Keep PDF mutation and export responsibilities outside the viewer layer, primarily using pdf-lib where supported.
+
+When a feature is already provided by ngx-extended-pdf-viewer, use the library capability instead of recreating it manually.
+
+Verify compatibility between the project's Angular version and the selected ngx-extended-pdf-viewer version before installation.
+
+Requirements:
+
+Render pages correctly
+
+High DPI rendering
+
+Zoom
+
+Fit width
+
+Fit page
+
+Scroll
+
+Page navigation
+
+Lazy rendering for large PDFs
+
+Thumbnail rendering
+
+Search support
+
+Responsive rendering
+
+Do not render 500 PDF pages simultaneously if it can be avoided.
+
+Use virtualization/lazy rendering where practical.
+
+10. EDITOR WORKSPACE
+
+Implement the editor in stages.
+
+The editor structure should contain:
+
+Editor
+ ├── App Header
+ ├── Editor Toolbar
+ ├── Left Page Sidebar
+ ├── Main PDF Workspace
+ ├── Right Properties Panel
+ └── Bottom Controls
+
+
+Maintain independent state for:
+
+Current tool
+
+Current page
+
+Selected objects
+
+Selected pages
+
+Zoom
+
+Pan
+
+Viewport
+
+Undo/redo
+
+Document modified state
+
+11. IMPLEMENTATION PHASE 1 — APPLICATION FOUNDATION
+
+Implement:
+
+Angular application shell
+
+Routing
+
+Global styles
+
+Theme system
+
+Header
+
+Footer
+
+Navigation
+
+Responsive layout
+
+Tool cards
+
+Landing page
+
+All tools page
+
+Shared buttons
+
+Shared dialogs
+
+Toast system
+
+Loading system
+
+Error system
+
+At the end of this phase:
+
+The website should look like the Stitch design even though PDF functionality is not yet implemented.
+
+Do not proceed to complicated PDF editing until this foundation is stable.
+
+12. IMPLEMENTATION PHASE 2 — FILE HANDLING
+
+Implement local file handling.
+
+Features:
+
+Drag and drop
+
+File picker
+
+PDF validation
+
+File size validation
+
+Unsupported file handling
+
+Open PDF
+
+Recent files
+
+File metadata
+
+Browser-local state
+
+No file should be sent to a server.
+
+Support common browser file interactions.
+
+Provide friendly error messages.
+
+13. IMPLEMENTATION PHASE 3 — PDF VIEWER
+
+Implement:
+
+PDF loading
+
+Rendering
+
+Page navigation
+
+Zoom
+
+Fit page
+
+Fit width
+
+Pan
+
+Fullscreen
+
+Page counter
+
+Thumbnails
+
+Thumbnail selection
+
+Optimize rendering for large documents.
+
+The viewer must be stable before editor annotations are added.
+
+14. IMPLEMENTATION PHASE 4 — PAGE MANAGEMENT
+
+Implement:
+
+Page selection
+
+Multi-selection
+
+Reordering
+
+Drag-and-drop
+
+Delete page
+
+Duplicate page
+
+Rotate page
+
+Extract page
+
+Select all
+
+Clear selection
+
+Update thumbnails immediately after operations.
+
+Maintain correct page numbering.
+
+Implement undo/redo for page operations.
+
+15. IMPLEMENTATION PHASE 5 — EDITOR TOOLBAR
+
+Implement each tool incrementally.
+
+Order:
+
+Select
+
+Hand
+
+Text
+
+Highlight
+
+Underline
+
+Strikethrough
+
+Pen
+
+Freehand drawing
+
+Eraser
+
+Rectangle
+
+Circle
+
+Arrow
+
+Image
+
+Signature
+
+Stamp
+
+Comment
+
+Do not implement all tools simultaneously.
+
+After implementing each tool:
+
+Test it
+
+Verify selection
+
+Verify rendering
+
+Verify movement
+
+Verify deletion
+
+Verify undo
+
+Verify redo
+
+Verify export
+
+16. IMPLEMENTATION PHASE 6 — TEXT TOOL
+
+Implement a professional text annotation workflow.
+
+Requirements:
+
+Add text
+
+Move text
+
+Resize
+
+Delete
+
+Edit
+
+Font selection
+
+Font size
+
+Bold
+
+Italic
+
+Underline
+
+Alignment
+
+Color
+
+Opacity
+
+Properties panel must update based on selected text.
+
+Keyboard behavior must be intuitive.
+
+17. IMPLEMENTATION PHASE 7 — HIGHLIGHT / ANNOTATION TOOLS
+
+Implement:
+
+Highlight
+
+Underline
+
+Strikethrough
+
+Comment
+
+Sticky note
+
+Support:
+
+Select
+
+Edit
+
+Move where supported
+
+Delete
+
+Change properties
+
+Visual selection states must match the Stitch design.
+
+18. IMPLEMENTATION PHASE 8 — DRAWING AND SHAPES
+
+Implement:
+
+Freehand pen
+
+Rectangle
+
+Circle
+
+Arrow
+
+Line
+
+Eraser
+
+Properties:
+
+Stroke
+
+Width
+
+Opacity
+
+Fill
+
+Position
+
+Size
+
+Rotation
+
+Use pointer events and support mouse + touch.
+
+19. IMPLEMENTATION PHASE 9 — IMAGE INSERTION
+
+Implement:
+
+Choose image from device
+
+Drag image onto PDF
+
+Resize
+
+Move
+
+Rotate
+
+Crop if practical
+
+Delete
+
+Adjust opacity
+
+Support common image types:
+
+PNG
+
+JPEG
+
+WebP
+
+Convert the image into a PDF-compatible representation during export.
+
+20. IMPLEMENTATION PHASE 10 — SIGNATURE
+
+Implement:
+
+Draw signature
+
+Canvas
+
+Mouse support
+
+Touch support
+
+Clear
+
+Undo
+
+Type signature
+
+Text input
+
+Signature font styles
+
+Upload signature
+
+PNG/JPG
+
+Allow:
+
+Resize
+
+Move
+
+Rotate
+
+Delete
+
+Signature placement must become part of the exported PDF.
+
+21. IMPLEMENTATION PHASE 11 — PDF EXPORT
+
+This is a critical milestone.
+
+Implement:
+
+Export current document
+
+Apply annotations
+
+Apply page changes
+
+Apply rotations
+
+Apply inserted images
+
+Apply signatures
+
+Apply text
+
+Apply shapes
+
+Apply highlights where supported
+
+Preserve pages
+
+Download the generated PDF through the browser.
+
+Use sensible filename handling.
+
+Example:
+
+original-name-edited.pdf
+
+
+Never upload the generated document to a server.
+
+22. IMPLEMENTATION PHASE 12 — UNDO / REDO
+
+Implement a reliable command/history model.
+
+Actions that should support undo/redo:
+
+Add annotation
+
+Delete annotation
+
+Change annotation
+
+Move annotation
+
+Resize annotation
+
+Delete page
+
+Rotate page
+
+Reorder page
+
+Duplicate page
+
+Insert image
+
+Insert signature
+
+Text modifications
+
+Do not rely only on browser history.
+
+Keep document-level editor history.
+
+23. IMPLEMENTATION PHASE 13 — MERGE PDF
+
+Create the dedicated Merge workflow.
+
+Features:
+
+Multiple PDFs
+
+Drag and drop
+
+File ordering
+
+Remove files
+
+Preview page count
+
+Merge
+
+Progress
+
+Download
+
+Open in editor
+
+Use pdf-lib or an appropriate browser-side implementation.
+
+No server communication.
+
+24. IMPLEMENTATION PHASE 14 — SPLIT PDF
+
+Implement:
+
+Extract pages
+
+Custom ranges
+
+Split every page
+
+Multiple output documents
+
+Download generated files
+
+For multiple outputs, use browser-compatible ZIP generation only if necessary.
+
+Keep the UX simple.
+
+25. IMPLEMENTATION PHASE 15 — COMPRESS PDF
+
+Implement a realistic browser-side compression workflow.
+
+Do not promise impossible compression levels.
+
+Display:
+
+Original size
+
+Compression option
+
+Resulting size
+
+Percentage reduction
+
+If browser-side compression has limitations for certain PDFs, explain that clearly in the UI.
+
+26. IMPLEMENTATION PHASE 16 — CONVERSION TOOLS
+
+Implement browser-compatible conversions one at a time.
+
+Priority:
+
+PDF → PNG
+
+PDF → JPG
+
+Images → PDF
+
+PDF → Text
+
+Only add additional conversion tools when reliable client-side implementation exists.
+
+Do not simulate unsupported conversions.
+
+27. IMPLEMENTATION PHASE 17 — SECURITY
+
+Implement client-side PDF security only where the selected PDF library genuinely supports the required capability.
+
+Potential features:
+
+Password protection
+
+Encryption
+
+Permission restrictions
+
+Password removal where possible
+
+Do not create fake security controls.
+
+If browser-side limitations exist, show a clear explanation instead of pretending the operation succeeded.
+
+28. IMPLEMENTATION PHASE 18 — SEARCH
+
+Implement document search.
+
+Requirements:
+
+Search text
+
+Match count
+
+Highlight matches
+
+Next result
+
+Previous result
+
+Page navigation
+
+Search panel
+
+Keyboard shortcut:
+
+Ctrl/Cmd + F
+
+
+29. IMPLEMENTATION PHASE 19 — RECENT DOCUMENTS
+
+Use IndexedDB where appropriate.
+
+Store only local metadata and locally necessary document data.
+
+Provide:
+
+Recent document list
+
+Open
+
+Remove
+
+Clear history
+
+Clear all local data
+
+Do not store sensitive information unnecessarily.
+
+Show:
+
+Stored locally in this browser
+
+30. IMPLEMENTATION PHASE 20 — SETTINGS
+
+Implement:
+
+Appearance
+
+Light
+
+Dark
+
+System
+
+Editor
+
+Default zoom
+
+Auto-save
+
+Thumbnail behavior
+
+Page layout preferences
+
+Privacy
+
+Clear local data
+
+Clear recent documents
+
+Accessibility
+
+Reduce motion
+
+High contrast
+
+Keyboard navigation
+
+31. IMPLEMENTATION PHASE 21 — RESPONSIVE MOBILE UI
+
+Do not simply scale desktop down.
+
+Create dedicated responsive behavior.
+
+Mobile should use:
+
+Bottom toolbar
+
+Collapsible side panels
+
+Full-screen viewer
+
+Bottom sheets
+
+Touch gestures
+
+Large touch targets
+
+Simplified properties panel
+
+Test:
+
+320px
+
+375px
+
+390px
+
+768px
+
+1024px
+
+Desktop widths
+
+32. IMPLEMENTATION PHASE 22 — ACCESSIBILITY
+
+Implement:
+
+Semantic HTML
+
+ARIA labels where necessary
+
+Keyboard navigation
+
+Visible focus
+
+Accessible tooltips
+
+Screen-reader friendly controls
+
+Reduced motion
+
+High contrast
+
+Touch-friendly controls
+
+Do not sacrifice accessibility for visual effects.
+
+33. IMPLEMENTATION PHASE 23 — ERROR HANDLING
+
+Create centralized error handling for:
+
+Invalid PDF
+
+Corrupt PDF
+
+Password-protected PDF
+
+Unsupported operation
+
+Browser memory limitations
+
+File read failures
+
+PDF rendering failures
+
+Export failures
+
+Never expose raw stack traces in the UI.
+
+Errors should provide useful recovery actions.
+
+34. IMPLEMENTATION PHASE 24 — PERFORMANCE
+
+Performance is extremely important.
+
+Optimize for:
+
+Large PDFs
+
+Many pages
+
+Thumbnail rendering
+
+Canvas rendering
+
+Memory consumption
+
+Change detection
+
+Worker processing
+
+Use:
+
+Lazy loading
+
+Virtual scrolling where useful
+
+Web Workers
+
+Signals
+
+Efficient RxJS streams
+
+OnPush/change detection strategies where appropriate
+
+Do not keep unnecessary giant PDF buffers duplicated in memory.
+
+35. IMPLEMENTATION PHASE 25 — SECURITY / PRIVACY REVIEW
+
+Verify that:
+
+No PDF is sent to a network endpoint
+
+No API call uploads documents
+
+No analytics accidentally captures file names/content
+
+No PDF data is logged
+
+No sensitive document content is written to console
+
+No external service processes documents
+
+Use browser APIs only.
+
+36. IMPLEMENTATION PHASE 26 — TESTING
+
+Create meaningful tests.
+
+Unit tests
+
+Test:
+
+File validation
+
+Page manipulation
+
+Annotation state
+
+Editor state
+
+Undo/redo
+
+PDF services
+
+Utility functions
+
+Component tests
+
+Test:
+
+Toolbar
+
+Sidebar
+
+Properties panel
+
+File uploader
+
+Dialogs
+
+Integration tests
+
+Test:
+
+Open PDF
+→ Edit
+→ Save/Export
+→ Download
+
+
+Also test:
+
+Upload 2 PDFs
+→ Reorder
+→ Merge
+→ Download
+
+
+37. IMPLEMENTATION PHASE 27 — BUILD QUALITY
+
+Before considering the implementation complete:
+
+Run:
+
+TypeScript compilation
+
+Angular build
+
+Lint
+
+Unit tests
+
+Production build
+
+Fix all:
+
+Type errors
+
+Template errors
+
+Runtime errors
+
+Console errors
+
+Broken routes
+
+Responsive issues
+
+Do not leave TODOs for core functionality.
+
+38. FILE AND COMPONENT NAMING
+
+Use clean naming.
+
+Examples:
+
+pdf-editor.component.ts
+pdf-viewer.component.ts
+pdf-toolbar.component.ts
+page-thumbnail.component.ts
+properties-panel.component.ts
+file-dropzone.component.ts
+merge-pdf.component.ts
+split-pdf.component.ts
+compress-pdf.component.ts
+signature-dialog.component.ts
+annotation.service.ts
+pdf-document.service.ts
+pdf-export.service.ts
+recent-documents.service.ts
+
+
+Adapt naming to project conventions.
+
+39. STATE MANAGEMENT
+
+Do not introduce NgRx unless the application genuinely needs it.
+
+Prefer:
+
+Angular Signals
+
+Services
+
+RxJS
+
+Feature-level state
+
+Keep state ownership clear.
+
+Avoid a giant global state object.
+
+40. UI QUALITY REQUIREMENTS
+
+The finished application must not look like a developer prototype.
+
+Pay attention to:
+
+Exact spacing
+
+Typography
+
+Alignment
+
+Responsive behavior
+
+Hover states
+
+Focus states
+
+Disabled states
+
+Empty states
+
+Loading states
+
+Error states
+
+Toast notifications
+
+Modal behavior
+
+Scrollbars
+
+Toolbar consistency
+
+Use the Stitch design as the visual benchmark.
+
+41. DEVELOPMENT WORKFLOW
+
+You must work incrementally.
+
+For every implementation phase:
+
+Inspect the current code.
+
+Identify affected files.
+
+Implement the feature.
+
+Run the application/build/tests.
+
+Fix errors.
+
+Verify the UI.
+
+Verify the feature.
+
+Only then move to the next phase.
+
+Do not make one enormous uncontrolled change across the project.
+
+42. DO NOT BREAK EXISTING FEATURES
+
+Before modifying a shared component:
+
+Understand current usages.
+
+Preserve existing behavior.
+
+Refactor only when necessary.
+
+Avoid unnecessary rewrites.
+
+Do not replace working components just for stylistic reasons.
+
+43. AGENT BEHAVIOR
+
+When you encounter ambiguity:
+
+Prefer the implementation that:
+
+Keeps the architecture frontend-only
+
+Preserves the Stitch UI
+
+Uses mature browser technologies
+
+Minimizes dependencies
+
+Is maintainable
+
+Is accessible
+
+Is performant
+
+Is honest about browser limitations
+
+Do not invent backend APIs.
+
+Do not create fake functionality.
+
+Do not use mock implementations for core functionality once implementation begins.
+
+Do not claim a feature works unless it actually works.
+
+44. IMPORTANT PDF TECHNICAL LIMITATION
+
+PDF editing is not equivalent to editing a normal HTML document.
+
+For features where direct modification of original PDF content is technically difficult, distinguish between:
+
+PDF annotations/overlays
+
+Actual modification of embedded PDF content
+
+Use the technically correct approach.
+
+Do not silently pretend that overlay text is the same as editing original PDF text.
+
+The UI may present the feature as “Edit Text” where appropriate, but implementation must remain technically honest.
+
+45. IMPLEMENTATION ORDER
+
+Follow this order strictly:
+
+Milestone 1
+
+Project inspection + architecture
+
+Milestone 2
+
+Design system + application shell
+
+Milestone 3
+
+Landing page + tool pages
+
+Milestone 4
+
+File upload/open system
+
+Milestone 5
+
+PDF viewer
+
+Milestone 6
+
+Page management
+
+Milestone 7
+
+Editor toolbar
+
+Milestone 8
+
+Text + annotations
+
+Milestone 9
+
+Drawing + shapes
+
+Milestone 10
+
+Images + signatures
+
+Milestone 11
+
+Undo/redo
+
+Milestone 12
+
+PDF export
+
+Milestone 13
+
+Merge PDF
+
+Milestone 14
+
+Split PDF
+
+Milestone 15
+
+Compression
+
+Milestone 16
+
+Conversion tools
+
+Milestone 17
+
+Search
+
+Milestone 18
+
+Security tools
+
+Milestone 19
+
+Recent documents + IndexedDB
+
+Milestone 20
+
+Settings + themes
+
+Milestone 21
+
+Mobile optimization
+
+Milestone 22
+
+Accessibility
+
+Milestone 23
+
+Performance optimization
+
+Milestone 24
+
+Testing
+
+Milestone 25
+
+Production build and final QA
+
+46. AFTER EACH MILESTONE
+
+Provide a concise implementation report:
+
+Milestone:
+Implemented:
+Files changed:
+Dependencies added:
+Tests performed:
+Known limitations:
+Next milestone:
+
+
+Do not write lengthy explanations.
+
+47. STARTING INSTRUCTION
+
+Start with Milestone 1 only.
+
+First inspect the entire Angular repository and the Stitch-generated UI.
+
+Do not begin implementing PDF editing immediately.
+
+After inspection:
+
+Identify the current architecture.
+
+Identify the existing Stitch-generated screens/components.
+
+Identify missing dependencies.
+
+Propose the implementation structure.
+
+Implement the foundation required for Milestone 1.
+
+Run the build.
+
+Fix all immediate errors.
+
+Then continue sequentially through the milestones, validating each one before advancing.
+
+The final goal is a polished, production-ready, privacy-first PDF editor running entirely in the browser with Angular.

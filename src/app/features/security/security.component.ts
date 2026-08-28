@@ -5,6 +5,7 @@ import { FileDropzoneComponent } from '../../shared/components/dropzone/file-dro
 
 @Component({
     selector: 'app-security',
+    standalone: true,
     imports: [RouterLink, FormsModule, FileDropzoneComponent],
     templateUrl: './security.component.html',
     styleUrl: './security.component.scss'

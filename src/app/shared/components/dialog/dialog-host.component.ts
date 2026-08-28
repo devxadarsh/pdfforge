@@ -12,6 +12,7 @@ import { DialogService } from '../../../core/services/dialog.service';
 
 @Component({
     selector: 'app-dialog-host',
+    standalone: true,
     imports: [NgClass, FormsModule],
     templateUrl: './dialog-host.component.html',
     styleUrl: './dialog-host.component.scss'

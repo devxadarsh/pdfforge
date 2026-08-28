@@ -110,6 +110,100 @@ export class EditorStateService {
     }
   }
 
+  /** Duplicate an annotation, offsetting the copy so it is visibly distinct. */
+  duplicateAnnotation(id: string): string | null {
+    const map = new Map(this._annotations());
+    for (const [pageId, list] of map) {
+      const idx = list.findIndex((a) => a.id === id);
+      if (idx < 0) {
+        continue;
+      }
+      const source = list[idx];
+      const copy = {
+        ...source,
+        id: crypto.randomUUID(),
+        rect: {
+          x: source.rect.x + 12,
+          y: source.rect.y + 12,
+          width: source.rect.width,
+          height: source.rect.height,
+        },
+        createdAt: Date.now(),
+      } as PdfAnnotation;
+      const next = [...list];
+      next.splice(idx + 1, 0, copy);
+      map.set(pageId, next);
+      this._annotations.set(map);
+      this._selectedId.set(copy.id);
+      this._modified.set(true);
+      return copy.id;
+    }
+    return null;
+  }
+
+  /**
+   * Reorder an annotation within its page's z-stack. `direction` is `-1` to
+   * send one step backward and `+1` to bring one step forward. Returns the
+   * resulting index or `-1` if the annotation could not be moved.
+   */
+  reorderAnnotation(id: string, direction: -1 | 1): number {
+    const map = new Map(this._annotations());
+    for (const [pageId, list] of map) {
+      const idx = list.findIndex((a) => a.id === id);
+      if (idx < 0) {
+        continue;
+      }
+      const target = idx + direction;
+      if (target < 0 || target >= list.length) {
+        return idx;
+      }
+      const next = [...list];
+      const [moved] = next.splice(idx, 1);
+      next.splice(target, 0, moved);
+      map.set(pageId, next);
+      this._annotations.set(map);
+      this._modified.set(true);
+      return target;
+    }
+    return -1;
+  }
+
+  /** Move an annotation to the very front of its page's z-stack. */
+  bringToFront(id: string): void {
+    const map = new Map(this._annotations());
+    for (const [pageId, list] of map) {
+      const idx = list.findIndex((a) => a.id === id);
+      if (idx < 0 || idx === list.length - 1) {
+        return;
+      }
+      const next = [...list];
+      const [moved] = next.splice(idx, 1);
+      next.push(moved);
+      map.set(pageId, next);
+      this._annotations.set(map);
+      this._modified.set(true);
+      return;
+    }
+  }
+
+  /** Move an annotation to the very back of its page's z-stack. */
+  sendToBack(id: string): void {
+    const map = new Map(this._annotations());
+    for (const [pageId, list] of map) {
+      const idx = list.findIndex((a) => a.id === id);
+      if (idx <= 0) {
+        return;
+      }
+      const next = [...list];
+      const [moved] = next.splice(idx, 1);
+      next.unshift(moved);
+      map.set(pageId, next);
+      this._annotations.set(map);
+      this._modified.set(true);
+      return;
+    }
+  }
+
   selectAnnotation(id: string | null): void {
     this._selectedId.set(id);
   }

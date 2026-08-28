@@ -13,6 +13,7 @@ interface MergeItem {
 
 @Component({
     selector: 'app-merge',
+    standalone: true,
     imports: [RouterLink, FileDropzoneComponent],
     templateUrl: './merge.component.html',
     styleUrl: './merge.component.scss'

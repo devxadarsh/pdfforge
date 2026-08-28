@@ -6,6 +6,7 @@ import { TOOL_CATEGORIES, ToolCard } from '../../core/constants/tools';
 
 @Component({
     selector: 'app-tools',
+    standalone: true,
     imports: [RouterLink, FormsModule, NgClass],
     templateUrl: './tools.component.html',
     styleUrl: './tools.component.scss'

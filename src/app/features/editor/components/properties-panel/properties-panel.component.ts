@@ -5,6 +5,7 @@ import {
   computed,
   ChangeDetectionStrategy,
 } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import {
   PdfAnnotation,
   ShapeAnnotation,
@@ -16,11 +17,57 @@ import { PanelSectionComponent } from '../../../../shared/components/panel/panel
 import { EditorStateService } from '../../state/editor-state.service';
 import { EditorPagesService } from '../../state/editor-pages.service';
 
+type StrokeStyle = 'solid' | 'dashed' | 'dotted';
+
+interface ColorSwatch {
+  readonly value: string;
+  readonly label: string;
+}
+
+/** Convert a hex color like `#2563eb` (or `#25`) into an `rgba()` string. */
+function withAlpha(hex: string, alpha: number): string {
+  const m = hex.trim().match(/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (!m) {
+    return hex;
+  }
+  const raw = m[1];
+  const expand =
+    raw.length === 3
+      ? raw
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : raw;
+  const n = parseInt(expand, 16);
+  const r = (n >> 16) & 0xff;
+  const g = (n >> 8) & 0xff;
+  const b = n & 0xff;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+const HIGHLIGHT_SWATCHES: ReadonlyArray<ColorSwatch> = [
+  { value: '#fde047', label: 'Yellow' },
+  { value: '#86efac', label: 'Green' },
+  { value: '#7dd3fc', label: 'Blue' },
+  { value: '#fca5a5', label: 'Red' },
+  { value: '#fdba74', label: 'Orange' },
+  { value: '#d8b4fe', label: 'Purple' },
+];
+
+const SHAPE_SWATCHES: ReadonlyArray<ColorSwatch> = [
+  { value: '#2563eb', label: 'Blue' },
+  { value: '#111827', label: 'Black' },
+  { value: '#dc2626', label: 'Red' },
+  { value: '#16a34a', label: 'Green' },
+  { value: '#9333ea', label: 'Purple' },
+  { value: '#f59e0b', label: 'Amber' },
+];
+
 @Component({
   selector: 'app-properties-panel',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PanelSectionComponent],
+  imports: [PanelSectionComponent, DecimalPipe],
   templateUrl: './properties-panel.component.html',
   styleUrl: './properties-panel.component.scss',
 })
@@ -76,6 +123,60 @@ export class PropertiesPanelComponent {
     { label: 'Comic Sans MS', value: "'Comic Sans MS', cursive" },
     { label: 'Impact', value: 'Impact, sans-serif' },
   ];
+
+  readonly highlightSwatches = HIGHLIGHT_SWATCHES;
+  readonly shapeSwatches = SHAPE_SWATCHES;
+
+  readonly strokeStyles: ReadonlyArray<{ value: StrokeStyle; label: string }> = [
+    { value: 'solid', label: 'Solid' },
+    { value: 'dashed', label: 'Dashed' },
+    { value: 'dotted', label: 'Dotted' },
+  ];
+
+  /** Whether the selected annotation currently has a fill (i.e. not transparent). */
+  readonly hasFill = computed(() => {
+    const ann = this.selected();
+    if (!ann || ann.type !== 'shape') {
+      return false;
+    }
+    return ann.fillColor && ann.fillColor !== 'transparent';
+  });
+
+  /** Whether the selected annotation is a shape that can carry a fill. */
+  readonly canFill = computed(() => {
+    const ann = this.selected();
+    if (!ann || ann.type !== 'shape') {
+      return false;
+    }
+    return ann.kind !== 'arrow' && ann.kind !== 'line';
+  });
+
+  /** Whether the selected annotation is a shape whose stroke style is editable. */
+  readonly canStrokeStyle = computed(() => {
+    const ann = this.selected();
+    return !!ann && ann.type === 'shape';
+  });
+
+  /** Index of the selected annotation within its page (used for z-order UI). */
+  readonly selectionIndex = computed<number>(() => {
+    const ann = this.selected();
+    if (!ann) {
+      return -1;
+    }
+    const pageId = this.pages.currentId();
+    const list = this.state.annotationsFor(pageId);
+    return list.findIndex((a) => a.id === ann.id);
+  });
+
+  readonly selectionTotal = computed<number>(() => {
+    const pageId = this.pages.currentId();
+    return this.state.annotationsFor(pageId).length;
+  });
+
+  readonly canBringForward = computed(
+    () => this.selectionIndex() >= 0 && this.selectionIndex() < this.selectionTotal() - 1,
+  );
+  readonly canSendBackward = computed(() => this.selectionIndex() > 0);
 
 
   iconOf(ann: PdfAnnotation): string {
@@ -139,6 +240,15 @@ export class PropertiesPanelComponent {
       return value;
     }
     return '#000000';
+  }
+
+  /** Visual stroke style — defaults to 'solid' for shapes created before the field existed. */
+  strokeStyleOf(ann: ShapeAnnotation): StrokeStyle {
+    return ann.strokeStyle ?? 'solid';
+  }
+
+  setStrokeStyle(ann: ShapeAnnotation, style: StrokeStyle): void {
+    this.state.updateAnnotation(ann.id, { strokeStyle: style });
   }
 
   setText(ann: PdfAnnotation, value: string): void {
@@ -212,6 +322,18 @@ export class PropertiesPanelComponent {
     } as Partial<ShapeAnnotation>);
   }
 
+  setFillEnabled(ann: ShapeAnnotation, enabled: boolean): void {
+    if (!enabled) {
+      this.state.updateAnnotation(ann.id, { fillColor: 'transparent' });
+      return;
+    }
+    if (!ann.fillColor || ann.fillColor === 'transparent') {
+      this.state.updateAnnotation(ann.id, {
+        fillColor: withAlpha(ann.strokeColor, 0.18),
+      });
+    }
+  }
+
   setStrokeWidth(ann: PdfAnnotation, value: string): void {
     const n = Number(value);
     if (!Number.isNaN(n)) {
@@ -226,6 +348,86 @@ export class PropertiesPanelComponent {
     if (!Number.isNaN(n)) {
       this.state.updateAnnotation(ann.id, { opacity: n });
     }
+  }
+
+  setX(ann: PdfAnnotation, value: string): void {
+    const n = Number(value);
+    if (!Number.isNaN(n)) {
+      this.state.updateAnnotation(ann.id, {
+        rect: { ...ann.rect, x: n },
+      });
+    }
+  }
+
+  setY(ann: PdfAnnotation, value: string): void {
+    const n = Number(value);
+    if (!Number.isNaN(n)) {
+      this.state.updateAnnotation(ann.id, {
+        rect: { ...ann.rect, y: n },
+      });
+    }
+  }
+
+  setWidth(ann: PdfAnnotation, value: string): void {
+    const n = Number(value);
+    if (!Number.isNaN(n) && n >= 1) {
+      this.state.updateAnnotation(ann.id, {
+        rect: { ...ann.rect, width: n },
+      });
+    }
+  }
+
+  setHeight(ann: PdfAnnotation, value: string): void {
+    const n = Number(value);
+    if (!Number.isNaN(n) && n >= 1) {
+      this.state.updateAnnotation(ann.id, {
+        rect: { ...ann.rect, height: n },
+      });
+    }
+  }
+
+  setRotation(ann: PdfAnnotation, value: string): void {
+    const n = Number(value);
+    if (!Number.isNaN(n)) {
+      this.state.updateAnnotation(ann.id, { rotation: n });
+    }
+  }
+
+  rotate90(ann: PdfAnnotation): void {
+    const next = (((ann.rotation + 90) % 360) + 360) % 360;
+    this.state.updateAnnotation(ann.id, { rotation: next });
+  }
+
+  rotateNeg90(ann: PdfAnnotation): void {
+    let next = ((ann.rotation - 90) % 360 + 360) % 360;
+    if (next === 360) {
+      next = 0;
+    }
+    this.state.updateAnnotation(ann.id, { rotation: next });
+  }
+
+  resetRotation(ann: PdfAnnotation): void {
+    this.state.updateAnnotation(ann.id, { rotation: 0 });
+  }
+
+  bringForward(ann: PdfAnnotation): void {
+    this.state.reorderAnnotation(ann.id, 1);
+  }
+
+  sendBackward(ann: PdfAnnotation): void {
+    this.state.reorderAnnotation(ann.id, -1);
+  }
+
+  bringToFront(ann: PdfAnnotation): void {
+    this.state.bringToFront(ann.id);
+  }
+
+  sendToBack(ann: PdfAnnotation): void {
+    this.state.sendToBack(ann.id);
+  }
+
+  duplicate(ann: PdfAnnotation): void {
+    this.state.duplicateAnnotation(ann.id);
   }
 
   delete(ann: PdfAnnotation): void {

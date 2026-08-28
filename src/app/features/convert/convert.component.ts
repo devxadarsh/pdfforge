@@ -15,6 +15,7 @@ interface ConvertMode {
 
 @Component({
     selector: 'app-convert',
+    standalone: true,
     imports: [RouterLink, FormsModule, NgClass, FileDropzoneComponent],
     templateUrl: './convert.component.html',
     styleUrl: './convert.component.scss'

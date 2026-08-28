@@ -8,6 +8,7 @@ import { FileDropzoneComponent } from '../../shared/components/dropzone/file-dro
 
 @Component({
     selector: 'app-home',
+    standalone: true,
     imports: [RouterLink, NgClass, FileDropzoneComponent],
     templateUrl: './home.component.html',
     styleUrl: './home.component.scss'

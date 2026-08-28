@@ -6,6 +6,7 @@ import { FileDropzoneComponent } from '../../shared/components/dropzone/file-dro
 
 @Component({
     selector: 'app-split',
+    standalone: true,
     imports: [RouterLink, FormsModule, FileDropzoneComponent],
     templateUrl: './split.component.html',
     styleUrl: './split.component.scss'

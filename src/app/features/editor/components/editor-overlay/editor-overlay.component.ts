@@ -442,6 +442,28 @@ export class EditorOverlayComponent {
     return a.rect.x + TEXT_PAD_X;
   }
 
+  /** Line of dashes (or null) for the given shape's stroke style. */
+  strokeDashFor(a: ShapeAnnotation): string | null {
+    const style = a.strokeStyle ?? 'solid';
+    if (style === 'dashed') {
+      return `${Math.max(2, a.strokeWidth * 2)} ${Math.max(2, a.strokeWidth * 2)}`;
+    }
+    if (style === 'dotted') {
+      return `${Math.max(1, a.strokeWidth)} ${Math.max(2, a.strokeWidth * 2)}`;
+    }
+    return null;
+  }
+
+  /** Build a rotation transform centered on the annotation's bounding box. */
+  rotateTransform(a: { rect: { x: number; y: number; width: number; height: number }; rotation: number }): string | null {
+    if (!a.rotation) {
+      return null;
+    }
+    const cx = a.rect.x + a.rect.width / 2;
+    const cy = a.rect.y + a.rect.height / 2;
+    return `rotate(${a.rotation} ${cx} ${cy})`;
+  }
+
   /** Baseline Y for the line at `lineIndex` (0-based) within the box. */
   lineBaselineY(a: TextAnnotation, lineIndex: number): number {
     return (
@@ -506,6 +528,7 @@ export class EditorOverlayComponent {
       strokeColor: '#2563eb',
       fillColor: d.type === 'arrow' ? 'transparent' : 'rgba(37,99,235,0.12)',
       strokeWidth: 2,
+      strokeStyle: 'solid',
     };
     this.state.addAnnotation(this.pageId(), ann);
   }

@@ -7,6 +7,7 @@ import { DialogHostComponent } from '../../../shared/components/dialog/dialog-ho
 
 @Component({
     selector: 'app-marketing-shell',
+    standalone: true,
     imports: [
         RouterOutlet,
         HeaderComponent,

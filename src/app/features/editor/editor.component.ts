@@ -34,6 +34,7 @@ import { EditorStateService } from './state/editor-state.service';
 
 @Component({
     selector: 'app-editor',
+  standalone: true,
   imports: [
     RouterLink,
     NgClass,

@@ -14,12 +14,12 @@
     </div>
   </div>
 } @else {
-  <div class="psec" [class.psec--collapsed]="collapsible() && collapsed()">
+  <div class="psec" [class.psec--collapsed]="collapsible() && isCollapsed()">
     <button
       type="button"
       class="psec__head"
       [class.psec__head--static]="!collapsible()"
-      [attr.aria-expanded]="collapsible() ? !collapsed() : null"
+      [attr.aria-expanded]="collapsible() ? !isCollapsed() : null"
       [disabled]="!collapsible()"
       (click)="toggle()"
     >
@@ -39,7 +39,7 @@
         }
       </span>
     </button>
-    @if (!collapsible() || !collapsed()) {
+    @if (!collapsible() || !isCollapsed()) {
       <div class="psec__body">
         <ng-content />
       </div>
