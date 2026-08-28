@@ -62,10 +62,6 @@
   font-size: 10px;
 }
 
-.props__tool-badge--sm {
-  margin-left: 0;
-}
-
 .props__group {
   display: flex;
   flex-direction: column;
@@ -317,38 +313,4 @@
   margin: 0;
   font-size: 12px;
   line-height: 1.4;
-}
-
-.props__meta {
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.props__meta div {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 11px;
-}
-
-.props__meta dt {
-  color: var(--pf-on-surface-variant);
-}
-
-.props__meta dd {
-  margin: 0;
-  font-weight: 600;
-  text-align: right;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 60%;
-}
-
-.props__meta dd:has(.props__tool-badge) {
-  max-width: none;
-  overflow: visible;
-  white-space: normal;
 }

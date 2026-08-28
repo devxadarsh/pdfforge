@@ -1,50 +1,37 @@
-<div class="editor">
+<div class="editor" #editor>
   @if (docSrc(); as pdfSrc) {
-    <ngx-extended-pdf-viewer
-      class="editor__pdf-loader"
-      [src]="pdfSrc"
-      [showToolbar]="false"
-      [showSidebarButton]="false"
-      [sidebarVisible]="false"
-      [textLayer]="false"
-      [showFindButton]="false"
-      (pagesLoaded)="onPagesLoaded($event)"
-    ></ngx-extended-pdf-viewer>
+  <ngx-extended-pdf-viewer class="editor__pdf-loader" [src]="pdfSrc" [showToolbar]="false" [showSidebarButton]="false"
+    [sidebarVisible]="false" [textLayer]="false" [showFindButton]="false"
+    (pagesLoaded)="onPagesLoaded($event)"></ngx-extended-pdf-viewer>
   }
 
   <div class="editor__toolbar">
     <div class="editor__toolbar-group">
       @for (group of toolGroups() | keyvalue; track group.key) {
-        <div class="editor__toolset">
-          @for (tool of group.value; track tool.id) {
-          <button
-            type="button"
-            class="editor__tool"
-            [class.editor__tool--active]="state.tool() === tool.id"
-            [title]="tool.label + (tool.shortcut ? ' (' + tool.shortcut + ')' : '')"
-            [attr.aria-label]="tool.label"
-            [attr.aria-pressed]="state.tool() === tool.id"
-            (click)="selectTool(tool.id)"
-          >
-              <i [ngClass]="tool.icon"></i>
-            </button>
-          }
-        </div>
+      <div class="editor__toolset">
+        @for (tool of group.value; track tool.id) {
+        <button type="button" class="editor__tool" [class.editor__tool--active]="state.tool() === tool.id"
+          [title]="tool.label + (tool.shortcut ? ' (' + tool.shortcut + ')' : '')" [attr.aria-label]="tool.label"
+          [attr.aria-pressed]="state.tool() === tool.id" (click)="selectTool(tool.id)">
+          <i [ngClass]="tool.icon"></i>
+        </button>
+        }
+      </div>
       }
     </div>
     <div class="editor__toolbar-actions">
-      <button
-        type="button"
-        class="pf-btn pf-btn--primary pf-btn--sm"
-        (click)="exportPdf()"
-        [disabled]="!docName() || exporting()"
-        [attr.aria-label]="'Export edited PDF'"
-        title="Export edited PDF"
-      >
+      <button type="button" class="pf-btn pf-btn--ghost pf-btn--sm" (click)="toggleFullscreen()" [disabled]="!docName()"
+        [title]="isFullscreen() ? 'Exit fullscreen (Esc)' : 'Edit in fullscreen'"
+        [attr.aria-label]="isFullscreen() ? 'Exit fullscreen' : 'Edit in fullscreen'">
+        <i [class]="isFullscreen() ? 'fa-solid fa-compress' : 'fa-solid fa-expand'"></i>
+        {{ isFullscreen() ? 'Exit fullscreen' : 'Fullscreen' }}
+      </button>
+      <button type="button" class="pf-btn pf-btn--primary pf-btn--sm" (click)="exportPdf()"
+        [disabled]="!docName() || exporting()" [attr.aria-label]="'Export edited PDF'" title="Export edited PDF">
         @if (exporting()) {
-          <i class="fa-solid fa-spinner fa-spin"></i> Exporting…
+        <i class="fa-solid fa-spinner fa-spin"></i> Exporting…
         } @else {
-          <i class="fa-solid fa-file-arrow-down"></i> Export PDF
+        <i class="fa-solid fa-file-arrow-down"></i> Export PDF
         }
       </button>
       <a class="pf-btn pf-btn--ghost pf-btn--sm" routerLink="/tools">
@@ -54,193 +41,105 @@
   </div>
 
   @if (docName()) {
-    <div class="editor__viewbar">
-      <div class="editor__pagenav">
-        <button
-          type="button"
-          class="icon-btn"
-          (click)="prevPage()"
-          [disabled]="currentPageNumber() <= 1"
-          aria-label="Previous page"
-        >
-          <i class="fa-solid fa-chevron-left"></i>
-        </button>
-        <span class="editor__pagenav-label"
-          >Page {{ currentPageNumber() }} / {{ totalPages() }}</span
-        >
-        <button
-          type="button"
-          class="icon-btn"
-          (click)="nextPage()"
-          [disabled]="currentPageNumber() >= totalPages()"
-          aria-label="Next page"
-        >
-          <i class="fa-solid fa-chevron-right"></i>
-        </button>
-      </div>
-
-      <div class="editor__zoom">
-        <button type="button" class="icon-btn" (click)="zoomOut()" aria-label="Zoom out">
-          <i class="fa-solid fa-magnifying-glass-minus"></i>
-        </button>
-        <button
-          type="button"
-          class="editor__zoom-value"
-          (click)="resetZoom()"
-          [title]="zoomLabel()"
-        >
-          {{ zoomLabel() }}
-        </button>
-        <button type="button" class="icon-btn" (click)="zoomIn()" aria-label="Zoom in">
-          <i class="fa-solid fa-magnifying-glass-plus"></i>
-        </button>
-        <button
-          type="button"
-          class="editor__chip"
-          [class.editor__chip--active]="state.fitMode() === 'width'"
-          (click)="setFit('width')"
-        >
-          Fit width
-        </button>
-        <button
-          type="button"
-          class="editor__chip"
-          [class.editor__chip--active]="state.fitMode() === 'page'"
-          (click)="setFit('page')"
-        >
-          Fit page
-        </button>
-      </div>
-
-      <div class="editor__search">
-        <i class="fa-solid fa-magnifying-glass"></i>
-        <input
-          type="search"
-          class="pf-input editor__search-input"
-          placeholder="Search in document…"
-          [value]="searchQuery()"
-          (input)="onSearch($any($event.target).value)"
-          aria-label="Search in document"
-        />
-        @if (searchQuery().trim()) {
-          <button
-            type="button"
-            class="icon-btn"
-            (click)="searchPrev()"
-            aria-label="Previous match"
-          >
-            <i class="fa-solid fa-chevron-up"></i>
-          </button>
-          <button
-            type="button"
-            class="icon-btn"
-            (click)="searchNext()"
-            aria-label="Next match"
-          >
-            <i class="fa-solid fa-chevron-down"></i>
-          </button>
-          <span class="editor__search-count">{{ searchCountLabel() }}</span>
-        }
-      </div>
+  <div class="editor__viewbar">
+    <div class="editor__pagenav">
+      <button type="button" class="icon-btn" (click)="prevPage()" [disabled]="currentPageNumber() <= 1"
+        aria-label="Previous page">
+        <i class="fa-solid fa-chevron-left"></i>
+      </button>
+      <span class="editor__pagenav-label">Page {{ currentPageNumber() }} / {{ totalPages() }}</span>
+      <button type="button" class="icon-btn" (click)="nextPage()" [disabled]="currentPageNumber() >= totalPages()"
+        aria-label="Next page">
+        <i class="fa-solid fa-chevron-right"></i>
+      </button>
     </div>
+
+    <div class="editor__zoom">
+      <button type="button" class="icon-btn" (click)="zoomOut()" aria-label="Zoom out">
+        <i class="fa-solid fa-magnifying-glass-minus"></i>
+      </button>
+      <button type="button" class="editor__zoom-value" (click)="resetZoom()" [title]="zoomLabel()">
+        {{ zoomLabel() }}
+      </button>
+      <button type="button" class="icon-btn" (click)="zoomIn()" aria-label="Zoom in">
+        <i class="fa-solid fa-magnifying-glass-plus"></i>
+      </button>
+      <button type="button" class="editor__chip" [class.editor__chip--active]="state.fitMode() === 'width'"
+        (click)="setFit('width')">
+        Fit width
+      </button>
+      <button type="button" class="editor__chip" [class.editor__chip--active]="state.fitMode() === 'page'"
+        (click)="setFit('page')">
+        Fit page
+      </button>
+    </div>
+
+    <div class="editor__search">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="search" class="pf-input editor__search-input" placeholder="Search in document…"
+        [value]="searchQuery()" (input)="onSearch($any($event.target).value)" aria-label="Search in document" />
+      @if (searchQuery().trim()) {
+      <button type="button" class="icon-btn" (click)="searchPrev()" aria-label="Previous match">
+        <i class="fa-solid fa-chevron-up"></i>
+      </button>
+      <button type="button" class="icon-btn" (click)="searchNext()" aria-label="Next match">
+        <i class="fa-solid fa-chevron-down"></i>
+      </button>
+      <span class="editor__search-count">{{ searchCountLabel() }}</span>
+      }
+    </div>
+  </div>
   }
 
-  <div
-    class="editor__body"
-    [class.editor__body--pages-collapsed]="pagesPanelCollapsed()"
-    [class.editor__body--properties-collapsed]="propertiesPanelCollapsed()"
-  >
-    <aside
-      id="editor-pages-panel"
-      class="editor__sidebar"
-      [class.editor__sidebar--collapsed]="pagesPanelCollapsed()"
-      aria-label="Pages"
-    >
+  <div class="editor__body" [class.editor__body--pages-collapsed]="pagesPanelCollapsed()"
+    [class.editor__body--properties-collapsed]="propertiesPanelCollapsed()">
+    <aside id="editor-pages-panel" class="editor__sidebar" [class.editor__sidebar--collapsed]="pagesPanelCollapsed()"
+      aria-label="Pages">
       @if (pagesPanelCollapsed()) {
-        <button
-          type="button"
-          class="editor__panel-rail"
-          (click)="togglePagesPanel()"
-          [attr.aria-expanded]="false"
-          aria-controls="editor-pages-panel"
-          title="Expand pages panel"
-          aria-label="Expand pages panel"
-        >
-          <i class="fa-solid fa-layer-group"></i>
-        </button>
+      <button type="button" class="editor__panel-rail" (click)="togglePagesPanel()" [attr.aria-expanded]="false"
+        aria-controls="editor-pages-panel" title="Expand pages panel" aria-label="Expand pages panel">
+        <i class="fa-solid fa-layer-group"></i>
+      </button>
       } @else {
-        <app-pages-panel (collapse)="togglePagesPanel()" />
+      <app-pages-panel (collapse)="togglePagesPanel()" />
       }
     </aside>
 
     <section class="editor__workspace">
       @if (loading()) {
-        <div class="editor__loading">
-          <i class="fa-solid fa-spinner fa-spin"></i> Loading document…
-        </div>
+      <div class="editor__loading">
+        <i class="fa-solid fa-spinner fa-spin"></i> Loading document…
+      </div>
       } @else if (!docName()) {
-        <div class="editor__drop">
-          <app-file-dropzone
-            [multiple]="false"
-            label="Open a PDF to start editing"
-          />
-          <p class="editor__privacy">
-            <i class="fa-solid fa-lock"></i> Your file stays on this device.
-          </p>
-        </div>
+      <div class="editor__drop">
+        <app-file-dropzone [multiple]="false" label="Open a PDF to start editing" />
+        <p class="editor__privacy">
+          <i class="fa-solid fa-lock"></i> Your file stays on this device.
+        </p>
+      </div>
       } @else {
-        <div
-          class="editor__canvas-stage"
-          #stage
-          (wheel)="onWorkspaceWheel($event)"
-        >
-          <div
-            class="editor__page-frame"
-            [style.width.px]="displaySize()?.width"
-            [style.height.px]="displaySize()?.height"
-          >
-            <app-pdf-page
-              [pageIndex]="currentSourceIndex()"
-              [scale]="displaySize()?.scale ?? 1"
-              [rotation]="currentRotation()"
-            ></app-pdf-page>
-            <app-editor-overlay
-              [pageId]="currentPageId() ?? ''"
-              [pageIndex]="currentSourceIndex()"
-              [annotations]="currentAnnotations()"
-              [tool]="state.tool()"
-              [selectedId]="state.selectedId()"
-              [width]="displaySize()?.width ?? 0"
-              [height]="displaySize()?.height ?? 0"
-            ></app-editor-overlay>
-          </div>
+      <div class="editor__canvas-stage" #stage (wheel)="onWorkspaceWheel($event)">
+        <div class="editor__page-frame" [style.width.px]="displaySize()?.width"
+          [style.height.px]="displaySize()?.height">
+          <app-pdf-page [pageIndex]="currentSourceIndex()" [scale]="displaySize()?.scale ?? 1"
+            [rotation]="currentRotation()"></app-pdf-page>
+          <app-editor-overlay [pageId]="currentPageId() ?? ''" [pageIndex]="currentSourceIndex()"
+            [annotations]="currentAnnotations()" [tool]="state.tool()" [selectedId]="state.selectedId()"
+            [width]="displaySize()?.width ?? 0" [height]="displaySize()?.height ?? 0"></app-editor-overlay>
         </div>
+      </div>
       }
     </section>
 
-    <aside
-      id="editor-properties-panel"
-      class="editor__properties"
-      [class.editor__properties--collapsed]="propertiesPanelCollapsed()"
-      aria-label="Properties"
-    >
+    <aside id="editor-properties-panel" class="editor__properties"
+      [class.editor__properties--collapsed]="propertiesPanelCollapsed()" aria-label="Properties">
       @if (propertiesPanelCollapsed()) {
-        <button
-          type="button"
-          class="editor__panel-rail"
-          (click)="togglePropertiesPanel()"
-          [attr.aria-expanded]="false"
-          aria-controls="editor-properties-panel"
-          title="Expand properties panel"
-          aria-label="Expand properties panel"
-        >
-          <i class="fa-solid fa-sliders"></i>
-        </button>
+      <button type="button" class="editor__panel-rail" (click)="togglePropertiesPanel()" [attr.aria-expanded]="false"
+        aria-controls="editor-properties-panel" title="Expand properties panel" aria-label="Expand properties panel">
+        <i class="fa-solid fa-sliders"></i>
+      </button>
       } @else {
-        <app-properties-panel
-          [docName]="docName()"
-          (collapse)="togglePropertiesPanel()"
-        />
+      <app-properties-panel (collapse)="togglePropertiesPanel()" />
       }
     </aside>
   </div>

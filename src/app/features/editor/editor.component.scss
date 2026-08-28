@@ -23,6 +23,13 @@
   min-height: 480px;
 }
 
+.editor:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  min-height: 0;
+  background: var(--pf-surface-container);
+}
+
 .editor__toolbar {
   display: flex;
   align-items: center;

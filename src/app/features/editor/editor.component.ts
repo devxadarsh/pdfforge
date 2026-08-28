@@ -60,6 +60,7 @@ export class EditorComponent implements OnDestroy {
   readonly state = inject(EditorStateService);
 
   readonly exporting = signal(false);
+  readonly isFullscreen = signal(false);
   /** Session-level workspace preferences; collapsed panels remain as icon rails. */
   readonly pagesPanelCollapsed = signal(false);
   readonly propertiesPanelCollapsed = signal(false);
@@ -84,6 +85,7 @@ export class EditorComponent implements OnDestroy {
   readonly searchTotal = signal(0);
   readonly searchHitIndex = signal(-1);
 
+  private readonly editorRef = viewChild<ElementRef<HTMLDivElement>>('editor');
   private readonly stageRef = viewChild<ElementRef<HTMLDivElement>>('stage');
   readonly stageSize = signal<{ width: number; height: number }>({
     width: 0,
@@ -250,6 +252,27 @@ export class EditorComponent implements OnDestroy {
     this.state.setTool(id);
   }
 
+  async toggleFullscreen(): Promise<void> {
+    const editor = this.editorRef()?.nativeElement;
+    if (!editor) {
+      return;
+    }
+    try {
+      if (document.fullscreenElement === editor) {
+        await document.exitFullscreen();
+      } else {
+        await editor.requestFullscreen();
+      }
+    } catch {
+      this.toasts.error('Fullscreen mode is not available in this browser.');
+    }
+  }
+
+  @HostListener('document:fullscreenchange')
+  onFullscreenChange(): void {
+    this.isFullscreen.set(document.fullscreenElement === this.editorRef()?.nativeElement);
+  }
+
   togglePagesPanel(): void {
     this.pagesPanelCollapsed.update((collapsed) => !collapsed);
   }
@@ -384,6 +407,11 @@ export class EditorComponent implements OnDestroy {
 
   @HostListener('document:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && this.isFullscreen()) {
+      void document.exitFullscreen();
+      return;
+    }
+
     const hasZoomModifier = event.ctrlKey || event.metaKey;
     const isZoomIn = event.key === '+' || event.key === '=' || event.code === 'NumpadAdd';
     const isZoomOut = event.key === '-' || event.key === '_' || event.code === 'NumpadSubtract';

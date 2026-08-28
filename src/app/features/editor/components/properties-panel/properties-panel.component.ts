@@ -1,7 +1,6 @@
 import {
   Component,
   inject,
-  input,
   output,
   computed,
   ChangeDetectionStrategy,
@@ -77,12 +76,9 @@ export class PropertiesPanelComponent {
   readonly pages = inject(EditorPagesService);
   readonly collapse = output<void>();
 
-  readonly docName = input<string | null>(null);
-
   readonly selected = computed(() =>
     this.state.getSelected(this.pages.currentId()),
   );
-  readonly pageCount = this.pages.pagesCount;
   readonly toolLabel = computed(() => {
     const t = this.state.tool();
     return t.charAt(0).toUpperCase() + t.slice(1);

@@ -1,7 +1,8 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { NgClass } from '@angular/common';
 import { ThemeService } from '../../../core/services/theme.service';
+import { FileService } from '../../../core/services/file/file.service';
 
 interface EditorNavItem {
   readonly label: string;
@@ -18,6 +19,11 @@ interface EditorNavItem {
 export class EditorShellComponent {
   protected readonly theme = inject(ThemeService);
   private readonly router = inject(Router);
+  private readonly files = inject(FileService);
+
+  readonly documentName = computed(
+    () => this.files.currentFiles()[0]?.name ?? 'Untitled document',
+  );
 
   readonly editorNav: EditorNavItem[] = [
     { label: 'Edit', path: '/editor' },

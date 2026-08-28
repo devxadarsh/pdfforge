@@ -598,23 +598,5 @@
         from the toolbar to add a new annotation.
       </p>
     </app-panel-section>
-    @if (docName()) {
-      <app-panel-section title="Document" icon="fa-solid fa-file-pdf">
-        <dl class="props__meta">
-          <div>
-            <dt>Document</dt>
-            <dd>{{ docName() }}</dd>
-          </div>
-          <div>
-            <dt>Pages</dt>
-            <dd>{{ pageCount() }}</dd>
-          </div>
-          <div>
-            <dt>Active tool</dt>
-            <dd><span class="props__tool-badge props__tool-badge--sm">{{ toolLabel() }}</span></dd>
-          </div>
-        </dl>
-      </app-panel-section>
-    }
   }
 </div>
