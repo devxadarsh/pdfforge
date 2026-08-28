@@ -1,7 +1,7 @@
 import {
   Component,
   input,
-  signal,
+  linkedSignal,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { NgClass } from '@angular/common';
@@ -31,16 +31,8 @@ export class PanelSectionComponent {
   readonly collapsed = input(false);
   readonly bare = input(false);
 
-  private readonly _collapsed = signal(false);
+  private readonly _collapsed = linkedSignal(() => this.collapsed());
   readonly isCollapsed = this._collapsed.asReadonly();
-
-  constructor() {
-    // Initialise the internal toggle state from the input on first render so
-    // the body is shown correctly the very first time the section is drawn
-    // (and so that later input changes do not silently override the user
-    // toggling the section open/closed).
-    queueMicrotask(() => this._collapsed.set(this.collapsed()));
-  }
 
   toggle(): void {
     this._collapsed.update((v) => !v);

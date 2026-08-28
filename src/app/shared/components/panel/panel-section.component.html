@@ -1,5 +1,9 @@
-@if (bare()) {
-  <div class="psec__group">
+<div
+  [class.psec__group]="bare()"
+  [class.psec]="!bare()"
+  [class.psec--collapsed]="!bare() && collapsible() && isCollapsed()"
+>
+  @if (bare()) {
     <div class="psec__subtitle">
       @if (icon()) {
         <i [ngClass]="icon()" class="psec__subicon"></i>
@@ -9,12 +13,7 @@
         <span class="psec__count">{{ count() }}</span>
       }
     </div>
-    <div class="psec__body psec__body--bare">
-      <ng-content />
-    </div>
-  </div>
-} @else {
-  <div class="psec" [class.psec--collapsed]="collapsible() && isCollapsed()">
+  } @else {
     <button
       type="button"
       class="psec__head"
@@ -39,10 +38,12 @@
         }
       </span>
     </button>
-    @if (!collapsible() || !isCollapsed()) {
-      <div class="psec__body">
-        <ng-content />
-      </div>
-    }
-  </div>
-}
+  }
+
+  @if (bare() || !collapsible() || !isCollapsed()) {
+    <div class="psec__body" [class.psec__body--bare]="bare()">
+      <ng-content />
+    </div>
+  }
+</div>
+
