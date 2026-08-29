@@ -275,6 +275,23 @@ export class EditorComponent implements OnDestroy {
 
   readonly pinchLiveZoom = signal<number | null>(null);
 
+  readonly renderWindow = computed(() => {
+    const curr = this.pagesStore.currentIndex();
+    const total = this.pagesStore.pagesCount();
+    if (curr < 0 || total === 0) {
+      return { min: 0, max: 2 };
+    }
+    return {
+      min: Math.max(0, curr - 1),
+      max: Math.min(total - 1, curr + 1),
+    };
+  });
+
+  isPageInRenderWindow(idx: number): boolean {
+    const w = this.renderWindow();
+    return idx >= w.min && idx <= w.max;
+  }
+
   readonly zoomLabel = computed(() => {
     const live = this.pinchLiveZoom();
     if (live !== null) {
@@ -1064,6 +1081,10 @@ export class EditorComponent implements OnDestroy {
       cancelAnimationFrame(this.pinchRafId);
       this.pinchRafId = null;
     }
+    if (this.scrollRafId) {
+      cancelAnimationFrame(this.scrollRafId);
+      this.scrollRafId = null;
+    }
     document.removeEventListener('touchstart', this.onGlobalTouchStart);
     document.removeEventListener('touchmove', this.onGlobalTouchStart);
     if (this.currentStageElement) {
@@ -1414,32 +1435,39 @@ export class EditorComponent implements OnDestroy {
   }
 
   private isAutoScrolling = false;
+  private scrollRafId: number | null = null;
 
   onStageScroll(event: Event): void {
+    if (this.isAutoScrolling) {
+      return;
+    }
+
+    if (this.scrollRafId === null) {
+      this.scrollRafId = requestAnimationFrame(() => {
+        this.scrollRafId = null;
+        this.detectActivePageInViewport();
+      });
+    }
+  }
+
+  private detectActivePageInViewport(): void {
     const stage = this.stageRef()?.nativeElement;
     if (!stage || this.isAutoScrolling) {
       return;
     }
+
     const stageRect = stage.getBoundingClientRect();
+    const centerX = stageRect.left + stageRect.width / 2;
     const centerY = stageRect.top + stageRect.height / 2;
 
-    const pageElements = stage.querySelectorAll<HTMLElement>('.editor__page-wrapper');
-    let closestPageId: string | null = null;
-    let minDistance = Infinity;
+    const el = document.elementFromPoint(centerX, centerY);
+    const wrapper = el?.closest('.editor__page-wrapper') as HTMLElement | null;
 
-    for (let i = 0; i < pageElements.length; i++) {
-      const el = pageElements[i];
-      const rect = el.getBoundingClientRect();
-      const pageCenterY = rect.top + rect.height / 2;
-      const dist = Math.abs(pageCenterY - centerY);
-      if (dist < minDistance) {
-        minDistance = dist;
-        closestPageId = el.getAttribute('data-page-id');
+    if (wrapper) {
+      const pageId = wrapper.getAttribute('data-page-id');
+      if (pageId && pageId !== this.pagesStore.currentId()) {
+        this.pagesStore.setCurrent(pageId);
       }
-    }
-
-    if (closestPageId && closestPageId !== this.pagesStore.currentId()) {
-      this.pagesStore.setCurrent(closestPageId);
     }
   }
 

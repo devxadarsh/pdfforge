@@ -28,6 +28,7 @@ export class PdfPageComponent implements OnDestroy {
   readonly pageIndex = input.required<number>();
   readonly scale = input.required<number>();
   readonly rotation = input(0);
+  readonly isFullQuality = input<boolean>(true);
 
   private readonly renderTask: { task: Cancellable | null } = { task: null };
   private readonly isVisible = signal(false);
@@ -37,6 +38,7 @@ export class PdfPageComponent implements OnDestroy {
     this.initObserver();
 
     effect(() => {
+      const fullQuality = this.isFullQuality();
       const visible = this.isVisible();
       const canvas = this.canvasRef()?.nativeElement;
       const idx = this.pageIndex();
@@ -47,7 +49,7 @@ export class PdfPageComponent implements OnDestroy {
         return;
       }
 
-      if (!visible) {
+      if (!fullQuality || !visible) {
         // Cancel off-screen render to conserve CPU/memory on large documents
         this.renderTask.task?.cancel();
         this.renderTask.task = null;

@@ -712,16 +712,19 @@
                   [pageIndex]="page.sourceIndex"
                   [scale]="getPageDisplaySize(page).scale"
                   [rotation]="page.rotation"
+                  [isFullQuality]="isPageInRenderWindow(idx)"
                 ></app-pdf-page>
-                <app-editor-overlay
-                  [pageId]="page.id"
-                  [pageIndex]="page.sourceIndex"
-                  [annotations]="state.annotationsFor(page.id)"
-                  [tool]="state.tool()"
-                  [selectedId]="state.selectedId()"
-                  [width]="getPageDisplaySize(page).width"
-                  [height]="getPageDisplaySize(page).height"
-                ></app-editor-overlay>
+                @if (isPageInRenderWindow(idx)) {
+                  <app-editor-overlay
+                    [pageId]="page.id"
+                    [pageIndex]="page.sourceIndex"
+                    [annotations]="state.annotationsFor(page.id)"
+                    [tool]="state.tool()"
+                    [selectedId]="state.selectedId()"
+                    [width]="getPageDisplaySize(page).width"
+                    [height]="getPageDisplaySize(page).height"
+                  ></app-editor-overlay>
+                }
               </div>
             </div>
           }

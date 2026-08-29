@@ -1,1 +1,9 @@
-<div class="pdf-page" #host><canvas #canvas></canvas></div>
+<div class="pdf-page" #host>
+  @if (isFullQuality()) {
+    <canvas #canvas></canvas>
+  } @else {
+    <div class="pdf-page__placeholder">
+      <div class="pdf-page__placeholder-badge">Page {{ pageIndex() + 1 }}</div>
+    </div>
+  }
+</div>
