@@ -118,7 +118,17 @@
         </p>
       </div>
       } @else {
-      <div class="editor__canvas-stage" #stage (wheel)="onWorkspaceWheel($event)">
+      <div
+        class="editor__canvas-stage"
+        #stage
+        [class.editor__canvas-stage--hand]="state.tool() === 'hand' || isSpacePanning()"
+        [class.editor__canvas-stage--panning]="isPanning()"
+        (pointerdown)="onStagePointerDown($event)"
+        (pointermove)="onStagePointerMove($event)"
+        (pointerup)="onStagePointerUp($event)"
+        (pointercancel)="onStagePointerUp($event)"
+        (wheel)="onWorkspaceWheel($event)"
+      >
         <div class="editor__page-frame" [style.width.px]="displaySize()?.width"
           [style.height.px]="displaySize()?.height">
           <app-pdf-page [pageIndex]="currentSourceIndex()" [scale]="displaySize()?.scale ?? 1"

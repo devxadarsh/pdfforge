@@ -419,10 +419,72 @@ export class EditorComponent implements OnDestroy {
     this.state.resetZoom();
   }
 
-  @HostListener('document:keydown', ['$event'])
+  readonly isPanning = signal(false);
+  readonly isSpacePanning = signal(false);
+  private panStart: { x: number; y: number; scrollLeft: number; scrollTop: number } | null = null;
+
+  onStagePointerDown(event: PointerEvent): void {
+    const isHand =
+      this.state.tool() === 'hand' ||
+      this.isSpacePanning() ||
+      event.button === 1;
+    if (!isHand) {
+      return;
+    }
+    const stage = this.stageRef()?.nativeElement;
+    if (!stage) {
+      return;
+    }
+    this.isPanning.set(true);
+    this.panStart = {
+      x: event.clientX,
+      y: event.clientY,
+      scrollLeft: stage.scrollLeft,
+      scrollTop: stage.scrollTop,
+    };
+    stage.setPointerCapture?.(event.pointerId);
+  }
+
+  onStagePointerMove(event: PointerEvent): void {
+    if (!this.isPanning() || !this.panStart) {
+      return;
+    }
+    const stage = this.stageRef()?.nativeElement;
+    if (!stage) {
+      return;
+    }
+    const dx = event.clientX - this.panStart.x;
+    const dy = event.clientY - this.panStart.y;
+    stage.scrollLeft = this.panStart.scrollLeft - dx;
+    stage.scrollTop = this.panStart.scrollTop - dy;
+  }
+
+  onStagePointerUp(event: PointerEvent): void {
+    if (this.isPanning()) {
+      this.isPanning.set(false);
+      this.panStart = null;
+      const stage = this.stageRef()?.nativeElement;
+      stage?.releasePointerCapture?.(event.pointerId);
+    }
+  }
+
+  @HostListener('window:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
     if (event.key === 'Escape' && this.isFullscreen()) {
       void document.exitFullscreen();
+      return;
+    }
+
+    const target = event.target as HTMLElement | null;
+    const isInput =
+      target &&
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable);
+
+    if (event.code === 'Space' && !isInput && !this.isSpacePanning()) {
+      event.preventDefault();
+      this.isSpacePanning.set(true);
       return;
     }
 
@@ -435,23 +497,33 @@ export class EditorComponent implements OnDestroy {
       return;
     }
 
-    const target = event.target as HTMLElement | null;
-    if (
-      target &&
-      (target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable)
-    ) {
+    if (isInput) {
       return;
     }
-    const id = this.state.selectedId();
-    if (!id) {
+
+    const selectedIds = this.state.selectedIds();
+    if (selectedIds.length === 0) {
+      return;
+    }
+
+    const hasModifier = event.ctrlKey || event.metaKey;
+
+    if (hasModifier && event.key.toLowerCase() === 'g') {
+      event.preventDefault();
+      const pageId = this.currentPageId();
+      if (event.shiftKey) {
+        this.state.ungroupSelected(pageId);
+      } else if (event.altKey) {
+        this.state.regroupSelected(pageId);
+      } else {
+        this.state.groupSelected(pageId);
+      }
       return;
     }
 
     if (event.key === 'Delete' || event.key === 'Backspace') {
       event.preventDefault();
-      this.state.removeAnnotation(id);
+      this.state.deleteSelected(this.currentPageId());
       return;
     }
 
@@ -469,7 +541,20 @@ export class EditorComponent implements OnDestroy {
       if (event.key === 'ArrowRight') dx = step;
       if (event.key === 'ArrowUp') dy = -step;
       if (event.key === 'ArrowDown') dy = step;
-      this.state.nudgeAnnotation(id, dx, dy);
+      for (const id of selectedIds) {
+        this.state.nudgeAnnotation(id, dx, dy);
+      }
+    }
+  }
+
+  @HostListener('window:keyup', ['$event'])
+  onKeyup(event: KeyboardEvent): void {
+    if (event.code === 'Space') {
+      this.isSpacePanning.set(false);
+      if (this.isPanning()) {
+        this.isPanning.set(false);
+        this.panStart = null;
+      }
     }
   }
 

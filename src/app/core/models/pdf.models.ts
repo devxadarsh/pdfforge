@@ -36,6 +36,10 @@ export type ShapeKind = 'rectangle' | 'circle' | 'arrow' | 'line';
 export type EraserMode = 'stroke' | 'segment';
 export type EraserTarget = 'all' | 'drawing' | 'highlight';
 
+export type DrawingMode = 'continuous' | 'autoselect' | 'box';
+
+export type SelectMode = 'box' | 'lasso' | 'click';
+
 export interface EraserSettings {
   mode: EraserMode;
   size: number;
@@ -78,6 +82,7 @@ export interface BaseAnnotation {
   opacity: number;
   createdAt: number;
   locked?: boolean;
+  groupId?: string;
 }
 
 export type TextTransform = 'none' | 'uppercase' | 'lowercase' | 'capitalize';

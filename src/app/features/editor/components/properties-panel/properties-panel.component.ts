@@ -13,6 +13,8 @@ import {
   HighlightAnnotation,
   CommentAnnotation,
   DrawingAnnotation,
+  DrawingMode,
+  SelectMode,
   EraserMode,
   EraserTarget,
 } from '../../../../core/models/pdf.models';
@@ -69,17 +71,45 @@ const SHAPE_SWATCHES: ReadonlyArray<ColorSwatch> = [
 @Component({
   selector: 'app-properties-panel',
   standalone: true,
-  changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PanelSectionComponent, DecimalPipe],
+  imports: [DecimalPipe, PanelSectionComponent],
   templateUrl: './properties-panel.component.html',
   styleUrl: './properties-panel.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PropertiesPanelComponent {
   private readonly state = inject(EditorStateService);
-  readonly pages = inject(EditorPagesService);
+  private readonly pages = inject(EditorPagesService);
+
   readonly collapse = output<void>();
 
   readonly activeTool = this.state.tool;
+  readonly selectMode = this.state.selectMode;
+  readonly selectedIds = this.state.selectedIds;
+  readonly selectedList = computed(() =>
+    this.state.getSelectedList(this.pages.currentId()),
+  );
+  readonly hasGroupInSelection = computed(() =>
+    this.state.hasGroupInSelection(this.pages.currentId()),
+  );
+  readonly canRegroup = computed(() =>
+    this.state.canRegroup(this.pages.currentId()),
+  );
+  readonly isGrouped = computed(() => {
+    const list = this.selectedList();
+    if (list.length < 2) {
+      return false;
+    }
+    const gid = list[0].groupId;
+    return Boolean(gid && list.every((a) => a.groupId === gid));
+  });
+
+  readonly drawingMode = this.state.drawingMode;
+  readonly penColor = this.state.penColor;
+  readonly penStrokeWidth = this.state.penStrokeWidth;
+  readonly freehandColor = this.state.freehandColor;
+  readonly freehandStrokeWidth = this.state.freehandStrokeWidth;
+  readonly penSmoothing = this.state.penSmoothing;
+
   readonly eraserMode = this.state.eraserMode;
   readonly eraserSize = this.state.eraserSize;
   readonly eraserTolerance = this.state.eraserTolerance;
@@ -512,6 +542,101 @@ export class PropertiesPanelComponent {
 
   setEraserTarget(target: EraserTarget): void {
     this.state.setEraserTarget(target);
+  }
+
+  setDrawingMode(mode: DrawingMode): void {
+    this.state.setDrawingMode(mode);
+  }
+
+  setPenColor(c: string): void {
+    this.state.setPenColor(c);
+  }
+
+  setPenStrokeWidth(w: number | string): void {
+    const n = Number(w);
+    if (!Number.isNaN(n)) {
+      this.state.setPenStrokeWidth(n);
+    }
+  }
+
+  setFreehandColor(c: string): void {
+    this.state.setFreehandColor(c);
+  }
+
+  setFreehandStrokeWidth(w: number | string): void {
+    const n = Number(w);
+    if (!Number.isNaN(n)) {
+      this.state.setFreehandStrokeWidth(n);
+    }
+  }
+
+  setPenSmoothing(s: 'none' | 'medium' | 'high'): void {
+    this.state.setPenSmoothing(s);
+  }
+
+  selectInkArea(): void {
+    this.state.selectDrawingsArea(this.pages.currentId());
+  }
+
+  setSelectMode(mode: SelectMode): void {
+    this.state.setSelectMode(mode);
+  }
+
+  selectAll(): void {
+    this.state.selectAllAnnotations(this.pages.currentId());
+  }
+
+  clearSelection(): void {
+    this.state.clearSelection();
+  }
+
+  deleteSelected(): void {
+    this.state.deleteSelected(this.pages.currentId());
+  }
+
+  duplicateSelected(): void {
+    this.state.duplicateSelected(this.pages.currentId());
+  }
+
+  alignSelected(
+    alignment: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom',
+  ): void {
+    this.state.alignSelected(this.pages.currentId(), alignment);
+  }
+
+  setBatchOpacity(opacity: number | string): void {
+    const n = Number(opacity);
+    if (!Number.isNaN(n)) {
+      this.state.setBatchOpacity(this.pages.currentId(), n);
+    }
+  }
+
+  toggleBatchLock(): void {
+    this.state.toggleBatchLock(this.pages.currentId());
+  }
+
+  groupSelected(): void {
+    this.state.groupSelected(this.pages.currentId());
+  }
+
+  ungroupSelected(): void {
+    this.state.ungroupSelected(this.pages.currentId());
+  }
+
+  regroupSelected(): void {
+    this.state.regroupSelected(this.pages.currentId());
+  }
+
+  distributeSelected(axis: 'horizontal' | 'vertical'): void {
+    this.state.distributeSelected(this.pages.currentId(), axis);
+  }
+
+  bringSelectedToFront(): void {
+    this.state.bringSelectedToFront(this.pages.currentId());
+  }
+
+  sendSelectedToBack(): void {
+    this.state.sendSelectedToBack(this.pages.currentId());
   }
 
   clearCurrentPage(): void {

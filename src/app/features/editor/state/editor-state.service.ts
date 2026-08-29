@@ -1,8 +1,10 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, computed } from '@angular/core';
 import {
   PdfToolId,
   PdfAnnotation,
   DrawingAnnotation,
+  DrawingMode,
+  SelectMode,
   EraserMode,
   EraserTarget,
 } from '../../../core/models/pdf.models';
@@ -20,8 +22,20 @@ export class EditorStateService {
   private readonly _annotations = signal<Map<string, PdfAnnotation[]>>(
     new Map(),
   );
-  private readonly _selectedId = signal<string | null>(null);
+  private readonly _selectedIds = signal<string[]>([]);
+  private readonly _selectedId = computed(() => this._selectedIds()[0] ?? null);
   private readonly _modified = signal(false);
+
+  // Selection mode options
+  private readonly _selectMode = signal<SelectMode>('box');
+
+  // Drawing options
+  private readonly _drawingMode = signal<DrawingMode>('continuous');
+  private readonly _penColor = signal<string>('#111827');
+  private readonly _penStrokeWidth = signal<number>(2);
+  private readonly _freehandColor = signal<string>('#dc2626');
+  private readonly _freehandStrokeWidth = signal<number>(4);
+  private readonly _penSmoothing = signal<'none' | 'medium' | 'high'>('medium');
 
   // Eraser options
   private readonly _eraserMode = signal<EraserMode>('segment');
@@ -34,15 +48,48 @@ export class EditorStateService {
   readonly tool = this._tool.asReadonly();
   readonly zoom = this._zoom.asReadonly();
   readonly fitMode = this._fitMode.asReadonly();
-  readonly selectedId = this._selectedId.asReadonly();
+  readonly selectedIds = this._selectedIds.asReadonly();
+  readonly selectedId = this._selectedId;
+  readonly selectMode = this._selectMode.asReadonly();
   readonly modified = this._modified.asReadonly();
   readonly annotationsByPage = this._annotations.asReadonly();
+
+  readonly drawingMode = this._drawingMode.asReadonly();
+  readonly penColor = this._penColor.asReadonly();
+  readonly penStrokeWidth = this._penStrokeWidth.asReadonly();
+  readonly freehandColor = this._freehandColor.asReadonly();
+  readonly freehandStrokeWidth = this._freehandStrokeWidth.asReadonly();
+  readonly penSmoothing = this._penSmoothing.asReadonly();
 
   readonly eraserMode = this._eraserMode.asReadonly();
   readonly eraserSize = this._eraserSize.asReadonly();
   readonly eraserTolerance = this._eraserTolerance.asReadonly();
   readonly eraserTarget = this._eraserTarget.asReadonly();
   readonly eraserSizePreviewActive = this._eraserSizePreviewActive.asReadonly();
+
+  setDrawingMode(mode: DrawingMode): void {
+    this._drawingMode.set(mode);
+  }
+
+  setPenColor(color: string): void {
+    this._penColor.set(color);
+  }
+
+  setPenStrokeWidth(w: number): void {
+    this._penStrokeWidth.set(Math.max(1, Math.min(32, w)));
+  }
+
+  setFreehandColor(color: string): void {
+    this._freehandColor.set(color);
+  }
+
+  setFreehandStrokeWidth(w: number): void {
+    this._freehandStrokeWidth.set(Math.max(1, Math.min(32, w)));
+  }
+
+  setPenSmoothing(smoothing: 'none' | 'medium' | 'high'): void {
+    this._penSmoothing.set(smoothing);
+  }
 
   setEraserMode(mode: EraserMode): void {
     this._eraserMode.set(mode);
@@ -99,16 +146,15 @@ export class EditorStateService {
       map.set(pageId, remaining);
       this._annotations.set(map);
       this._modified.set(true);
-      if (this._selectedId() && !remaining.some((a) => a.id === this._selectedId())) {
-        this._selectedId.set(null);
-      }
+      const remainingIds = new Set(remaining.map((a) => a.id));
+      this._selectedIds.update((ids) => ids.filter((id) => remainingIds.has(id)));
     }
   }
 
   setTool(tool: PdfToolId): void {
     this._tool.set(tool);
     if (tool !== 'select' && tool !== 'hand') {
-      this._selectedId.set(null);
+      this._selectedIds.set([]);
     }
   }
 
@@ -155,7 +201,7 @@ export class EditorStateService {
     map.set(pageId, [...existing, annotation]);
     this._annotations.set(map);
     if (select) {
-      this._selectedId.set(annotation.id);
+      this._selectedIds.set([annotation.id]);
     }
     this._modified.set(true);
   }
@@ -327,9 +373,7 @@ export class EditorStateService {
       map.set(pageId, next);
       this._annotations.set(map);
       this._modified.set(true);
-      if (this._selectedId() === id) {
-        this._selectedId.set(null);
-      }
+      this._selectedIds.update((ids) => ids.filter((i) => i !== id));
       return;
     }
   }
@@ -367,7 +411,7 @@ export class EditorStateService {
       next.splice(idx + 1, 0, copy);
       map.set(pageId, next);
       this._annotations.set(map);
-      this._selectedId.set(copy.id);
+      this._selectedIds.set([copy.id]);
       this._modified.set(true);
       return copy.id;
     }
@@ -437,12 +481,82 @@ export class EditorStateService {
     }
   }
 
-  selectAnnotation(id: string | null): void {
-    this._selectedId.set(id);
+  private readonly _lastUngroupedMap = signal<Map<string, string[]>>(
+    new Map(),
+  );
+
+  setSelectMode(mode: SelectMode): void {
+    this._selectMode.set(mode);
+  }
+
+  private getGroupMembers(id: string): string[] {
+    for (const [, list] of this._annotations()) {
+      const target = list.find((a) => a.id === id);
+      if (target?.groupId) {
+        return list
+          .filter((a) => a.groupId === target.groupId)
+          .map((a) => a.id);
+      }
+      if (target) {
+        return [id];
+      }
+    }
+    return [id];
+  }
+
+  selectAnnotation(id: string | null, additive = false): void {
+    if (!id) {
+      this._selectedIds.set([]);
+      return;
+    }
+    const memberIds = this.getGroupMembers(id);
+    if (additive) {
+      const current = new Set(this._selectedIds());
+      const allIn = memberIds.every((mId) => current.has(mId));
+      if (allIn) {
+        for (const mId of memberIds) {
+          current.delete(mId);
+        }
+      } else {
+        for (const mId of memberIds) {
+          current.add(mId);
+        }
+      }
+      this._selectedIds.set(Array.from(current));
+    } else {
+      this._selectedIds.set(memberIds);
+    }
+  }
+
+  selectAnnotations(ids: string[], additive = false): void {
+    const expanded = new Set<string>();
+    for (const id of ids) {
+      for (const mId of this.getGroupMembers(id)) {
+        expanded.add(mId);
+      }
+    }
+    if (additive) {
+      const set = new Set([...this._selectedIds(), ...expanded]);
+      this._selectedIds.set(Array.from(set));
+    } else {
+      this._selectedIds.set(Array.from(expanded));
+    }
+  }
+
+  toggleAnnotationSelection(id: string): void {
+    this.selectAnnotation(id, true);
+  }
+
+  selectAllAnnotations(pageId: string | null): void {
+    if (!pageId) {
+      return;
+    }
+    const list = this._annotations().get(pageId) ?? [];
+    this._selectedIds.set(list.map((a) => a.id));
   }
 
   clearSelection(): void {
-    this._selectedId.set(null);
+    this._selectedIds.set([]);
   }
 
   /** Drop annotations whose page is no longer present (e.g. after deletion). */
@@ -463,19 +577,427 @@ export class EditorStateService {
   }
 
   getSelected(pageId: string | null): PdfAnnotation | null {
+    if (!pageId || this._selectedIds().length === 0) {
+      return null;
+    }
+    const id = this._selectedIds()[0];
+    return this._annotations().get(pageId)?.find((a) => a.id === id) ?? null;
+  }
+
+  getSelectedList(pageId: string | null): PdfAnnotation[] {
+    if (!pageId) {
+      return [];
+    }
+    const ids = new Set(this._selectedIds());
+    return (this._annotations().get(pageId) ?? []).filter((a) => ids.has(a.id));
+  }
+
+  deleteSelected(pageId: string | null): void {
+    if (!pageId) {
+      return;
+    }
+    const ids = new Set(this._selectedIds());
+    if (ids.size === 0) {
+      return;
+    }
+    const map = new Map(this._annotations());
+    const list = map.get(pageId) ?? [];
+    const next = list.filter((a) => !ids.has(a.id) || a.locked);
+    map.set(pageId, next);
+    this._annotations.set(map);
+    this._selectedIds.set([]);
+    this._modified.set(true);
+  }
+
+  duplicateSelected(pageId: string | null): string[] {
+    if (!pageId) {
+      return [];
+    }
+    const ids = new Set(this._selectedIds());
+    if (ids.size === 0) {
+      return [];
+    }
+    const map = new Map(this._annotations());
+    const list = map.get(pageId) ?? [];
+    const newCopies: PdfAnnotation[] = [];
+    const newIds: string[] = [];
+
+    for (const item of list) {
+      if (!ids.has(item.id)) {
+        continue;
+      }
+      let copy: PdfAnnotation = {
+        ...item,
+        id: crypto.randomUUID(),
+        rect: {
+          x: item.rect.x + 16,
+          y: item.rect.y + 16,
+          width: item.rect.width,
+          height: item.rect.height,
+        },
+        createdAt: Date.now(),
+      } as PdfAnnotation;
+      if (item.type === 'drawing') {
+        copy = {
+          ...item,
+          id: copy.id,
+          rect: copy.rect,
+          createdAt: copy.createdAt,
+          points: item.points.map((p) => ({ x: p.x + 16, y: p.y + 16 })),
+        } as DrawingAnnotation;
+      }
+      newCopies.push(copy);
+      newIds.push(copy.id);
+    }
+
+    if (newCopies.length > 0) {
+      map.set(pageId, [...list, ...newCopies]);
+      this._annotations.set(map);
+      this._selectedIds.set(newIds);
+      this._modified.set(true);
+    }
+    return newIds;
+  }
+
+  alignSelected(
+    pageId: string | null,
+    alignment: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom',
+  ): void {
+    if (!pageId) {
+      return;
+    }
+    const selected = this.getSelectedList(pageId);
+    if (selected.length < 2) {
+      return;
+    }
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (const a of selected) {
+      minX = Math.min(minX, a.rect.x);
+      maxX = Math.max(maxX, a.rect.x + a.rect.width);
+      minY = Math.min(minY, a.rect.y);
+      maxY = Math.max(maxY, a.rect.y + a.rect.height);
+    }
+    const centerX = minX + (maxX - minX) / 2;
+    const centerY = minY + (maxY - minY) / 2;
+
+    const map = new Map(this._annotations());
+    const list = map.get(pageId) ?? [];
+    const next = list.map((a) => {
+      if (!this._selectedIds().includes(a.id) || a.locked) {
+        return a;
+      }
+      let targetX = a.rect.x;
+      let targetY = a.rect.y;
+      if (alignment === 'left') {
+        targetX = minX;
+      } else if (alignment === 'center') {
+        targetX = Math.round(centerX - a.rect.width / 2);
+      } else if (alignment === 'right') {
+        targetX = maxX - a.rect.width;
+      } else if (alignment === 'top') {
+        targetY = minY;
+      } else if (alignment === 'middle') {
+        targetY = Math.round(centerY - a.rect.height / 2);
+      } else if (alignment === 'bottom') {
+        targetY = maxY - a.rect.height;
+      }
+      const dx = targetX - a.rect.x;
+      const dy = targetY - a.rect.y;
+
+      let updated = {
+        ...a,
+        rect: { ...a.rect, x: targetX, y: targetY },
+      } as PdfAnnotation;
+      if (a.type === 'drawing') {
+        updated = {
+          ...a,
+          rect: updated.rect,
+          points: a.points.map((p) => ({ x: p.x + dx, y: p.y + dy })),
+        } as DrawingAnnotation;
+      }
+      return updated;
+    });
+
+    map.set(pageId, next);
+    this._annotations.set(map);
+    this._modified.set(true);
+  }
+
+  setBatchOpacity(pageId: string | null, opacity: number): void {
+    if (!pageId) {
+      return;
+    }
+    const ids = new Set(this._selectedIds());
+    if (ids.size === 0) {
+      return;
+    }
+    const map = new Map(this._annotations());
+    const list = map.get(pageId) ?? [];
+    const next = list.map((a) =>
+      ids.has(a.id) && !a.locked ? { ...a, opacity } : a,
+    );
+    map.set(pageId, next);
+    this._annotations.set(map);
+    this._modified.set(true);
+  }
+
+  toggleBatchLock(pageId: string | null): void {
+    if (!pageId) {
+      return;
+    }
+    const selected = this.getSelectedList(pageId);
+    if (selected.length === 0) {
+      return;
+    }
+    const hasUnlocked = selected.some((a) => !a.locked);
+    const targetLocked = hasUnlocked; // If any is unlocked, lock all; otherwise unlock all
+    const ids = new Set(this._selectedIds());
+    const map = new Map(this._annotations());
+    const list = map.get(pageId) ?? [];
+    const next = list.map((a) =>
+      ids.has(a.id) ? { ...a, locked: targetLocked } : a,
+    );
+    map.set(pageId, next);
+    this._annotations.set(map);
+    this._modified.set(true);
+  }
+
+  /** Group selected annotations together under a shared groupId */
+  groupSelected(pageId: string | null): string | null {
+    if (!pageId || this._selectedIds().length < 2) {
+      return null;
+    }
+    const newGroupId = 'grp-' + crypto.randomUUID().slice(0, 8);
+    const ids = new Set(this._selectedIds());
+    const map = new Map(this._annotations());
+    const list = map.get(pageId) ?? [];
+    const next = list.map((a) =>
+      ids.has(a.id) ? { ...a, groupId: newGroupId } : a,
+    );
+    map.set(pageId, next);
+    this._annotations.set(map);
+    this._modified.set(true);
+    return newGroupId;
+  }
+
+  /** Ungroup selected annotations and cache the set for regrouping */
+  ungroupSelected(pageId: string | null): string[] {
+    if (!pageId || this._selectedIds().length === 0) {
+      return [];
+    }
+    const selected = this.getSelectedList(pageId);
+    const hasGrouped = selected.some((a) => Boolean(a.groupId));
+    if (!hasGrouped) {
+      return [];
+    }
+    const selectedIds = this._selectedIds();
+    // Cache for Regroup action
+    const lastMap = new Map(this._lastUngroupedMap());
+    lastMap.set(pageId, [...selectedIds]);
+    this._lastUngroupedMap.set(lastMap);
+
+    const ids = new Set(selectedIds);
+    const map = new Map(this._annotations());
+    const list = map.get(pageId) ?? [];
+    const next = list.map((a) =>
+      ids.has(a.id) ? { ...a, groupId: undefined } : a,
+    );
+    map.set(pageId, next);
+    this._annotations.set(map);
+    this._modified.set(true);
+    return selectedIds;
+  }
+
+  /** Regroup previously ungrouped annotations on this page */
+  regroupSelected(pageId: string | null): string | null {
     if (!pageId) {
       return null;
     }
-    const id = this._selectedId();
-    if (!id) {
+    const cachedIds = this._lastUngroupedMap().get(pageId);
+    if (!cachedIds || cachedIds.length < 2) {
       return null;
     }
-    return this._annotations().get(pageId)?.find((a) => a.id === id) ?? null;
+    const map = new Map(this._annotations());
+    const list = map.get(pageId) ?? [];
+    const existingIds = new Set(list.map((a) => a.id));
+    const validIds = cachedIds.filter((id) => existingIds.has(id));
+    if (validIds.length < 2) {
+      return null;
+    }
+
+    const newGroupId = 'grp-' + crypto.randomUUID().slice(0, 8);
+    const targetSet = new Set(validIds);
+    const next = list.map((a) =>
+      targetSet.has(a.id) ? { ...a, groupId: newGroupId } : a,
+    );
+    map.set(pageId, next);
+    this._annotations.set(map);
+    this._selectedIds.set(validIds);
+    this._modified.set(true);
+    return newGroupId;
+  }
+
+  canRegroup(pageId: string | null): boolean {
+    if (!pageId) {
+      return false;
+    }
+    const cached = this._lastUngroupedMap().get(pageId);
+    return Boolean(cached && cached.length >= 2);
+  }
+
+  hasGroupInSelection(pageId: string | null): boolean {
+    if (!pageId) {
+      return false;
+    }
+    return this.getSelectedList(pageId).some((a) => Boolean(a.groupId));
+  }
+
+  /** Distribute 3 or more selected annotations evenly across horizontal or vertical axis */
+  distributeSelected(pageId: string | null, axis: 'horizontal' | 'vertical'): void {
+    if (!pageId) {
+      return;
+    }
+    const selected = this.getSelectedList(pageId);
+    if (selected.length < 3) {
+      return;
+    }
+
+    const sorted = [...selected].sort((a, b) =>
+      axis === 'horizontal' ? a.rect.x - b.rect.x : a.rect.y - b.rect.y,
+    );
+
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
+
+    if (axis === 'horizontal') {
+      const minX = first.rect.x;
+      const maxX = last.rect.x + last.rect.width;
+      const totalWidth = sorted.reduce((sum, item) => sum + item.rect.width, 0);
+      const freeSpace = maxX - minX - totalWidth;
+      const gap = freeSpace / (sorted.length - 1);
+
+      let currentX = minX;
+      const newPosMap = new Map<string, number>();
+      for (const item of sorted) {
+        newPosMap.set(item.id, Math.round(currentX));
+        currentX += item.rect.width + gap;
+      }
+
+      const map = new Map(this._annotations());
+      const list = map.get(pageId) ?? [];
+      const next = list.map((a) => {
+        if (!newPosMap.has(a.id) || a.locked) {
+          return a;
+        }
+        const targetX = newPosMap.get(a.id)!;
+        const dx = targetX - a.rect.x;
+        let updated = { ...a, rect: { ...a.rect, x: targetX } } as PdfAnnotation;
+        if (a.type === 'drawing') {
+          updated = {
+            ...a,
+            rect: updated.rect,
+            points: a.points.map((p) => ({ x: p.x + dx, y: p.y })),
+          } as DrawingAnnotation;
+        }
+        return updated;
+      });
+      map.set(pageId, next);
+      this._annotations.set(map);
+      this._modified.set(true);
+    } else {
+      const minY = first.rect.y;
+      const maxY = last.rect.y + last.rect.height;
+      const totalHeight = sorted.reduce((sum, item) => sum + item.rect.height, 0);
+      const freeSpace = maxY - minY - totalHeight;
+      const gap = freeSpace / (sorted.length - 1);
+
+      let currentY = minY;
+      const newPosMap = new Map<string, number>();
+      for (const item of sorted) {
+        newPosMap.set(item.id, Math.round(currentY));
+        currentY += item.rect.height + gap;
+      }
+
+      const map = new Map(this._annotations());
+      const list = map.get(pageId) ?? [];
+      const next = list.map((a) => {
+        if (!newPosMap.has(a.id) || a.locked) {
+          return a;
+        }
+        const targetY = newPosMap.get(a.id)!;
+        const dy = targetY - a.rect.y;
+        let updated = { ...a, rect: { ...a.rect, y: targetY } } as PdfAnnotation;
+        if (a.type === 'drawing') {
+          updated = {
+            ...a,
+            rect: updated.rect,
+            points: a.points.map((p) => ({ x: p.x, y: p.y + dy })),
+          } as DrawingAnnotation;
+        }
+        return updated;
+      });
+      map.set(pageId, next);
+      this._annotations.set(map);
+      this._modified.set(true);
+    }
+  }
+
+  bringSelectedToFront(pageId: string | null): void {
+    if (!pageId) {
+      return;
+    }
+    const ids = new Set(this._selectedIds());
+    if (ids.size === 0) {
+      return;
+    }
+    const map = new Map(this._annotations());
+    const list = map.get(pageId) ?? [];
+    const unselected = list.filter((a) => !ids.has(a.id));
+    const selected = list.filter((a) => ids.has(a.id));
+    map.set(pageId, [...unselected, ...selected]);
+    this._annotations.set(map);
+    this._modified.set(true);
+  }
+
+  sendSelectedToBack(pageId: string | null): void {
+    if (!pageId) {
+      return;
+    }
+    const ids = new Set(this._selectedIds());
+    if (ids.size === 0) {
+      return;
+    }
+    const map = new Map(this._annotations());
+    const list = map.get(pageId) ?? [];
+    const unselected = list.filter((a) => !ids.has(a.id));
+    const selected = list.filter((a) => ids.has(a.id));
+    map.set(pageId, [...selected, ...unselected]);
+    this._annotations.set(map);
+    this._modified.set(true);
+  }
+
+  /** Select all drawings or the latest drawn ink mark on the page for transformation */
+  selectDrawingsArea(pageId: string | null): void {
+    if (!pageId) {
+      return;
+    }
+    const list = this._annotations().get(pageId) ?? [];
+    const drawings = list.filter(
+      (a): a is DrawingAnnotation => a.type === 'drawing',
+    );
+    if (drawings.length === 0) {
+      return;
+    }
+    this._tool.set('select');
+    this._selectedIds.set(drawings.map((d) => d.id));
   }
 
   reset(): void {
     this._annotations.set(new Map());
-    this._selectedId.set(null);
+    this._selectedIds.set([]);
     this._modified.set(false);
     this._tool.set('select');
     this._zoom.set(1);

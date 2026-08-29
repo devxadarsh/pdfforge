@@ -83,7 +83,7 @@ describe('EditorStateService', () => {
     const newId = state.duplicateAnnotation(shape.id);
     expect(newId).not.toBeNull();
     expect(state.annotationsFor('page-1').length).toBe(2);
-    expect(state.selectedId()).toBe(newId);
+    expect(state.selectedId()).toBe(newId!);
     const copy = state.annotationsFor('page-1').find((a) => a.id === newId);
     expect(copy).toBeDefined();
     expect(copy!.rect.x).toBe(shape.rect.x + 12);
@@ -268,5 +268,97 @@ describe('EditorStateService', () => {
 
   it('returns null from duplicate when the id is missing', () => {
     expect(state.duplicateAnnotation('missing')).toBeNull();
+  });
+
+  it('handles multi-selection, selectMode, batch duplication, alignment, and deletion', () => {
+    state.setSelectMode('lasso');
+    expect(state.selectMode()).toBe('lasso');
+    state.setSelectMode('box');
+    expect(state.selectMode()).toBe('box');
+
+    const a = makeShape({ id: 's1', rect: { x: 10, y: 10, width: 40, height: 40 } });
+    const b = makeShape({ id: 's2', rect: { x: 100, y: 80, width: 60, height: 60 } });
+    const c = makeShape({ id: 's3', rect: { x: 200, y: 200, width: 30, height: 30 } });
+    state.addAnnotation('page-1', a, false);
+    state.addAnnotation('page-1', b, false);
+    state.addAnnotation('page-1', c, false);
+
+    state.selectAnnotations(['s1', 's2']);
+    expect(state.selectedIds()).toEqual(['s1', 's2']);
+    expect(state.selectedId()).toBe('s1');
+    expect(state.getSelectedList('page-1')).toHaveSize(2);
+
+    state.selectAnnotation('s3', true); // additive
+    expect(state.selectedIds()).toEqual(['s1', 's2', 's3']);
+
+    // Batch Align Left
+    state.alignSelected('page-1', 'left');
+    const updated = state.getSelectedList('page-1');
+    expect(updated.every((item) => item.rect.x === 10)).toBeTrue();
+
+    // Batch Opacity
+    state.setBatchOpacity('page-1', 0.5);
+    expect(state.getSelectedList('page-1').every((item) => item.opacity === 0.5)).toBeTrue();
+
+    // Batch Duplication
+    const newIds = state.duplicateSelected('page-1');
+    expect(newIds).toHaveSize(3);
+    expect(state.annotationsFor('page-1')).toHaveSize(6);
+
+    // Batch Deletion
+    state.deleteSelected('page-1');
+    expect(state.annotationsFor('page-1')).toHaveSize(3);
+    expect(state.selectedIds()).toHaveSize(0);
+  });
+
+  it('manages groups, ungroup, regroup, distribution, and z-ordering', () => {
+    const a = makeShape({ id: 'g1', rect: { x: 0, y: 10, width: 20, height: 20 } });
+    const b = makeShape({ id: 'g2', rect: { x: 50, y: 40, width: 20, height: 20 } });
+    const c = makeShape({ id: 'g3', rect: { x: 120, y: 100, width: 20, height: 20 } });
+    state.addAnnotation('page-1', a, false);
+    state.addAnnotation('page-1', b, false);
+    state.addAnnotation('page-1', c, false);
+
+    // Grouping
+    state.selectAnnotations(['g1', 'g2']);
+    const groupId = state.groupSelected('page-1');
+    expect(groupId).not.toBeNull();
+    expect(state.hasGroupInSelection('page-1')).toBeTrue();
+
+    // Selecting one group member selects whole group
+    state.clearSelection();
+    state.selectAnnotation('g1');
+    expect(state.selectedIds()).toEqual(['g1', 'g2']);
+
+    // Ungrouping
+    const ungrouped = state.ungroupSelected('page-1');
+    expect(ungrouped).toEqual(['g1', 'g2']);
+    expect(state.hasGroupInSelection('page-1')).toBeFalse();
+    expect(state.canRegroup('page-1')).toBeTrue();
+
+    // Regrouping
+    const regroupId = state.regroupSelected('page-1');
+    expect(regroupId).not.toBeNull();
+    expect(state.hasGroupInSelection('page-1')).toBeTrue();
+
+    // Distribution
+    state.selectAnnotations(['g1', 'g2', 'g3']);
+    state.distributeSelected('page-1', 'horizontal');
+    const distributed = state.getSelectedList('page-1');
+    // First at 0, last at 120+20=140. Total widths = 60. Free space = 80. Gap = 40.
+    // Positions: 0, 60, 120
+    expect(distributed[0].rect.x).toBe(0);
+    expect(distributed[1].rect.x).toBe(60);
+    expect(distributed[2].rect.x).toBe(120);
+
+    // Z-Ordering (group containing g1 & g2 moved together to front)
+    state.selectAnnotation('g1');
+    state.bringSelectedToFront('page-1');
+    const orderAfterFront = state.annotationsFor('page-1').map((x) => x.id);
+    expect(orderAfterFront).toEqual(['g3', 'g1', 'g2']);
+
+    state.sendSelectedToBack('page-1');
+    const orderAfterBack = state.annotationsFor('page-1').map((x) => x.id);
+    expect(orderAfterBack).toEqual(['g1', 'g2', 'g3']);
   });
 });

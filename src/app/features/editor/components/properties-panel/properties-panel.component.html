@@ -13,7 +13,221 @@
     ><i class="fa-solid fa-sliders"></i></button>
   </header>
 
-  @if (selected(); as ann) {
+  @if (selectedIds().length > 1) {
+    <app-panel-section [title]="'Multiple Items (' + selectedIds().length + ')'" icon="fa-solid fa-layer-group">
+      <!-- SUMMARY & COUNT -->
+      <div class="props__group">
+        <div class="props__row props__row--between">
+          <span class="props__label">Selection</span>
+          <span class="props__value-badge">{{ selectedIds().length }} objects</span>
+        </div>
+      </div>
+
+      <!-- GROUP MANAGEMENT -->
+      <div class="props__group">
+        <label class="props__label">Group Management</label>
+        <div class="props__seg-group props__seg-group--full" style="margin-bottom: 8px;">
+          @if (!isGrouped()) {
+            <button
+              type="button"
+              class="props__seg-btn props__field--grow"
+              (click)="groupSelected()"
+              title="Group selected items together (Ctrl/Cmd + G)"
+            >
+              <i class="fa-solid fa-object-group"></i> Group Selected
+            </button>
+          } @else {
+            <button
+              type="button"
+              class="props__seg-btn props__field--grow"
+              (click)="ungroupSelected()"
+              title="Ungroup items (Ctrl/Cmd + Shift + G)"
+            >
+              <i class="fa-solid fa-object-ungroup"></i> Ungroup
+            </button>
+          }
+          @if (canRegroup() && !isGrouped()) {
+            <button
+              type="button"
+              class="props__seg-btn props__field--grow"
+              (click)="regroupSelected()"
+              title="Regroup previously disbanded group (Ctrl/Cmd + Alt + G)"
+            >
+              <i class="fa-solid fa-rotate-left"></i> Regroup
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="props__divider"></div>
+
+      <!-- ALIGNMENT & DISTRIBUTION TOOLBAR -->
+      <div class="props__group">
+        <label class="props__label">Align & Distribute</label>
+        <div class="props__seg-group props__seg-group--full" style="margin-bottom: 6px;">
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            (click)="alignSelected('left')"
+            title="Align Left"
+            aria-label="Align Left"
+          >
+            <i class="fa-solid fa-align-left"></i>
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            (click)="alignSelected('center')"
+            title="Align Horizontal Center"
+            aria-label="Align Horizontal Center"
+          >
+            <i class="fa-solid fa-align-center"></i>
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            (click)="alignSelected('right')"
+            title="Align Right"
+            aria-label="Align Right"
+          >
+            <i class="fa-solid fa-align-right"></i>
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            (click)="alignSelected('top')"
+            title="Align Top"
+            aria-label="Align Top"
+          >
+            <i class="fa-solid fa-arrows-up-to-line"></i>
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            (click)="alignSelected('middle')"
+            title="Align Vertical Middle"
+            aria-label="Align Vertical Middle"
+          >
+            <i class="fa-solid fa-grip-lines"></i>
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            (click)="alignSelected('bottom')"
+            title="Align Bottom"
+            aria-label="Align Bottom"
+          >
+            <i class="fa-solid fa-arrows-down-to-line"></i>
+          </button>
+        </div>
+        @if (selectedIds().length >= 3) {
+          <div class="props__seg-group props__seg-group--full">
+            <button
+              type="button"
+              class="props__seg-btn props__field--grow"
+              (click)="distributeSelected('horizontal')"
+              title="Distribute Horizontally (Equal Spacing)"
+            >
+              <i class="fa-solid fa-arrows-left-right"></i> Distribute Horizontally
+            </button>
+            <button
+              type="button"
+              class="props__seg-btn props__field--grow"
+              (click)="distributeSelected('vertical')"
+              title="Distribute Vertically (Equal Spacing)"
+            >
+              <i class="fa-solid fa-arrows-up-down"></i> Distribute Vertically
+            </button>
+          </div>
+        }
+      </div>
+
+      <!-- LAYER Z-ORDER -->
+      <div class="props__group">
+        <label class="props__label">Layer Order</label>
+        <div class="props__seg-group props__seg-group--full">
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            (click)="bringSelectedToFront()"
+            title="Bring selection to top layer"
+          >
+            <i class="fa-solid fa-arrow-up"></i> Bring to Front
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            (click)="sendSelectedToBack()"
+            title="Send selection to bottom layer"
+          >
+            <i class="fa-solid fa-arrow-down"></i> Send to Back
+          </button>
+        </div>
+      </div>
+
+      <div class="props__divider"></div>
+
+      <!-- BATCH OPACITY -->
+      <div class="props__group">
+        <div class="props__row props__row--inline">
+          <span class="props__sublabel">Opacity</span>
+          <input
+            class="pf-input props__field--grow"
+            type="range"
+            min="0.1"
+            max="1"
+            step="0.05"
+            value="1"
+            (input)="setBatchOpacity($any($event.target).value)"
+            aria-label="Batch opacity slider"
+          />
+        </div>
+      </div>
+
+      <div class="props__divider"></div>
+
+      <!-- BATCH ACTIONS -->
+      <div class="props__group">
+        <label class="props__label">Batch Actions</label>
+        <div class="props__seg-group props__seg-group--full" style="margin-bottom: 8px;">
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            (click)="duplicateSelected()"
+            title="Duplicate all selected items"
+          >
+            <i class="fa-solid fa-copy"></i> Duplicate All
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            (click)="toggleBatchLock()"
+            title="Lock or unlock all selected items"
+          >
+            <i class="fa-solid fa-lock"></i> Lock / Unlock
+          </button>
+        </div>
+        <div class="props__seg-group props__seg-group--full">
+          <button
+            type="button"
+            class="props__seg-btn props__seg-btn--danger props__field--grow"
+            (click)="deleteSelected()"
+            title="Delete all selected items"
+          >
+            <i class="fa-solid fa-trash-can"></i> Delete Selected
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            (click)="clearSelection()"
+            title="Deselect all"
+          >
+            <i class="fa-solid fa-xmark"></i> Deselect
+          </button>
+        </div>
+      </div>
+    </app-panel-section>
+  } @else if (selected(); as ann) {
     <app-panel-section [title]="titleOf(ann)" [icon]="iconOf(ann)">
       <button
         type="button"
@@ -768,6 +982,197 @@
           title="Clear all unlocked annotations on the current page"
         >
           <i class="fa-solid fa-trash-can"></i> Clear Page Marks
+        </button>
+      </div>
+    </app-panel-section>
+  } @else if (activeTool() === 'pen' || activeTool() === 'freehand') {
+    <app-panel-section
+      [title]="activeTool() === 'freehand' ? 'Freehand Marker' : 'Pen Options'"
+      [icon]="activeTool() === 'freehand' ? 'fa-solid fa-pen-ruler' : 'fa-solid fa-pen'"
+    >
+      <!-- DRAWING MODE -->
+      <div class="props__group">
+        <label class="props__label">Drawing Mode</label>
+        <div class="props__seg-group props__seg-group--full">
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            [class.props__seg-btn--on]="drawingMode() === 'continuous'"
+            (click)="setDrawingMode('continuous')"
+            title="Natural Inking: Draw continuously without border/selection interruptions"
+          >
+            <i class="fa-solid fa-pen-nib"></i> Natural Ink
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            [class.props__seg-btn--on]="drawingMode() === 'autoselect'"
+            (click)="setDrawingMode('autoselect')"
+            title="Auto-Select: Show bounding box and handles on release"
+          >
+            <i class="fa-solid fa-vector-square"></i> Auto-Select
+          </button>
+        </div>
+        <p class="props__hint" style="font-size: 11px; margin-top: 4px; color: var(--pf-text-muted);">
+          @if (drawingMode() === 'continuous') {
+            <span><i class="fa-solid fa-feather"></i> Draw and write freely. No bounding box interrupts your flow.</span>
+          } @else {
+            <span><i class="fa-solid fa-crop-simple"></i> Shows bounding box and handles immediately after each stroke to resize.</span>
+          }
+        </p>
+      </div>
+
+      <!-- STROKE WIDTH -->
+      <div class="props__group">
+        <div class="props__row props__row--between">
+          <label class="props__label">Stroke Thickness</label>
+          <span class="props__value-badge">
+            {{ (activeTool() === 'freehand' ? freehandStrokeWidth() : penStrokeWidth()) }}px
+          </span>
+        </div>
+        <div class="props__row props__row--inline">
+          <input
+            class="pf-input props__field--grow"
+            type="range"
+            min="1"
+            max="24"
+            step="1"
+            [value]="activeTool() === 'freehand' ? freehandStrokeWidth() : penStrokeWidth()"
+            (input)="activeTool() === 'freehand' ? setFreehandStrokeWidth($any($event.target).value) : setPenStrokeWidth($any($event.target).value)"
+            aria-label="Stroke width slider"
+          />
+          <input
+            class="pf-input props__input-size"
+            type="number"
+            min="1"
+            max="24"
+            step="1"
+            [value]="activeTool() === 'freehand' ? freehandStrokeWidth() : penStrokeWidth()"
+            (input)="activeTool() === 'freehand' ? setFreehandStrokeWidth($any($event.target).value) : setPenStrokeWidth($any($event.target).value)"
+            aria-label="Stroke width"
+          />
+        </div>
+      </div>
+
+      <!-- INK COLOR -->
+      <div class="props__group">
+        <label class="props__label">Ink Color</label>
+        <div class="props__swatches">
+          @for (c of shapeSwatches; track c.value) {
+            <button
+              type="button"
+              class="props__swatch"
+              [class.props__swatch--active]="(activeTool() === 'freehand' ? freehandColor() : penColor()) === c.value"
+              [style.background-color]="c.value"
+              [title]="c.label"
+              (click)="activeTool() === 'freehand' ? setFreehandColor(c.value) : setPenColor(c.value)"
+              [attr.aria-label]="'Set color ' + c.label"
+            ></button>
+          }
+          <label class="props__color-picker" title="Custom color">
+            <input
+              type="color"
+              [value]="activeTool() === 'freehand' ? freehandColor() : penColor()"
+              (input)="activeTool() === 'freehand' ? setFreehandColor($any($event.target).value) : setPenColor($any($event.target).value)"
+              aria-label="Custom ink color"
+            />
+            <i class="fa-solid fa-eye-dropper"></i>
+          </label>
+        </div>
+      </div>
+
+      <!-- SMOOTHING -->
+      <div class="props__group">
+        <label class="props__label">Curve Smoothing</label>
+        <div class="props__seg-group props__seg-group--full">
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            [class.props__seg-btn--on]="penSmoothing() === 'none'"
+            (click)="setPenSmoothing('none')"
+            title="Raw / Precision"
+          >
+            Raw
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            [class.props__seg-btn--on]="penSmoothing() === 'medium'"
+            (click)="setPenSmoothing('medium')"
+            title="Smooth Curve"
+          >
+            Smooth
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            [class.props__seg-btn--on]="penSmoothing() === 'high'"
+            (click)="setPenSmoothing('high')"
+            title="High Smoothing"
+          >
+            High
+          </button>
+        </div>
+      </div>
+
+      <div class="props__divider"></div>
+
+      <!-- QUICK AREA ADJUSTMENT ACTION -->
+      <div class="props__group">
+        <button
+          type="button"
+          class="props__seg-btn props__seg-group--full"
+          (click)="selectInkArea()"
+          title="Select drawn strokes to resize or move whole area"
+        >
+          <i class="fa-solid fa-arrows-up-down-left-right"></i> Select Ink to Adjust / Resize
+        </button>
+      </div>
+    </app-panel-section>
+  } @else if (activeTool() === 'select') {
+    <app-panel-section title="Selection Options" icon="fa-solid fa-arrow-pointer">
+      <div class="props__group">
+        <label class="props__label">Selection Mode</label>
+        <div class="props__seg-group props__seg-group--full">
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            [class.props__seg-btn--on]="selectMode() === 'box'"
+            (click)="setSelectMode('box')"
+            title="Box Marquee: Drag a rectangle to select elements"
+          >
+            <i class="fa-solid fa-vector-square"></i> Box Drag
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            [class.props__seg-btn--on]="selectMode() === 'lasso'"
+            (click)="setSelectMode('lasso')"
+            title="Lasso: Draw a freehand loop around items to select"
+          >
+            <i class="fa-solid fa-draw-polygon"></i> Freehand Lasso
+          </button>
+        </div>
+        <p class="props__hint" style="font-size: 11px; margin-top: 4px; color: var(--pf-text-muted);">
+          @if (selectMode() === 'box') {
+            <span><i class="fa-solid fa-vector-square"></i> Drag across canvas to select enclosed items with a rectangle.</span>
+          } @else {
+            <span><i class="fa-solid fa-draw-polygon"></i> Draw a freeform loop around items to select all enclosed marks.</span>
+          }
+        </p>
+      </div>
+
+      <div class="props__divider"></div>
+
+      <div class="props__group">
+        <label class="props__label">Quick Selection</label>
+        <button
+          type="button"
+          class="props__seg-btn props__seg-group--full"
+          (click)="selectAll()"
+          title="Select all marks and annotations on current page"
+        >
+          <i class="fa-solid fa-object-group"></i> Select All Page Marks
         </button>
       </div>
     </app-panel-section>

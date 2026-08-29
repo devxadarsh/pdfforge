@@ -48,6 +48,51 @@ const TEXT_PAD_Y = 8;
 const TEXT_LINE_HEIGHT = 1.35;
 const TEXT_BACKGROUND_PADDING = 6;
 
+function isRectIntersecting(r1: Rect, r2: Rect): boolean {
+  return !(
+    r2.x > r1.x + r1.width ||
+    r2.x + r2.width < r1.x ||
+    r2.y > r1.y + r1.height ||
+    r2.y + r2.height < r1.y
+  );
+}
+
+function isPointInPolygon(p: Point, polygon: Point[]): boolean {
+  if (polygon.length < 3) {
+    return false;
+  }
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].x;
+    const yi = polygon[i].y;
+    const xj = polygon[j].x;
+    const yj = polygon[j].y;
+    const intersect =
+      yi > p.y !== yj > p.y &&
+      p.x < ((xj - xi) * (p.y - yi)) / (yj - yi) + xi;
+    if (intersect) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function isAnnotationInPolygon(a: PdfAnnotation, polygon: Point[]): boolean {
+  if (a.type === 'drawing') {
+    if (a.points.some((p) => isPointInPolygon(p, polygon))) {
+      return true;
+    }
+  }
+  const corners: Point[] = [
+    { x: a.rect.x, y: a.rect.y },
+    { x: a.rect.x + a.rect.width, y: a.rect.y },
+    { x: a.rect.x + a.rect.width, y: a.rect.y + a.rect.height },
+    { x: a.rect.x, y: a.rect.y + a.rect.height },
+    { x: a.rect.x + a.rect.width / 2, y: a.rect.y + a.rect.height / 2 },
+  ];
+  return corners.some((p) => isPointInPolygon(p, polygon));
+}
+
 @Component({
   selector: 'app-editor-overlay',
   standalone: true,
@@ -79,6 +124,8 @@ export class EditorOverlayComponent {
   });
 
   readonly draft = signal<DraftMark | null>(null);
+  readonly draftBox = signal<Rect | null>(null);
+  readonly draftLasso = signal<Point[] | null>(null);
   readonly draftDrawing = signal<{
     color: string;
     strokeWidth: number;
@@ -88,6 +135,14 @@ export class EditorOverlayComponent {
   private start: { x: number; y: number } | null = null;
   private dragId: string | null = null;
   private dragOffset = { x: 0, y: 0 };
+  private multiDragStart: Array<{
+    id: string;
+    x: number;
+    y: number;
+    points?: Point[];
+  }> | null = null;
+  private dragPivot = { x: 0, y: 0 };
+
   private resizeId: string | null = null;
   private resizeHandle: Handle | null = null;
   private resizeStart: {
@@ -110,6 +165,55 @@ export class EditorOverlayComponent {
         this.state.eraserSize() * this.state.eraserTolerance() * 10,
       ) / 10,
   );
+
+  readonly multiSelectionBounds = computed<Rect | null>(() => {
+    const ids = this.state.selectedIds();
+    if (ids.length <= 1) {
+      return null;
+    }
+    const idSet = new Set(ids);
+    const selected = this.annotations().filter((a) => idSet.has(a.id));
+    if (selected.length <= 1) {
+      return null;
+    }
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (const a of selected) {
+      minX = Math.min(minX, a.rect.x);
+      maxX = Math.max(maxX, a.rect.x + a.rect.width);
+      minY = Math.min(minY, a.rect.y);
+      maxY = Math.max(maxY, a.rect.y + a.rect.height);
+    }
+    return {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
+    };
+  });
+
+  readonly isGroupSelected = computed(() => {
+    const list = this.state.getSelectedList(this.pageId());
+    if (list.length < 2) {
+      return false;
+    }
+    const firstGroupId = list[0].groupId;
+    return Boolean(
+      firstGroupId && list.every((a) => a.groupId === firstGroupId),
+    );
+  });
+
+  onContextMenu(event: MouseEvent): void {
+    if (event.ctrlKey || event.metaKey || this.tool() === 'select') {
+      event.preventDefault();
+    }
+  }
+
+  isSelected(id: string): boolean {
+    return this.state.selectedIds().includes(id);
+  }
 
   readonly arrowMarkers = computed(() =>
     this.annotations().filter(
@@ -338,24 +442,56 @@ export class EditorOverlayComponent {
 
     if (t === 'pen' || t === 'freehand') {
       this.isDrawing = true;
-      const color = t === 'freehand' ? '#dc2626' : '#111827';
-      const strokeWidth = t === 'freehand' ? 4 : 2;
+      const color =
+        t === 'freehand'
+          ? this.state.freehandColor()
+          : this.state.penColor();
+      const strokeWidth =
+        t === 'freehand'
+          ? this.state.freehandStrokeWidth()
+          : this.state.penStrokeWidth();
       this.draftDrawing.set({ color, strokeWidth, points: [{ x, y }] });
       this.svgRef()?.nativeElement.setPointerCapture?.(event.pointerId);
       return;
     }
 
-    if (t === 'select' || t === 'hand') {
+    if (t === 'select') {
       const hit = this.hitTest(x, y);
       if (hit) {
-        if (!hit.locked) {
-          this.dragId = hit.id;
-          this.dragOffset = { x: x - hit.rect.x, y: y - hit.rect.y };
+        const isCurrentlySelected = this.state.selectedIds().includes(hit.id);
+        if (event.shiftKey || event.ctrlKey || event.metaKey) {
+          this.state.toggleAnnotationSelection(hit.id);
+        } else if (!isCurrentlySelected) {
+          this.state.selectAnnotation(hit.id);
         }
-        this.state.selectAnnotation(hit.id);
+
+        // Initialize synchronized multi-drag for all selected items
+        const selected = this.state.getSelectedList(this.pageId());
+        this.multiDragStart = selected
+          .filter((a) => !a.locked)
+          .map((a) => ({
+            id: a.id,
+            x: a.rect.x,
+            y: a.rect.y,
+            points:
+              a.type === 'drawing'
+                ? a.points.map((p) => ({ ...p }))
+                : undefined,
+          }));
+        this.dragPivot = { x, y };
         this.svgRef()?.nativeElement.setPointerCapture?.(event.pointerId);
       } else {
-        this.state.selectAnnotation(null);
+        if (!event.shiftKey && !event.ctrlKey && !event.metaKey) {
+          this.state.clearSelection();
+        }
+        this.start = { x, y };
+        const mode = this.state.selectMode();
+        if (mode === 'lasso') {
+          this.draftLasso.set([{ x, y }]);
+        } else {
+          this.draftBox.set({ x, y, width: 0, height: 0 });
+        }
+        this.svgRef()?.nativeElement.setPointerCapture?.(event.pointerId);
       }
       return;
     }
@@ -495,28 +631,51 @@ export class EditorOverlayComponent {
       return;
     }
 
-    if (this.dragId) {
-      const a = this.annotations().find((it) => it.id === this.dragId);
-      if (!a) {
-        return;
-      }
+    if (this.multiDragStart && this.multiDragStart.length > 0) {
       const { x, y } = this.localPoint(event);
-      const newX = x - this.dragOffset.x;
-      const newY = y - this.dragOffset.y;
-      const dx = newX - a.rect.x;
-      const dy = newY - a.rect.y;
-      if (a.type === 'drawing') {
-        this.state.updateAnnotation(a.id, {
-          rect: { ...a.rect, x: newX, y: newY },
-          points: a.points.map((p) => ({ x: p.x + dx, y: p.y + dy })),
-        });
-      } else {
-        this.state.updateAnnotation(a.id, {
-          rect: { ...a.rect, x: newX, y: newY },
-        });
+      const dx = x - this.dragPivot.x;
+      const dy = y - this.dragPivot.y;
+      for (const item of this.multiDragStart) {
+        const a = this.annotations().find((it) => it.id === item.id);
+        if (!a) {
+          continue;
+        }
+        const newX = Math.round(item.x + dx);
+        const newY = Math.round(item.y + dy);
+        if (a.type === 'drawing' && item.points) {
+          this.state.updateAnnotation(a.id, {
+            rect: { ...a.rect, x: newX, y: newY },
+            points: item.points.map((p) => ({
+              x: Math.round(p.x + dx),
+              y: Math.round(p.y + dy),
+            })),
+          });
+        } else {
+          this.state.updateAnnotation(a.id, {
+            rect: { ...a.rect, x: newX, y: newY },
+          });
+        }
       }
       return;
     }
+
+    if (this.draftBox() && this.start) {
+      const { x, y } = this.localPoint(event);
+      this.draftBox.set({
+        x: Math.min(this.start.x, x),
+        y: Math.min(this.start.y, y),
+        width: Math.abs(x - this.start.x),
+        height: Math.abs(y - this.start.y),
+      });
+      return;
+    }
+
+    if (this.draftLasso()) {
+      const { x, y } = this.localPoint(event);
+      this.draftLasso.update((pts) => (pts ? [...pts, { x, y }] : [{ x, y }]));
+      return;
+    }
+
     if (this.draft() && this.start) {
       const { x, y } = this.localPoint(event);
       const d = this.draft()!;
@@ -570,9 +729,16 @@ export class EditorOverlayComponent {
           strokeWidth: cur.strokeWidth,
           points: cur.points,
         };
-        this.state.addAnnotation(this.pageId(), ann);
-        this.state.setTool('select');
-        this.state.selectAnnotation(ann.id);
+        const mode = this.state.drawingMode();
+        if (mode === 'autoselect') {
+          this.state.addAnnotation(this.pageId(), ann, true);
+          this.state.setTool('select');
+          this.state.selectAnnotation(ann.id);
+        } else {
+          // Natural ink mode: add annotation silently without showing borders or switching tools
+          this.state.addAnnotation(this.pageId(), ann, false);
+          this.state.selectAnnotation(null);
+        }
       }
       return;
     }
@@ -582,8 +748,37 @@ export class EditorOverlayComponent {
       this.resizeStart = null;
       return;
     }
-    if (this.dragId) {
-      this.dragId = null;
+    if (this.multiDragStart) {
+      this.multiDragStart = null;
+    }
+    if (this.draftBox()) {
+      const box = this.draftBox()!;
+      this.draftBox.set(null);
+      this.start = null;
+      if (box.width >= 3 || box.height >= 3) {
+        const hitIds = this.annotations()
+          .filter((a) => isRectIntersecting(a.rect, box))
+          .map((a) => a.id);
+        this.state.selectAnnotations(
+          hitIds,
+          event.shiftKey || event.ctrlKey || event.metaKey,
+        );
+      }
+      return;
+    }
+    if (this.draftLasso()) {
+      const lasso = this.draftLasso()!;
+      this.draftLasso.set(null);
+      this.start = null;
+      if (lasso.length >= 3) {
+        const hitIds = this.annotations()
+          .filter((a) => isAnnotationInPolygon(a, lasso))
+          .map((a) => a.id);
+        this.state.selectAnnotations(
+          hitIds,
+          event.shiftKey || event.ctrlKey || event.metaKey,
+        );
+      }
       return;
     }
     if (this.draft()) {
@@ -863,6 +1058,15 @@ export class EditorOverlayComponent {
     }
     if (points.length === 2) {
       return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
+    }
+    if (this.state.penSmoothing() === 'none') {
+      return (
+        `M ${points[0].x} ${points[0].y} ` +
+        points
+          .slice(1)
+          .map((p) => `L ${p.x} ${p.y}`)
+          .join(' ')
+      );
     }
     let d = `M ${points[0].x} ${points[0].y}`;
     for (let i = 1; i < points.length - 1; i++) {

@@ -12,6 +12,7 @@
   (pointerup)="onPointerUp($event)"
   (pointerleave)="onPointerLeave()"
   (dblclick)="onDblClick($event)"
+  (contextmenu)="onContextMenu($event)"
 >
   <defs>
     @for (a of arrowMarkers(); track a.id) {
@@ -218,7 +219,7 @@
       }
     }
 
-    @if (tool() === 'select' && a.id === selectedId()) {
+    @if (tool() === 'select' && isSelected(a.id)) {
       <rect
         class="sel"
         [class.sel--locked]="a.locked"
@@ -239,7 +240,7 @@
             transform="scale(0.8) translate(2, 2)"
           />
         </g>
-      } @else {
+      } @else if (state.selectedIds().length === 1) {
         <g class="handles">
           <rect
             class="handle"
@@ -419,6 +420,74 @@
       [attr.cy]="ep.y"
       r="2"
       fill="#ef4444"
+      pointer-events="none"
+    />
+  }
+
+  <!-- Multi-Selection / Group Combined Bounding Box -->
+  @if (tool() === 'select' && multiSelectionBounds(); as mb) {
+    <rect
+      class="sel sel--multi"
+      [class.sel--group]="isGroupSelected()"
+      [attr.x]="mb.x"
+      [attr.y]="mb.y"
+      [attr.width]="mb.width"
+      [attr.height]="mb.height"
+      fill="none"
+      stroke="#2563eb"
+      stroke-width="1.5"
+      [attr.stroke-dasharray]="isGroupSelected() ? 'none' : '4 3'"
+      pointer-events="none"
+    />
+    @if (isGroupSelected()) {
+      <g
+        class="group-badge"
+        [attr.transform]="'translate(' + mb.x + ',' + Math.max(0, mb.y - 20) + ')'"
+        pointer-events="none"
+      >
+        <rect
+          x="0"
+          y="0"
+          [attr.width]="64 + state.selectedIds().length.toString().length * 8"
+          height="18"
+          rx="4"
+          fill="#2563eb"
+        />
+        <text
+          x="6"
+          y="13"
+          font-size="10"
+          font-family="sans-serif"
+          font-weight="600"
+          fill="#ffffff"
+        >Group ({{ state.selectedIds().length }})</text>
+      </g>
+    }
+  }
+
+  <!-- Active Marquee Selection Box -->
+  @if (draftBox(); as b) {
+    <rect
+      [attr.x]="b.x"
+      [attr.y]="b.y"
+      [attr.width]="b.width"
+      [attr.height]="b.height"
+      fill="rgba(37, 99, 235, 0.12)"
+      stroke="#2563eb"
+      stroke-width="1.5"
+      stroke-dasharray="3 3"
+      pointer-events="none"
+    />
+  }
+
+  <!-- Active Freehand Lasso Selection Path -->
+  @if (draftLasso(); as pts) {
+    <path
+      [attr.d]="pointsToSvgPath(pts) + ' Z'"
+      fill="rgba(37, 99, 235, 0.12)"
+      stroke="#2563eb"
+      stroke-width="1.5"
+      stroke-dasharray="3 3"
       pointer-events="none"
     />
   }
