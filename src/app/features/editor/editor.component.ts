@@ -619,6 +619,13 @@ export class EditorComponent implements OnDestroy {
       void this.load(file);
     });
 
+    // Auto-restore last-opened document from IndexedDB on page reload.
+    // Runs once on init — if no file is currently loaded, attempt to
+    // restore the persisted document so it seamlessly survives a reload.
+    if (this.files.currentFiles().length === 0) {
+      void this.files.restoreLastDocument();
+    }
+
     effect(() => {
       this.pagesStore.currentId();
       this.state.clearSelection();

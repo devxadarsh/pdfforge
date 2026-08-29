@@ -4,12 +4,14 @@ import { ToastService } from '../../services/toast.service';
 import { verifyPdfMagic } from '../../utilities/file.util';
 import { LoadedFile } from '../../models/file.models';
 import { DownloadService } from '../download/download.service';
+import { DocumentStorageService } from '../storage/document-storage.service';
 
 @Injectable({ providedIn: 'root' })
 export class FileService {
   private readonly toasts = inject(ToastService);
   private readonly router = inject(Router);
   private readonly downloader = inject(DownloadService);
+  private readonly storage = inject(DocumentStorageService);
 
   readonly currentFiles = signal<LoadedFile[]>([]);
 
@@ -49,8 +51,32 @@ export class FileService {
     }
     if (loaded.length) {
       this.currentFiles.set(loaded);
+      // Persist the first file so it survives a page reload
+      void this.storage.saveDocument(loaded[0].name, loaded[0].data);
     }
     return loaded;
+  }
+
+  /**
+   * Attempt to restore the last-opened document from IndexedDB.
+   * Returns `true` if a document was successfully restored.
+   */
+  async restoreLastDocument(): Promise<boolean> {
+    const stored = await this.storage.loadDocument();
+    if (!stored) {
+      return false;
+    }
+    const blob = new Blob([stored.data], { type: 'application/pdf' });
+    const file = new File([blob], stored.name, { type: 'application/pdf' });
+    const loaded: LoadedFile = {
+      file,
+      name: stored.name,
+      sizeBytes: stored.data.byteLength,
+      data: stored.data,
+      loadedAt: Date.now(),
+    };
+    this.currentFiles.set([loaded]);
+    return true;
   }
 
   setCurrent(files: ReadonlyArray<LoadedFile>): void {
@@ -59,6 +85,7 @@ export class FileService {
 
   clearCurrent(): void {
     this.currentFiles.set([]);
+    void this.storage.clearDocument();
   }
 
   async openInEditor(files: ReadonlyArray<File>): Promise<boolean> {
