@@ -1197,12 +1197,18 @@ export class EditorComponent implements OnDestroy {
     const isRedo = (event.ctrlKey || event.metaKey) && (event.key.toLowerCase() === 'y' || (event.key.toLowerCase() === 'z' && event.shiftKey));
     if (isUndo) {
       event.preventDefault();
-      this.state.undo();
+      const res = this.state.undo();
+      if (res.success && res.description) {
+        this.toasts.info(`Undone: ${res.description}`);
+      }
       return;
     }
     if (isRedo) {
       event.preventDefault();
-      this.state.redo();
+      const res = this.state.redo();
+      if (res.success && res.description) {
+        this.toasts.info(`Redone: ${res.description}`);
+      }
       return;
     }
 

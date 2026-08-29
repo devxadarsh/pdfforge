@@ -17,6 +17,7 @@ export class EditorPagesService {
   private _lastSelectedId: string | null = null;
 
   readonly pages = this._pages.asReadonly();
+  readonly selected = this._selected.asReadonly();
   readonly selectedCount = computed(() => this._selected().size);
   readonly currentId = this._currentId.asReadonly();
   readonly pagesCount = computed(() => this._pages().length);
@@ -89,6 +90,22 @@ export class EditorPagesService {
   clearSelection(): void {
     this._selected.set(new Set());
     this._lastSelectedId = null;
+  }
+
+  restoreState(
+    pages: EditorPage[],
+    selected?: ReadonlySet<string>,
+    currentId?: string | null,
+  ): void {
+    this._pages.set(pages);
+    if (selected) {
+      this._selected.set(new Set(selected));
+    }
+    if (currentId !== undefined && currentId !== null && pages.some((p) => p.id === currentId)) {
+      this._currentId.set(currentId);
+    } else {
+      this._currentId.set(pages.length ? pages[0].id : null);
+    }
   }
 
   deleteSelected(): string[] {

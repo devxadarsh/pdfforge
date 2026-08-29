@@ -19,7 +19,16 @@
     [accept]="accept()"
     (change)="onInputChange($event)"
   />
-  <i class="fa-solid fa-cloud-arrow-up pf-dropzone__icon"></i>
+  <div class="pf-dropzone__icon-circle">
+    <i class="fa-solid fa-cloud-arrow-up pf-dropzone__icon"></i>
+  </div>
   <p class="pf-dropzone__label">{{ label() }}</p>
   <p class="pf-dropzone__hint">PDF only · up to {{ formatBytes(500 * 1024 * 1024) }}</p>
+  <button
+    type="button"
+    class="pf-dropzone__action-btn"
+    (click)="$event.stopPropagation(); openPicker()"
+  >
+    <i class="fa-solid fa-folder-open"></i> Choose PDF File
+  </button>
 </div>

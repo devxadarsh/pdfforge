@@ -31,18 +31,22 @@ export class PagesPanelComponent {
   private dragId: string | null = null;
 
   rotateLeft(): void {
+    this.state.pushHistorySnapshot('Rotate Page Left');
     this.pages.rotateSelected(-90);
   }
 
   rotateRight(): void {
+    this.state.pushHistorySnapshot('Rotate Page Right');
     this.pages.rotateSelected(90);
   }
 
   duplicate(): void {
+    this.state.pushHistorySnapshot('Duplicate Page');
     this.pages.duplicateSelected();
   }
 
   deleteSelected(): void {
+    this.state.pushHistorySnapshot('Delete Page');
     const removed = this.pages.deleteSelected();
     if (removed.length) {
       this.state.pruneAnnotations(
@@ -83,6 +87,7 @@ export class PagesPanelComponent {
         .pages()
         .findIndex((p) => p.id === id);
       if (targetIndex >= 0) {
+        this.state.pushHistorySnapshot('Reorder Pages');
         this.pages.move(this.dragId, targetIndex);
       }
     }

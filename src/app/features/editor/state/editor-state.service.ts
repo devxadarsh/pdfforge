@@ -8,9 +8,19 @@ import {
   EraserMode,
   EraserTarget,
 } from '../../../core/models/pdf.models';
+import { EditorPage } from '../models/editor-page.model';
 import { EditorPagesService } from './editor-pages.service';
 
 export type EditorFitMode = 'none' | 'width' | 'page';
+ 
+export interface HistorySnapshot {
+  readonly description: string;
+  readonly annotations: Map<string, PdfAnnotation[]>;
+  readonly pages: EditorPage[];
+  readonly currentId: string | null;
+  readonly selectedIds: string[];
+  readonly pageSelectedIds: string[];
+}
 
 @Injectable({ providedIn: 'root' })
 export class EditorStateService {
@@ -53,10 +63,12 @@ export class EditorStateService {
   private readonly _mobilePagesOpen = signal<boolean>(false);
 
   // Undo / Redo history stacks
-  private undoStack: Array<Map<string, PdfAnnotation[]>> = [];
-  private redoStack: Array<Map<string, PdfAnnotation[]>> = [];
+  private undoStack: HistorySnapshot[] = [];
+  private redoStack: HistorySnapshot[] = [];
   private readonly _canUndo = signal<boolean>(false);
   private readonly _canRedo = signal<boolean>(false);
+  private readonly _undoLabel = signal<string>('Undo (Ctrl+Z)');
+  private readonly _redoLabel = signal<string>('Redo (Ctrl+Y)');
 
   readonly tool = this._tool.asReadonly();
   readonly zoom = this._zoom.asReadonly();
@@ -69,6 +81,8 @@ export class EditorStateService {
 
   readonly canUndo = this._canUndo.asReadonly();
   readonly canRedo = this._canRedo.asReadonly();
+  readonly undoLabel = this._undoLabel.asReadonly();
+  readonly redoLabel = this._redoLabel.asReadonly();
 
   readonly exportTrigger = this._exportTrigger.asReadonly();
   readonly isExporting = this._isExporting.asReadonly();
@@ -230,10 +244,10 @@ export class EditorStateService {
     this._fitMode.set('width');
   }
 
-  pushHistorySnapshot(): void {
-    const snapshot = new Map<string, PdfAnnotation[]>();
-    for (const [k, v] of this._annotations()) {
-      snapshot.set(
+  private cloneAnnotationsMap(source: Map<string, PdfAnnotation[]>): Map<string, PdfAnnotation[]> {
+    const copy = new Map<string, PdfAnnotation[]>();
+    for (const [k, v] of source) {
+      copy.set(
         k,
         v.map((a) =>
           typeof structuredClone === 'function'
@@ -242,61 +256,97 @@ export class EditorStateService {
         ),
       );
     }
+    return copy;
+  }
+
+  private createSnapshot(description: string): HistorySnapshot {
+    const pageSel =
+      typeof this.pages.selected === 'function'
+        ? Array.from(this.pages.selected())
+        : [];
+    const pageList =
+      typeof this.pages.pages === 'function'
+        ? this.pages.pages().map((p) => ({ ...p }))
+        : [];
+    const curId =
+      typeof this.pages.currentId === 'function'
+        ? this.pages.currentId()
+        : null;
+    return {
+      description,
+      annotations: this.cloneAnnotationsMap(this._annotations()),
+      pages: pageList,
+      currentId: curId,
+      selectedIds: [...this._selectedIds()],
+      pageSelectedIds: pageSel,
+    };
+  }
+
+  private updateActionLabels(): void {
+    const topUndo = this.undoStack[this.undoStack.length - 1];
+    this._undoLabel.set(topUndo ? `Undo ${topUndo.description} (Ctrl+Z)` : 'Undo (Ctrl+Z)');
+    const topRedo = this.redoStack[this.redoStack.length - 1];
+    this._redoLabel.set(topRedo ? `Redo ${topRedo.description} (Ctrl+Y)` : 'Redo (Ctrl+Y)');
+  }
+
+  pushHistorySnapshot(description = 'Edit'): void {
+    const snapshot = this.createSnapshot(description);
     this.undoStack.push(snapshot);
-    if (this.undoStack.length > 50) {
+    if (this.undoStack.length > 100) {
       this.undoStack.shift();
     }
     this.redoStack = [];
     this._canUndo.set(true);
     this._canRedo.set(false);
+    this.updateActionLabels();
   }
 
-  undo(): void {
+  undo(): { success: boolean; description?: string } {
     if (this.undoStack.length === 0) {
-      return;
+      return { success: false };
     }
-    const current = new Map<string, PdfAnnotation[]>();
-    for (const [k, v] of this._annotations()) {
-      current.set(
-        k,
-        v.map((a) =>
-          typeof structuredClone === 'function'
-            ? structuredClone(a)
-            : JSON.parse(JSON.stringify(a)),
-        ),
-      );
-    }
+    const previous = this.undoStack.pop()!;
+    const current = this.createSnapshot(previous.description);
     this.redoStack.push(current);
 
-    const previous = this.undoStack.pop()!;
-    this._annotations.set(previous);
+    this._annotations.set(this.cloneAnnotationsMap(previous.annotations));
+    if (typeof this.pages.restoreState === 'function') {
+      this.pages.restoreState(
+        previous.pages.map((p) => ({ ...p })),
+        new Set(previous.pageSelectedIds),
+        previous.currentId,
+      );
+    }
+    this._selectedIds.set([...previous.selectedIds]);
     this._canUndo.set(this.undoStack.length > 0);
     this._canRedo.set(true);
     this._modified.set(true);
+    this.updateActionLabels();
+    return { success: true, description: previous.description };
   }
 
-  redo(): void {
+  redo(): { success: boolean; description?: string } {
     if (this.redoStack.length === 0) {
-      return;
+      return { success: false };
     }
-    const current = new Map<string, PdfAnnotation[]>();
-    for (const [k, v] of this._annotations()) {
-      current.set(
-        k,
-        v.map((a) =>
-          typeof structuredClone === 'function'
-            ? structuredClone(a)
-            : JSON.parse(JSON.stringify(a)),
-        ),
-      );
-    }
+    const next = this.redoStack.pop()!;
+    const current = this.createSnapshot(next.description);
     this.undoStack.push(current);
 
-    const next = this.redoStack.pop()!;
-    this._annotations.set(next);
+    this._annotations.set(this.cloneAnnotationsMap(next.annotations));
+    if (typeof this.pages.restoreState === 'function') {
+      this.pages.restoreState(
+        next.pages.map((p) => ({ ...p })),
+        new Set(next.pageSelectedIds),
+        next.currentId,
+      );
+    }
+    this._selectedIds.set([...next.selectedIds]);
     this._canUndo.set(true);
     this._canRedo.set(this.redoStack.length > 0);
     this._modified.set(true);
+    this.updateActionLabels();
+    return { success: true, description: next.description };
   }
 
   readonly annotationsFor = (pageId: string | null): PdfAnnotation[] => {
@@ -310,8 +360,15 @@ export class EditorStateService {
     pageId: string,
     annotation: PdfAnnotation,
     select = true,
+    recordHistory = true,
+    description?: string,
   ): void {
-    this.pushHistorySnapshot();
+    if (recordHistory) {
+      this.pushHistorySnapshot(
+        description ??
+          `Add ${annotation.type.charAt(0).toUpperCase() + annotation.type.slice(1)}`,
+      );
+    }
     const map = new Map(this._annotations());
     const existing = map.get(pageId) ?? [];
     map.set(pageId, [...existing, annotation]);
@@ -322,7 +379,12 @@ export class EditorStateService {
     this._modified.set(true);
   }
 
-  updateAnnotation(id: string, patch: Partial<PdfAnnotation>): void {
+  updateAnnotation(
+    id: string,
+    patch: Partial<PdfAnnotation>,
+    recordHistory = true,
+    description = 'Edit Object',
+  ): void {
     const map = new Map(this._annotations());
     for (const [pageId, list] of map) {
       const idx = list.findIndex((a) => a.id === id);
@@ -334,7 +396,9 @@ export class EditorStateService {
       if (list[idx].locked) {
         return;
       }
-      this.pushHistorySnapshot();
+      if (recordHistory) {
+        this.pushHistorySnapshot(description);
+      }
       const updated = { ...list[idx], ...patch } as PdfAnnotation;
       const next = [...list];
       next[idx] = updated;
@@ -1078,7 +1142,7 @@ export class EditorStateService {
     if (ids.size === 0) {
       return;
     }
-    this.pushHistorySnapshot();
+    this.pushHistorySnapshot('Bring to Front');
     const map = new Map(this._annotations());
     const list = map.get(pageId) ?? [];
     const unselected = list.filter((a) => !ids.has(a.id));
@@ -1096,7 +1160,7 @@ export class EditorStateService {
     if (ids.size === 0) {
       return;
     }
-    this.pushHistorySnapshot();
+    this.pushHistorySnapshot('Send to Back');
     const map = new Map(this._annotations());
     const list = map.get(pageId) ?? [];
     const unselected = list.filter((a) => !ids.has(a.id));
@@ -1133,6 +1197,7 @@ export class EditorStateService {
     this.redoStack = [];
     this._canUndo.set(false);
     this._canRedo.set(false);
+    this.updateActionLabels();
   }
 
   get pageService(): EditorPagesService {

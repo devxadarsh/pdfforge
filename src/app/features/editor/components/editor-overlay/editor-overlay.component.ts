@@ -281,6 +281,7 @@ export class EditorOverlayComponent implements OnDestroy {
     points?: Point[];
   }> | null = null;
   private dragPivot = { x: 0, y: 0 };
+  private hasMovedDuringDrag = false;
 
   private resizeId: string | null = null;
   private resizeHandle: Handle | null = null;
@@ -679,6 +680,7 @@ export class EditorOverlayComponent implements OnDestroy {
     if (!ann || ann.locked) {
       return;
     }
+    this.state.pushHistorySnapshot('Resize Object');
     const p = this.localPoint(event);
     this.resizeId = ann.id;
     this.resizeHandle = handle;
@@ -782,14 +784,22 @@ export class EditorOverlayComponent implements OnDestroy {
           x: rx + (p.x - origRect.x) * sx,
           y: ry + (p.y - origRect.y) * sy,
         }));
-        this.state.updateAnnotation(a.id, {
-          rect: { x: rx, y: ry, width: rw, height: rh },
-          points: scaledPts,
-        });
+        this.state.updateAnnotation(
+          a.id,
+          {
+            rect: { x: rx, y: ry, width: rw, height: rh },
+            points: scaledPts,
+          },
+          false,
+        );
       } else {
-        this.state.updateAnnotation(a.id, {
-          rect: { x: rx, y: ry, width: rw, height: rh },
-        });
+        this.state.updateAnnotation(
+          a.id,
+          {
+            rect: { x: rx, y: ry, width: rw, height: rh },
+          },
+          false,
+        );
       }
       return;
     }
@@ -797,6 +807,10 @@ export class EditorOverlayComponent implements OnDestroy {
     if (this.multiDragStart && this.multiDragStart.length > 0) {
       event.preventDefault();
       event.stopPropagation();
+      if (!this.hasMovedDuringDrag) {
+        this.state.pushHistorySnapshot('Move Object');
+        this.hasMovedDuringDrag = true;
+      }
       const { x, y } = this.localPoint(event);
       const dx = x - this.dragPivot.x;
       const dy = y - this.dragPivot.y;
@@ -808,17 +822,25 @@ export class EditorOverlayComponent implements OnDestroy {
         const newX = Math.round(item.x + dx);
         const newY = Math.round(item.y + dy);
         if (a.type === 'drawing' && item.points) {
-          this.state.updateAnnotation(a.id, {
-            rect: { ...a.rect, x: newX, y: newY },
-            points: item.points.map((p) => ({
-              x: Math.round(p.x + dx),
-              y: Math.round(p.y + dy),
-            })),
-          });
+          this.state.updateAnnotation(
+            a.id,
+            {
+              rect: { ...a.rect, x: newX, y: newY },
+              points: item.points.map((p) => ({
+                x: Math.round(p.x + dx),
+                y: Math.round(p.y + dy),
+              })),
+            },
+            false,
+          );
         } else {
-          this.state.updateAnnotation(a.id, {
-            rect: { ...a.rect, x: newX, y: newY },
-          });
+          this.state.updateAnnotation(
+            a.id,
+            {
+              rect: { ...a.rect, x: newX, y: newY },
+            },
+            false,
+          );
         }
       }
       return;
@@ -922,6 +944,7 @@ export class EditorOverlayComponent implements OnDestroy {
     }
     if (this.multiDragStart) {
       this.multiDragStart = null;
+      this.hasMovedDuringDrag = false;
     }
     if (this.draftBox()) {
       const box = this.draftBox()!;
@@ -987,6 +1010,7 @@ export class EditorOverlayComponent implements OnDestroy {
     caret: number,
     selectAll = false,
   ): void {
+    this.state.pushHistorySnapshot('Edit Text');
     this.editingId.set(a.id);
     this.state.selectAnnotation(a.id);
     setTimeout(() => {
@@ -1026,10 +1050,14 @@ export class EditorOverlayComponent implements OnDestroy {
       cur.lineHeight ?? TEXT_LINE_HEIGHT,
       cur.letterSpacing ?? 0,
     );
-    this.state.updateAnnotation(id, {
-      text,
-      rect: { ...cur.rect, width: m.width, height: m.height },
-    });
+    this.state.updateAnnotation(
+      id,
+      {
+        text,
+        rect: { ...cur.rect, width: m.width, height: m.height },
+      },
+      false,
+    );
   }
 
   stopEditing(): void {

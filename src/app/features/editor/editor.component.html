@@ -604,31 +604,58 @@
     </div>
   }
 
-  <div class="editor__body" [class.editor__body--pages-collapsed]="pagesPanelCollapsed()"
+  <div class="editor__body"
+    [class.editor__body--landing]="!docName()"
+    [class.editor__body--pages-collapsed]="pagesPanelCollapsed()"
     [class.editor__body--properties-collapsed]="propertiesPanelCollapsed()">
-    <aside id="editor-pages-panel" class="editor__sidebar" [class.editor__sidebar--collapsed]="pagesPanelCollapsed()"
-      aria-label="Pages">
-      @if (pagesPanelCollapsed()) {
-      <button type="button" class="editor__panel-rail" (click)="togglePagesPanel()" [attr.aria-expanded]="false"
-        aria-controls="editor-pages-panel" title="Expand pages panel" aria-label="Expand pages panel">
-        <i class="fa-solid fa-layer-group"></i>
-      </button>
-      } @else {
-      <app-pages-panel (collapse)="togglePagesPanel()" (pageSelect)="onPageSelectFromPanel($event)" />
-      }
-    </aside>
+    @if (docName()) {
+      <aside id="editor-pages-panel" class="editor__sidebar" [class.editor__sidebar--collapsed]="pagesPanelCollapsed()"
+        aria-label="Pages">
+        @if (pagesPanelCollapsed()) {
+        <button type="button" class="editor__panel-rail" (click)="togglePagesPanel()" [attr.aria-expanded]="false"
+          aria-controls="editor-pages-panel" title="Expand pages panel" aria-label="Expand pages panel">
+          <i class="fa-solid fa-layer-group"></i>
+        </button>
+        } @else {
+        <app-pages-panel (collapse)="togglePagesPanel()" (pageSelect)="onPageSelectFromPanel($event)" />
+        }
+      </aside>
+    }
 
-    <section class="editor__workspace">
+    <section class="editor__workspace" [class.editor__workspace--landing]="!docName()">
       @if (loading()) {
       <div class="editor__loading">
         <i class="fa-solid fa-spinner fa-spin"></i> Loading document…
       </div>
       } @else if (!docName()) {
-      <div class="editor__drop">
-        <app-file-dropzone [multiple]="false" label="Open a PDF to start editing" />
-        <p class="editor__privacy">
-          <i class="fa-solid fa-lock"></i> Your file stays on this device.
-        </p>
+      <div class="editor__landing">
+        <div class="editor__landing-card">
+          <div class="editor__landing-badge">
+            <i class="fa-solid fa-file-pdf"></i>
+          </div>
+          <h1 class="editor__landing-title">Open PDF to Start Editing</h1>
+          <p class="editor__landing-subtitle">
+            Annotate, add text, draw, sign, and organize pages privately in your browser.
+          </p>
+
+          <div class="editor__landing-dropzone">
+            <app-file-dropzone [multiple]="false" label="Tap to Choose or Drop PDF Here" />
+          </div>
+
+          <div class="editor__landing-privacy">
+            <i class="fa-solid fa-shield-halved"></i>
+            <span><strong>100% Private</strong> · Files stay on your device and are never uploaded.</span>
+          </div>
+
+          <div class="editor__landing-features">
+            <span class="editor__feat-pill"><i class="fa-solid fa-pen-nib"></i> Draw & Pen</span>
+            <span class="editor__feat-pill"><i class="fa-solid fa-font"></i> Add Text</span>
+            <span class="editor__feat-pill"><i class="fa-solid fa-signature"></i> Signatures</span>
+            <span class="editor__feat-pill"><i class="fa-solid fa-highlighter"></i> Highlight</span>
+            <span class="editor__feat-pill"><i class="fa-solid fa-shapes"></i> Shapes</span>
+            <span class="editor__feat-pill"><i class="fa-solid fa-layer-group"></i> Organize Pages</span>
+          </div>
+        </div>
       </div>
       } @else {
       <div
@@ -711,17 +738,19 @@
       }
     </section>
 
-    <aside id="editor-properties-panel" class="editor__properties"
-      [class.editor__properties--collapsed]="propertiesPanelCollapsed()" aria-label="Properties">
-      @if (propertiesPanelCollapsed()) {
-      <button type="button" class="editor__panel-rail" (click)="togglePropertiesPanel()" [attr.aria-expanded]="false"
-        aria-controls="editor-properties-panel" title="Expand properties panel" aria-label="Expand properties panel">
-        <i class="fa-solid fa-sliders"></i>
-      </button>
-      } @else {
-      <app-properties-panel (collapse)="togglePropertiesPanel()" />
-      }
-    </aside>
+    @if (docName()) {
+      <aside id="editor-properties-panel" class="editor__properties"
+        [class.editor__properties--collapsed]="propertiesPanelCollapsed()" aria-label="Properties">
+        @if (propertiesPanelCollapsed()) {
+        <button type="button" class="editor__panel-rail" (click)="togglePropertiesPanel()" [attr.aria-expanded]="false"
+          aria-controls="editor-properties-panel" title="Expand properties panel" aria-label="Expand properties panel">
+          <i class="fa-solid fa-sliders"></i>
+        </button>
+        } @else {
+        <app-properties-panel (collapse)="togglePropertiesPanel()" />
+        }
+      </aside>
+    }
   </div>
 
   <!-- Mobile Properties Bottom Sheet -->

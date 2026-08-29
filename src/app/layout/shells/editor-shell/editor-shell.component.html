@@ -37,7 +37,7 @@
         type="button"
         [disabled]="!canUndo()"
         (click)="undo()"
-        title="Undo (Ctrl+Z)"
+        [title]="undoLabel()"
         aria-label="Undo"
       >
         <i class="fa-solid fa-rotate-left"></i>
@@ -47,7 +47,7 @@
         type="button"
         [disabled]="!canRedo()"
         (click)="redo()"
-        title="Redo (Ctrl+Y)"
+        [title]="redoLabel()"
         aria-label="Redo"
       >
         <i class="fa-solid fa-rotate-right"></i>

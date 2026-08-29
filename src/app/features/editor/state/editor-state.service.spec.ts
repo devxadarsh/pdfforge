@@ -11,6 +11,13 @@ class EditorPagesStub {
   currentId(): string | null {
     return 'page-1';
   }
+  pages(): any[] {
+    return [];
+  }
+  selected(): Set<string> {
+    return new Set();
+  }
+  restoreState(pages: any[], selected?: any, currentId?: any): void {}
 }
 
 describe('EditorStateService', () => {
@@ -396,5 +403,32 @@ describe('EditorStateService', () => {
     expect(state.annotationsFor('page-1').length).toBe(0);
     expect(state.canUndo()).toBeFalse();
     expect(state.canRedo()).toBeTrue();
+  });
+
+  it('updates undo and redo action labels dynamically', () => {
+    const shape = makeShape({ id: 'label-1' });
+    state.addAnnotation('page-1', shape, true, true, 'Add Shape');
+    expect(state.undoLabel()).toContain('Undo Add Shape');
+
+    state.updateAnnotation('label-1', { strokeColor: '#ff0000' }, true, 'Change Stroke Color');
+    expect(state.undoLabel()).toContain('Undo Change Stroke Color');
+
+    state.undo();
+    expect(state.redoLabel()).toContain('Redo Change Stroke Color');
+  });
+
+  it('allows transient updates without pushing multiple undo steps', () => {
+    const text = makeText({ id: 'transient-1', text: 'Start' });
+    state.addAnnotation('page-1', text, true, true, 'Add Text');
+
+    // Simulate 10 frames of transient drag/resizing with recordHistory = false
+    for (let i = 1; i <= 10; i++) {
+      state.updateAnnotation('transient-1', { rect: { x: i * 5, y: i * 5, width: 100, height: 30 } }, false);
+    }
+
+    // Should only take ONE undo step to revert back to before adding text
+    const undoRes = state.undo();
+    expect(undoRes.success).toBeTrue();
+    expect(state.annotationsFor('page-1').length).toBe(0);
   });
 });

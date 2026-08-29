@@ -3,6 +3,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { NgClass } from '@angular/common';
 import { ThemeService } from '../../../core/services/theme.service';
 import { FileService } from '../../../core/services/file/file.service';
+import { ToastService } from '../../../core/services/toast.service';
 import { EditorStateService } from '../../../features/editor/state/editor-state.service';
 
 interface EditorNavItem {
@@ -21,6 +22,7 @@ export class EditorShellComponent {
   protected readonly theme = inject(ThemeService);
   private readonly router = inject(Router);
   private readonly files = inject(FileService);
+  private readonly toasts = inject(ToastService);
   private readonly state = inject(EditorStateService);
 
   readonly hasDocument = computed(
@@ -53,17 +55,25 @@ export class EditorShellComponent {
 
   readonly canUndo = this.state.canUndo;
   readonly canRedo = this.state.canRedo;
+  readonly undoLabel = this.state.undoLabel;
+  readonly redoLabel = this.state.redoLabel;
 
   back(): void {
     void this.router.navigate(['/']);
   }
 
   undo(): void {
-    this.state.undo();
+    const res = this.state.undo();
+    if (res.success && res.description) {
+      this.toasts.info(`Undone: ${res.description}`);
+    }
   }
 
   redo(): void {
-    this.state.redo();
+    const res = this.state.redo();
+    if (res.success && res.description) {
+      this.toasts.info(`Redone: ${res.description}`);
+    }
   }
 
   cycleTheme(): void {
