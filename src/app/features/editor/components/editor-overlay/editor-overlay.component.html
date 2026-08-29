@@ -7,7 +7,7 @@
   [class.overlay--interactive]="interactive()"
   [class.overlay--drawing]="isDrawingTool()"
   [style.pointerEvents]="interactive() ? 'auto' : 'none'"
-  [style.touchAction]="tool() === 'hand' ? 'pan-x pan-y pinch-zoom' : 'none'"
+  [style.touchAction]="touchAction()"
   [style.cursor]="cursor()"
   (pointerdown)="onPointerDown($event)"
   (pointermove)="onPointerMove($event)"

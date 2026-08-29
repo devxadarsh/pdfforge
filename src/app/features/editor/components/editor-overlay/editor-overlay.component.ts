@@ -101,6 +101,9 @@ function isAnnotationInPolygon(a: PdfAnnotation, polygon: Point[]): boolean {
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './editor-overlay.component.html',
   styleUrl: './editor-overlay.component.scss',
+  host: {
+    '[style.touchAction]': 'touchAction()',
+  },
 })
 export class EditorOverlayComponent implements OnDestroy {
   protected readonly Math = Math;
@@ -116,6 +119,14 @@ export class EditorOverlayComponent implements OnDestroy {
   readonly selectedId = input<string | null>(null);
   readonly width = input.required<number>();
   readonly height = input.required<number>();
+
+  readonly touchAction = computed(() => {
+    const t = this.tool();
+    if (t === 'hand' || t === 'select') {
+      return 'pan-x pan-y pinch-zoom';
+    }
+    return 'none';
+  });
 
   /** Text annotation currently being edited inline. */
   readonly editingId = signal<string | null>(null);
@@ -137,14 +148,13 @@ export class EditorOverlayComponent implements OnDestroy {
   private currentSvg: SVGSVGElement | null = null;
 
   private onNativeTouchStart = (event: TouchEvent): void => {
-    if (this.tool() !== 'hand') {
+    if (this.tool() !== 'hand' && this.tool() !== 'select') {
       const target = event.target as Element | null;
       if (
         target?.closest('.handle') ||
         target?.closest('.handles') ||
         target?.closest('.sel') ||
-        target?.closest('.ann-item') ||
-        this.selectedId() !== null
+        target?.closest('.ann-item')
       ) {
         event.stopPropagation();
       }

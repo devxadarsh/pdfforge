@@ -506,18 +506,32 @@
       <button type="button" class="icon-btn" (click)="zoomOut()" aria-label="Zoom out">
         <i class="fa-solid fa-magnifying-glass-minus"></i>
       </button>
-      <button type="button" class="editor__zoom-value" (click)="resetZoom()" [title]="zoomLabel()">
+      <button
+        type="button"
+        class="editor__zoom-value"
+        (click)="toggleFit()"
+        [title]="'Click to toggle between Fit width and Fit page (currently ' + zoomLabel() + ')'"
+        [attr.aria-label]="zoomLabel()"
+      >
         {{ zoomLabel() }}
       </button>
       <button type="button" class="icon-btn" (click)="zoomIn()" aria-label="Zoom in">
         <i class="fa-solid fa-magnifying-glass-plus"></i>
       </button>
-      <button type="button" class="editor__chip editor__chip--fit-w" [class.editor__chip--active]="state.fitMode() === 'width'"
-        (click)="setFit('width')">
+      <button
+        type="button"
+        class="editor__chip editor__chip--fit-w d-none d-md-inline-flex"
+        [class.editor__chip--active]="state.fitMode() === 'width'"
+        (click)="setFit('width')"
+      >
         Fit width
       </button>
-      <button type="button" class="editor__chip editor__chip--fit-p" [class.editor__chip--active]="state.fitMode() === 'page'"
-        (click)="setFit('page')">
+      <button
+        type="button"
+        class="editor__chip editor__chip--fit-p d-none d-md-inline-flex"
+        [class.editor__chip--active]="state.fitMode() === 'page'"
+        (click)="setFit('page')"
+      >
         Fit page
       </button>
     </div>

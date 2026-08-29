@@ -244,11 +244,11 @@ export class EditorComponent implements OnDestroy {
     const fit = this.state.fitMode();
     let scale: number;
     if (fit === 'width') {
-      const padding = stage.width < 768 ? 16 : 32;
+      const padding = stage.width < 768 ? 36 : 48;
       scale = Math.max(0.1, (stage.width - padding) / rotatedW);
     } else if (fit === 'page') {
-      const paddingX = stage.width < 768 ? 16 : 32;
-      const paddingY = stage.width < 768 ? 24 : 48;
+      const paddingX = stage.width < 768 ? 36 : 48;
+      const paddingY = stage.width < 768 ? 32 : 48;
       scale = Math.min(
         (stage.width - paddingX) / rotatedW,
         (stage.height - paddingY) / rotatedH,
@@ -1082,6 +1082,12 @@ export class EditorComponent implements OnDestroy {
     this.state.setFit(mode);
   }
 
+  toggleFit(): void {
+    const current = this.state.fitMode();
+    const next = current === 'width' ? 'page' : 'width';
+    this.state.setFit(next);
+  }
+
   resetZoom(): void {
     this.state.resetZoom();
   }
@@ -1091,6 +1097,9 @@ export class EditorComponent implements OnDestroy {
   private panStart: { x: number; y: number; scrollLeft: number; scrollTop: number } | null = null;
 
   onStagePointerDown(event: PointerEvent): void {
+    if (event.pointerType === 'touch') {
+      return;
+    }
     const isHand =
       this.state.tool() === 'hand' ||
       this.isSpacePanning() ||
