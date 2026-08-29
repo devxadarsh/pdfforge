@@ -327,3 +327,37 @@
   font-size: 12px;
   line-height: 1.4;
 }
+
+@media (max-width: 768px) {
+  .props {
+    gap: 12px;
+    padding: 4px;
+  }
+
+  .props__seg-btn {
+    min-height: 38px;
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+
+  .props__swatch {
+    width: 28px;
+    height: 28px;
+  }
+
+  .props__color-picker {
+    width: 32px;
+    height: 32px;
+  }
+
+  .pf-input {
+    height: 34px;
+    font-size: 13px;
+  }
+
+  .props__delete {
+    width: 32px;
+    height: 32px;
+    font-size: 13px;
+  }
+}

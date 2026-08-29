@@ -288,6 +288,52 @@ export class PropertiesPanelComponent {
     return ann.type;
   }
 
+  readonly Math = Math;
+
+  setRectX(ann: PdfAnnotation, x: number): void {
+    if (ann.locked || !Number.isFinite(x)) return;
+    const dx = x - ann.rect.x;
+    if (ann.type === 'drawing') {
+      this.state.updateAnnotation(ann.id, {
+        rect: { ...ann.rect, x: Math.round(x) },
+        points: ann.points.map((p) => ({ x: Math.round(p.x + dx), y: p.y })),
+      } as Partial<DrawingAnnotation>);
+    } else {
+      this.state.updateAnnotation(ann.id, {
+        rect: { ...ann.rect, x: Math.round(x) },
+      });
+    }
+  }
+
+  setRectY(ann: PdfAnnotation, y: number): void {
+    if (ann.locked || !Number.isFinite(y)) return;
+    const dy = y - ann.rect.y;
+    if (ann.type === 'drawing') {
+      this.state.updateAnnotation(ann.id, {
+        rect: { ...ann.rect, y: Math.round(y) },
+        points: ann.points.map((p) => ({ x: p.x, y: Math.round(p.y + dy) })),
+      } as Partial<DrawingAnnotation>);
+    } else {
+      this.state.updateAnnotation(ann.id, {
+        rect: { ...ann.rect, y: Math.round(y) },
+      });
+    }
+  }
+
+  setRectWidth(ann: PdfAnnotation, w: number): void {
+    if (ann.locked || !Number.isFinite(w) || w < 4) return;
+    this.state.updateAnnotation(ann.id, {
+      rect: { ...ann.rect, width: Math.round(w) },
+    });
+  }
+
+  setRectHeight(ann: PdfAnnotation, h: number): void {
+    if (ann.locked || !Number.isFinite(h) || h < 4) return;
+    this.state.updateAnnotation(ann.id, {
+      rect: { ...ann.rect, height: Math.round(h) },
+    });
+  }
+
   setDrawingColor(ann: PdfAnnotation, color: string): void {
     this.state.updateAnnotation(ann.id, { color } as Partial<DrawingAnnotation>);
   }

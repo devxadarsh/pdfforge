@@ -361,4 +361,40 @@ describe('EditorStateService', () => {
     const orderAfterBack = state.annotationsFor('page-1').map((x) => x.id);
     expect(orderAfterBack).toEqual(['g1', 'g2', 'g3']);
   });
+
+  it('supports undo and redo history', () => {
+    expect(state.canUndo()).toBeFalse();
+    expect(state.canRedo()).toBeFalse();
+
+    const note1 = makeText({ id: 'undo-1', text: 'First' });
+    state.addAnnotation('page-1', note1);
+    expect(state.annotationsFor('page-1').length).toBe(1);
+    expect(state.canUndo()).toBeTrue();
+    expect(state.canRedo()).toBeFalse();
+
+    // Add second annotation
+    const note2 = makeText({ id: 'undo-2', text: 'Second' });
+    state.addAnnotation('page-1', note2);
+    expect(state.annotationsFor('page-1').length).toBe(2);
+
+    // Undo second addition
+    state.undo();
+    expect(state.annotationsFor('page-1').length).toBe(1);
+    expect(state.annotationsFor('page-1')[0].id).toBe('undo-1');
+    expect(state.canUndo()).toBeTrue();
+    expect(state.canRedo()).toBeTrue();
+
+    // Redo second addition
+    state.redo();
+    expect(state.annotationsFor('page-1').length).toBe(2);
+    expect(state.annotationsFor('page-1')[1].id).toBe('undo-2');
+    expect(state.canRedo()).toBeFalse();
+
+    // Undo back to start
+    state.undo();
+    state.undo();
+    expect(state.annotationsFor('page-1').length).toBe(0);
+    expect(state.canUndo()).toBeFalse();
+    expect(state.canRedo()).toBeTrue();
+  });
 });

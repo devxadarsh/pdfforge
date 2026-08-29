@@ -44,6 +44,19 @@ export class EditorStateService {
   private readonly _eraserTarget = signal<EraserTarget>('all');
   private readonly _eraserSizePreviewActive = signal<boolean>(false);
   private previewTimer: ReturnType<typeof setTimeout> | null = null;
+  // Export bridge
+  private readonly _exportTrigger = signal<number>(0);
+  private readonly _isExporting = signal<boolean>(false);
+
+  // Mobile sheet states
+  private readonly _mobilePropertiesOpen = signal<boolean>(false);
+  private readonly _mobilePagesOpen = signal<boolean>(false);
+
+  // Undo / Redo history stacks
+  private undoStack: Array<Map<string, PdfAnnotation[]>> = [];
+  private redoStack: Array<Map<string, PdfAnnotation[]>> = [];
+  private readonly _canUndo = signal<boolean>(false);
+  private readonly _canRedo = signal<boolean>(false);
 
   readonly tool = this._tool.asReadonly();
   readonly zoom = this._zoom.asReadonly();
@@ -53,6 +66,15 @@ export class EditorStateService {
   readonly selectMode = this._selectMode.asReadonly();
   readonly modified = this._modified.asReadonly();
   readonly annotationsByPage = this._annotations.asReadonly();
+
+  readonly canUndo = this._canUndo.asReadonly();
+  readonly canRedo = this._canRedo.asReadonly();
+
+  readonly exportTrigger = this._exportTrigger.asReadonly();
+  readonly isExporting = this._isExporting.asReadonly();
+
+  readonly mobilePropertiesOpen = this._mobilePropertiesOpen.asReadonly();
+  readonly mobilePagesOpen = this._mobilePagesOpen.asReadonly();
 
   readonly drawingMode = this._drawingMode.asReadonly();
   readonly penColor = this._penColor.asReadonly();
@@ -66,6 +88,30 @@ export class EditorStateService {
   readonly eraserTolerance = this._eraserTolerance.asReadonly();
   readonly eraserTarget = this._eraserTarget.asReadonly();
   readonly eraserSizePreviewActive = this._eraserSizePreviewActive.asReadonly();
+
+  requestExport(): void {
+    this._exportTrigger.update((n) => n + 1);
+  }
+
+  setIsExporting(loading: boolean): void {
+    this._isExporting.set(loading);
+  }
+
+  setMobilePropertiesOpen(open: boolean): void {
+    this._mobilePropertiesOpen.set(open);
+  }
+
+  toggleMobileProperties(): void {
+    this._mobilePropertiesOpen.update((v) => !v);
+  }
+
+  setMobilePagesOpen(open: boolean): void {
+    this._mobilePagesOpen.set(open);
+  }
+
+  toggleMobilePages(): void {
+    this._mobilePagesOpen.update((v) => !v);
+  }
 
   setDrawingMode(mode: DrawingMode): void {
     this._drawingMode.set(mode);
@@ -184,6 +230,75 @@ export class EditorStateService {
     this._fitMode.set('width');
   }
 
+  pushHistorySnapshot(): void {
+    const snapshot = new Map<string, PdfAnnotation[]>();
+    for (const [k, v] of this._annotations()) {
+      snapshot.set(
+        k,
+        v.map((a) =>
+          typeof structuredClone === 'function'
+            ? structuredClone(a)
+            : JSON.parse(JSON.stringify(a)),
+        ),
+      );
+    }
+    this.undoStack.push(snapshot);
+    if (this.undoStack.length > 50) {
+      this.undoStack.shift();
+    }
+    this.redoStack = [];
+    this._canUndo.set(true);
+    this._canRedo.set(false);
+  }
+
+  undo(): void {
+    if (this.undoStack.length === 0) {
+      return;
+    }
+    const current = new Map<string, PdfAnnotation[]>();
+    for (const [k, v] of this._annotations()) {
+      current.set(
+        k,
+        v.map((a) =>
+          typeof structuredClone === 'function'
+            ? structuredClone(a)
+            : JSON.parse(JSON.stringify(a)),
+        ),
+      );
+    }
+    this.redoStack.push(current);
+
+    const previous = this.undoStack.pop()!;
+    this._annotations.set(previous);
+    this._canUndo.set(this.undoStack.length > 0);
+    this._canRedo.set(true);
+    this._modified.set(true);
+  }
+
+  redo(): void {
+    if (this.redoStack.length === 0) {
+      return;
+    }
+    const current = new Map<string, PdfAnnotation[]>();
+    for (const [k, v] of this._annotations()) {
+      current.set(
+        k,
+        v.map((a) =>
+          typeof structuredClone === 'function'
+            ? structuredClone(a)
+            : JSON.parse(JSON.stringify(a)),
+        ),
+      );
+    }
+    this.undoStack.push(current);
+
+    const next = this.redoStack.pop()!;
+    this._annotations.set(next);
+    this._canUndo.set(true);
+    this._canRedo.set(this.redoStack.length > 0);
+    this._modified.set(true);
+  }
+
   readonly annotationsFor = (pageId: string | null): PdfAnnotation[] => {
     if (!pageId) {
       return [];
@@ -196,6 +311,7 @@ export class EditorStateService {
     annotation: PdfAnnotation,
     select = true,
   ): void {
+    this.pushHistorySnapshot();
     const map = new Map(this._annotations());
     const existing = map.get(pageId) ?? [];
     map.set(pageId, [...existing, annotation]);
@@ -218,6 +334,7 @@ export class EditorStateService {
       if (list[idx].locked) {
         return;
       }
+      this.pushHistorySnapshot();
       const updated = { ...list[idx], ...patch } as PdfAnnotation;
       const next = [...list];
       next[idx] = updated;
@@ -370,6 +487,7 @@ export class EditorStateService {
       if (next.length === list.length) {
         continue;
       }
+      this.pushHistorySnapshot();
       map.set(pageId, next);
       this._annotations.set(map);
       this._modified.set(true);
@@ -386,6 +504,7 @@ export class EditorStateService {
       if (idx < 0) {
         continue;
       }
+      this.pushHistorySnapshot();
       const source = list[idx];
       let copy: PdfAnnotation = {
         ...source,
@@ -600,6 +719,7 @@ export class EditorStateService {
     if (ids.size === 0) {
       return;
     }
+    this.pushHistorySnapshot();
     const map = new Map(this._annotations());
     const list = map.get(pageId) ?? [];
     const next = list.filter((a) => !ids.has(a.id) || a.locked);
@@ -617,6 +737,7 @@ export class EditorStateService {
     if (ids.size === 0) {
       return [];
     }
+    this.pushHistorySnapshot();
     const map = new Map(this._annotations());
     const list = map.get(pageId) ?? [];
     const newCopies: PdfAnnotation[] = [];
@@ -770,6 +891,7 @@ export class EditorStateService {
     if (!pageId || this._selectedIds().length < 2) {
       return null;
     }
+    this.pushHistorySnapshot();
     const newGroupId = 'grp-' + crypto.randomUUID().slice(0, 8);
     const ids = new Set(this._selectedIds());
     const map = new Map(this._annotations());
@@ -793,6 +915,7 @@ export class EditorStateService {
     if (!hasGrouped) {
       return [];
     }
+    this.pushHistorySnapshot();
     const selectedIds = this._selectedIds();
     // Cache for Regroup action
     const lastMap = new Map(this._lastUngroupedMap());
@@ -828,6 +951,7 @@ export class EditorStateService {
       return null;
     }
 
+    this.pushHistorySnapshot();
     const newGroupId = 'grp-' + crypto.randomUUID().slice(0, 8);
     const targetSet = new Set(validIds);
     const next = list.map((a) =>
@@ -865,6 +989,7 @@ export class EditorStateService {
       return;
     }
 
+    this.pushHistorySnapshot();
     const sorted = [...selected].sort((a, b) =>
       axis === 'horizontal' ? a.rect.x - b.rect.x : a.rect.y - b.rect.y,
     );
@@ -953,6 +1078,7 @@ export class EditorStateService {
     if (ids.size === 0) {
       return;
     }
+    this.pushHistorySnapshot();
     const map = new Map(this._annotations());
     const list = map.get(pageId) ?? [];
     const unselected = list.filter((a) => !ids.has(a.id));
@@ -970,6 +1096,7 @@ export class EditorStateService {
     if (ids.size === 0) {
       return;
     }
+    this.pushHistorySnapshot();
     const map = new Map(this._annotations());
     const list = map.get(pageId) ?? [];
     const unselected = list.filter((a) => !ids.has(a.id));
@@ -1002,6 +1129,10 @@ export class EditorStateService {
     this._tool.set('select');
     this._zoom.set(1);
     this._fitMode.set('width');
+    this.undoStack = [];
+    this.redoStack = [];
+    this._canUndo.set(false);
+    this._canRedo.set(false);
   }
 
   get pageService(): EditorPagesService {

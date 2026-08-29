@@ -3,6 +3,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/rou
 import { NgClass } from '@angular/common';
 import { ThemeService } from '../../../core/services/theme.service';
 import { FileService } from '../../../core/services/file/file.service';
+import { EditorStateService } from '../../../features/editor/state/editor-state.service';
 
 interface EditorNavItem {
   readonly label: string;
@@ -20,6 +21,12 @@ export class EditorShellComponent {
   protected readonly theme = inject(ThemeService);
   private readonly router = inject(Router);
   private readonly files = inject(FileService);
+  private readonly state = inject(EditorStateService);
+
+  readonly hasDocument = computed(
+    () => this.files.currentFiles().length > 0,
+  );
+  readonly isExporting = this.state.isExporting;
 
   readonly documentName = computed(
     () => this.files.currentFiles()[0]?.name ?? 'Untitled document',
@@ -44,13 +51,28 @@ export class EditorShellComponent {
     }
   };
 
+  readonly canUndo = this.state.canUndo;
+  readonly canRedo = this.state.canRedo;
+
   back(): void {
     void this.router.navigate(['/']);
+  }
+
+  undo(): void {
+    this.state.undo();
+  }
+
+  redo(): void {
+    this.state.redo();
   }
 
   cycleTheme(): void {
     const order = ['system', 'light', 'dark'] as const;
     const idx = order.indexOf(this.theme.theme());
     this.theme.setTheme(order[(idx + 1) % order.length]);
+  }
+
+  download(): void {
+    this.state.requestExport();
   }
 }

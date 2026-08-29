@@ -262,6 +262,75 @@
         <i class="fa-solid fa-trash"></i>
       </button>
 
+      <!-- POSITION & DIMENSIONS (Hidden for Text tool/annotations) -->
+      @if (ann.type !== 'text') {
+        <div class="props__group">
+          <label class="props__label">Position & Dimensions</label>
+          <div class="props__grid props__grid--2">
+            <div class="props__field">
+              <span class="props__sublabel">X</span>
+              <input
+                class="pf-input"
+                type="number"
+                [value]="Math.round(ann.rect.x)"
+                [disabled]="ann.locked"
+                (change)="setRectX(ann, $any($event.target).valueAsNumber)"
+                aria-label="X position"
+              />
+            </div>
+            <div class="props__field">
+              <span class="props__sublabel">Y</span>
+              <input
+                class="pf-input"
+                type="number"
+                [value]="Math.round(ann.rect.y)"
+                [disabled]="ann.locked"
+                (change)="setRectY(ann, $any($event.target).valueAsNumber)"
+                aria-label="Y position"
+              />
+            </div>
+            <div class="props__field">
+              <span class="props__sublabel">Width</span>
+              <input
+                class="pf-input"
+                type="number"
+                min="4"
+                [value]="Math.round(ann.rect.width)"
+                [disabled]="ann.locked"
+                (change)="setRectWidth(ann, $any($event.target).valueAsNumber)"
+                aria-label="Width"
+              />
+            </div>
+            <div class="props__field">
+              <span class="props__sublabel">Height</span>
+              <input
+                class="pf-input"
+                type="number"
+                min="4"
+                [value]="Math.round(ann.rect.height)"
+                [disabled]="ann.locked"
+                (change)="setRectHeight(ann, $any($event.target).valueAsNumber)"
+                aria-label="Height"
+              />
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- GROUP STATUS (if grouped) -->
+      @if (ann.groupId) {
+        <div class="props__group">
+          <div class="props__row props__row--between">
+            <span class="props__sublabel"><i class="fa-solid fa-object-group"></i> Group</span>
+            <span class="props__value-badge">{{ ann.groupId }}</span>
+          </div>
+        </div>
+      }
+
+      @if (ann.type !== 'text') {
+        <div class="props__divider"></div>
+      }
+
       <!-- TEXT CONTROLS -->
       @if (ann.type === 'text') {
         <div class="props__group">

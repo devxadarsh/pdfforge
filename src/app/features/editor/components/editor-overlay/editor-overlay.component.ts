@@ -233,6 +233,22 @@ export class EditorOverlayComponent {
     return this.selectedId() !== null || this.annotations().length > 0;
   });
 
+  readonly isDrawingTool = computed(() => {
+    const t = this.tool();
+    return (
+      t === 'pen' ||
+      t === 'freehand' ||
+      t === 'eraser' ||
+      t === 'rectangle' ||
+      t === 'circle' ||
+      t === 'arrow' ||
+      t === 'line' ||
+      t === 'highlight' ||
+      t === 'underline' ||
+      t === 'strikethrough'
+    );
+  });
+
   readonly cursor = computed<'crosshair' | 'default' | 'none'>(() => {
     const t = this.tool();
     if (t === 'eraser') {
@@ -458,6 +474,8 @@ export class EditorOverlayComponent {
     if (t === 'select') {
       const hit = this.hitTest(x, y);
       if (hit) {
+        event.preventDefault();
+        event.stopPropagation();
         const isCurrentlySelected = this.state.selectedIds().includes(hit.id);
         if (event.shiftKey || event.ctrlKey || event.metaKey) {
           this.state.toggleAnnotationSelection(hit.id);
@@ -517,6 +535,7 @@ export class EditorOverlayComponent {
 
   onHandleDown(event: PointerEvent, handle: Handle): void {
     event.stopPropagation();
+    event.preventDefault();
     const ann = this.annotations().find((it) => it.id === this.selectedId());
     if (!ann || ann.locked) {
       return;
@@ -568,6 +587,8 @@ export class EditorOverlayComponent {
     }
 
     if (this.isDrawing) {
+      event.preventDefault();
+      event.stopPropagation();
       const { x, y } = this.localPoint(event);
       const cur = this.draftDrawing();
       if (cur) {
@@ -582,6 +603,8 @@ export class EditorOverlayComponent {
     }
 
     if (this.resizeId && this.resizeHandle && this.resizeStart) {
+      event.preventDefault();
+      event.stopPropagation();
       const a = this.annotations().find((it) => it.id === this.resizeId);
       if (!a) {
         return;
@@ -632,6 +655,8 @@ export class EditorOverlayComponent {
     }
 
     if (this.multiDragStart && this.multiDragStart.length > 0) {
+      event.preventDefault();
+      event.stopPropagation();
       const { x, y } = this.localPoint(event);
       const dx = x - this.dragPivot.x;
       const dy = y - this.dragPivot.y;

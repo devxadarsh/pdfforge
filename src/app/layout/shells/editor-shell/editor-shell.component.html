@@ -32,14 +32,25 @@
     </nav>
 
     <div class="editor-shell__header-right">
-      <button class="pf-icon-btn" type="button" disabled title="Undo (coming soon)" aria-label="Undo">
+      <button
+        class="pf-icon-btn"
+        type="button"
+        [disabled]="!canUndo()"
+        (click)="undo()"
+        title="Undo (Ctrl+Z)"
+        aria-label="Undo"
+      >
         <i class="fa-solid fa-rotate-left"></i>
       </button>
-      <button class="pf-icon-btn" type="button" disabled title="Redo (coming soon)" aria-label="Redo">
+      <button
+        class="pf-icon-btn"
+        type="button"
+        [disabled]="!canRedo()"
+        (click)="redo()"
+        title="Redo (Ctrl+Y)"
+        aria-label="Redo"
+      >
         <i class="fa-solid fa-rotate-right"></i>
-      </button>
-      <button class="pf-icon-btn" type="button" disabled title="Search (coming soon)" aria-label="Search">
-        <i class="fa-solid fa-magnifying-glass"></i>
       </button>
       <button
         class="pf-icon-btn"
@@ -50,8 +61,21 @@
       >
         <i class="fa-solid" [ngClass]="themeIcon()"></i>
       </button>
-      <button class="pf-btn pf-btn--primary" type="button" disabled title="Download (coming soon)">
-        <i class="fa-solid fa-download"></i> Download
+      <button
+        class="pf-btn pf-btn--primary editor-shell__download-btn"
+        type="button"
+        [disabled]="!hasDocument() || isExporting()"
+        (click)="download()"
+        title="Download / Export edited PDF"
+        aria-label="Download / Export edited PDF"
+      >
+        @if (isExporting()) {
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          <span class="editor-shell__btn-text">Saving…</span>
+        } @else {
+          <i class="fa-solid fa-download"></i>
+          <span class="editor-shell__btn-text">Download</span>
+        }
       </button>
     </div>
   </header>
@@ -59,20 +83,4 @@
   <div class="editor-shell__body">
     <router-outlet />
   </div>
-
-  <footer class="editor-shell__footer">
-    <span class="editor-shell__page">Page — of —</span>
-    <div class="editor-shell__zoom">
-      <button class="pf-icon-btn" type="button" disabled title="Zoom out" aria-label="Zoom out">
-        <i class="fa-solid fa-magnifying-glass-minus"></i>
-      </button>
-      <span class="editor-shell__zoom-label">100%</span>
-      <button class="pf-icon-btn" type="button" disabled title="Zoom in" aria-label="Zoom in">
-        <i class="fa-solid fa-magnifying-glass-plus"></i>
-      </button>
-      <button class="pf-btn pf-btn--ghost" type="button" disabled title="Fit width">
-        Fit width
-      </button>
-    </div>
-  </footer>
 </div>

@@ -25,6 +25,7 @@ import { EditorStateService } from '../../state/editor-state.service';
 export class PagesPanelComponent {
   readonly pages = inject(EditorPagesService);
   readonly collapse = output<void>();
+  readonly pageSelect = output<string>();
   private readonly state = inject(EditorStateService);
 
   private dragId: string | null = null;
@@ -64,6 +65,7 @@ export class PagesPanelComponent {
 
   selectPage(id: string, event?: MouseEvent): void {
     this.pages.select(id, event);
+    this.pageSelect.emit(id);
   }
 
   /* Drag-and-drop reordering */

@@ -5,40 +5,476 @@
     (pagesLoaded)="onPagesLoaded($event)"></ngx-extended-pdf-viewer>
   }
 
-  <div class="editor__toolbar">
-    <div class="editor__toolbar-group">
-      @for (group of toolGroups() | keyvalue; track group.key) {
-      <div class="editor__toolset">
-        @for (tool of group.value; track tool.id) {
-        <button type="button" class="editor__tool" [class.editor__tool--active]="state.tool() === tool.id"
-          [title]="tool.label + (tool.shortcut ? ' (' + tool.shortcut + ')' : '')" [attr.aria-label]="tool.label"
-          [attr.aria-pressed]="state.tool() === tool.id" (click)="selectTool(tool.id)">
-          <i [ngClass]="tool.icon"></i>
-        </button>
-        }
-      </div>
+  <!-- Mobile Dedicated Drawing & Formatting Panel (Rendered as 2 rows above bottom toolbar on mobile) -->
+  @if (docName() && hasDrawingPanel()) {
+    <div class="editor__mobile-drawing-panel" aria-label="Mobile Drawing and Tool Controls">
+      <!-- Selected Text Annotation (2 Rows) -->
+      @if (selectedTextAnnotation(); as textAnn) {
+        <div class="editor__dp-row">
+          <span class="editor__dp-label">Color:</span>
+          @for (c of penColorSwatches; track c) {
+            <button
+              type="button"
+              class="editor__dp-swatch"
+              [style.background-color]="c"
+              [class.editor__dp-swatch--active]="textAnn.color === c"
+              (click)="setSelectionColor(c)"
+              [title]="c"
+            ></button>
+          }
+          <div class="editor__dp-divider"></div>
+          <span class="editor__dp-label">Size:</span>
+          @for (sz of textFontSizePresets; track sz) {
+            <button
+              type="button"
+              class="editor__dp-pill"
+              [class.editor__dp-pill--active]="textAnn.fontSize === sz"
+              (click)="setTextFontSize(sz)"
+            >
+              {{ sz }}px
+            </button>
+          }
+        </div>
+        <div class="editor__dp-row">
+          <span class="editor__dp-label">Style:</span>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            [class.editor__dp-pill--active]="textAnn.fontWeight >= 700"
+            (click)="toggleTextBold()"
+            title="Bold text"
+          >
+            <i class="fa-solid fa-bold"></i> Bold
+          </button>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            [class.editor__dp-pill--active]="textAnn.italic"
+            (click)="toggleTextItalic()"
+            title="Italic text"
+          >
+            <i class="fa-solid fa-italic"></i> Italic
+          </button>
+          <div class="editor__dp-divider"></div>
+          <span class="editor__dp-label">Actions:</span>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            (click)="toggleLockSelected()"
+            [title]="textAnn.locked ? 'Unlock' : 'Lock'"
+          >
+            <i class="fa-solid" [class.fa-lock]="textAnn.locked" [class.fa-lock-open]="!textAnn.locked"></i>
+            {{ textAnn.locked ? 'Unlock' : 'Lock' }}
+          </button>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            (click)="duplicateSelected()"
+            title="Duplicate"
+          >
+            <i class="fa-solid fa-copy"></i> Duplicate
+          </button>
+          <button
+            type="button"
+            class="editor__dp-pill editor__dp-pill--danger"
+            (click)="deleteSelected()"
+            title="Delete"
+          >
+            <i class="fa-solid fa-trash-can"></i> Delete
+          </button>
+        </div>
+      } @else if (selectedAnnotation(); as selAnn) {
+        <!-- Non-Text Selected Annotation (2 Rows) -->
+        <div class="editor__dp-row">
+          @if (selAnn.type === 'drawing' || selAnn.type === 'shape' || selAnn.type === 'highlight' || selAnn.type === 'underline' || selAnn.type === 'strikethrough') {
+            <span class="editor__dp-label">Color:</span>
+            @for (c of penColorSwatches; track c) {
+              <button
+                type="button"
+                class="editor__dp-swatch"
+                [style.background-color]="c"
+                [class.editor__dp-swatch--active]="getAnnotationColor(selAnn) === c"
+                (click)="setSelectionColor(c)"
+                [title]="c"
+              ></button>
+            }
+          }
+          @if (selAnn.type === 'drawing' || selAnn.type === 'shape') {
+            <div class="editor__dp-divider"></div>
+            <span class="editor__dp-label">Width:</span>
+            @for (w of strokeWidthPresets; track w) {
+              <button
+                type="button"
+                class="editor__dp-pill"
+                [class.editor__dp-pill--active]="getAnnotationStrokeWidth(selAnn) === w"
+                (click)="setSelectionWidth(w)"
+              >
+                {{ w }}px
+              </button>
+            }
+          }
+        </div>
+        <div class="editor__dp-row">
+          <span class="editor__dp-label">Actions:</span>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            (click)="toggleLockSelected()"
+            [title]="selAnn.locked ? 'Unlock' : 'Lock'"
+          >
+            <i class="fa-solid" [class.fa-lock]="selAnn.locked" [class.fa-lock-open]="!selAnn.locked"></i>
+            {{ selAnn.locked ? 'Unlock' : 'Lock' }}
+          </button>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            (click)="duplicateSelected()"
+            title="Duplicate"
+          >
+            <i class="fa-solid fa-copy"></i> Duplicate
+          </button>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            (click)="bringSelectedToFront()"
+            title="Bring to front"
+          >
+            <i class="fa-solid fa-arrow-up"></i> Front
+          </button>
+          <button
+            type="button"
+            class="editor__dp-pill editor__dp-pill--danger"
+            (click)="deleteSelected()"
+            title="Delete"
+          >
+            <i class="fa-solid fa-trash-can"></i> Delete
+          </button>
+        </div>
+      } @else if (state.tool() === 'select') {
+        <!-- Select Tool (2 Rows) -->
+        <div class="editor__dp-row">
+          <span class="editor__dp-label">Mode:</span>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            [class.editor__dp-pill--active]="state.selectMode() === 'box'"
+            (click)="setSelectMode('box')"
+            title="Box Marquee: Drag a rectangle across elements"
+          >
+            <i class="fa-solid fa-vector-square"></i> Box Drag
+          </button>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            [class.editor__dp-pill--active]="state.selectMode() === 'lasso'"
+            (click)="setSelectMode('lasso')"
+            title="Freehand Lasso: Draw a freehand loop around items"
+          >
+            <i class="fa-solid fa-draw-polygon"></i> Lasso
+          </button>
+        </div>
+        <div class="editor__dp-row">
+          <span class="editor__dp-label">Quick:</span>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            (click)="selectAllAnnotations()"
+            title="Select all elements on page"
+          >
+            <i class="fa-solid fa-object-group"></i> Select All
+          </button>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            (click)="clearSelection()"
+            title="Clear element selection"
+          >
+            <i class="fa-solid fa-xmark"></i> Clear
+          </button>
+        </div>
+      } @else if (state.tool() === 'pen') {
+        <!-- Pen Tool (2 Rows) -->
+        <div class="editor__dp-row">
+          <span class="editor__dp-label">Ink:</span>
+          @for (c of penColorSwatches; track c) {
+            <button
+              type="button"
+              class="editor__dp-swatch"
+              [style.background-color]="c"
+              [class.editor__dp-swatch--active]="state.penColor() === c"
+              (click)="setPenColor(c)"
+              [title]="c"
+            ></button>
+          }
+        </div>
+        <div class="editor__dp-row">
+          <span class="editor__dp-label">Width:</span>
+          @for (w of strokeWidthPresets; track w) {
+            <button
+              type="button"
+              class="editor__dp-pill"
+              [class.editor__dp-pill--active]="state.penStrokeWidth() === w"
+              (click)="setPenWidth(w)"
+            >
+              {{ w }}px
+            </button>
+          }
+          <div class="editor__dp-divider"></div>
+          <span class="editor__dp-label">Mode:</span>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            [class.editor__dp-pill--active]="state.drawingMode() === 'continuous'"
+            (click)="setDrawingMode('continuous')"
+            title="Natural ink"
+          >
+            Natural
+          </button>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            [class.editor__dp-pill--active]="state.drawingMode() === 'autoselect'"
+            (click)="setDrawingMode('autoselect')"
+            title="Border area"
+          >
+            Border
+          </button>
+        </div>
+      } @else if (state.tool() === 'freehand') {
+        <!-- Freehand Tool (2 Rows) -->
+        <div class="editor__dp-row">
+          <span class="editor__dp-label">Ink:</span>
+          @for (c of penColorSwatches; track c) {
+            <button
+              type="button"
+              class="editor__dp-swatch"
+              [style.background-color]="c"
+              [class.editor__dp-swatch--active]="state.freehandColor() === c"
+              (click)="setFreehandColor(c)"
+              [title]="c"
+            ></button>
+          }
+        </div>
+        <div class="editor__dp-row">
+          <span class="editor__dp-label">Width:</span>
+          @for (w of strokeWidthPresets; track w) {
+            <button
+              type="button"
+              class="editor__dp-pill"
+              [class.editor__dp-pill--active]="state.freehandStrokeWidth() === w"
+              (click)="setFreehandWidth(w)"
+            >
+              {{ w }}px
+            </button>
+          }
+          <div class="editor__dp-divider"></div>
+          <span class="editor__dp-label">Mode:</span>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            [class.editor__dp-pill--active]="state.drawingMode() === 'continuous'"
+            (click)="setDrawingMode('continuous')"
+          >
+            Natural
+          </button>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            [class.editor__dp-pill--active]="state.drawingMode() === 'autoselect'"
+            (click)="setDrawingMode('autoselect')"
+          >
+            Border
+          </button>
+        </div>
+      } @else if (state.tool() === 'eraser') {
+        <!-- Eraser Tool (2 Rows) -->
+        <div class="editor__dp-row">
+          <span class="editor__dp-label">Cut Size:</span>
+          @for (s of eraserSizePresets; track s) {
+            <button
+              type="button"
+              class="editor__dp-pill"
+              [class.editor__dp-pill--active]="state.eraserSize() === s"
+              (click)="setEraserSize(s)"
+            >
+              {{ s }}px
+            </button>
+          }
+        </div>
+        <div class="editor__dp-row">
+          <span class="editor__dp-label">Mode:</span>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            [class.editor__dp-pill--active]="state.eraserMode() === 'segment'"
+            (click)="setEraserMode('segment')"
+            title="Cut path segments"
+          >
+            <i class="fa-solid fa-scissors"></i> Segment
+          </button>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            [class.editor__dp-pill--active]="state.eraserMode() === 'stroke'"
+            (click)="setEraserMode('stroke')"
+            title="Erase full stroke"
+          >
+            <i class="fa-solid fa-eraser"></i> Stroke
+          </button>
+          <div class="editor__dp-divider"></div>
+          <span class="editor__dp-label">Target:</span>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            [class.editor__dp-pill--active]="state.eraserTarget() === 'all'"
+            (click)="setEraserTarget('all')"
+          >
+            All
+          </button>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            [class.editor__dp-pill--active]="state.eraserTarget() === 'drawing'"
+            (click)="setEraserTarget('drawing')"
+          >
+            Ink
+          </button>
+        </div>
+      } @else if (state.tool() === 'rectangle' || state.tool() === 'circle' || state.tool() === 'arrow' || state.tool() === 'line') {
+        <!-- Shapes Tool (2 Rows) -->
+        <div class="editor__dp-row">
+          <span class="editor__dp-label">Color:</span>
+          @for (c of shapeColorSwatches; track c) {
+            <button
+              type="button"
+              class="editor__dp-swatch"
+              [style.background-color]="c"
+              (click)="setPenColor(c)"
+              [title]="c"
+            ></button>
+          }
+        </div>
+        <div class="editor__dp-row">
+          <span class="editor__dp-label">Width:</span>
+          @for (w of strokeWidthPresets; track w) {
+            <button
+              type="button"
+              class="editor__dp-pill"
+              [class.editor__dp-pill--active]="state.penStrokeWidth() === w"
+              (click)="setPenWidth(w)"
+            >
+              {{ w }}px
+            </button>
+          }
+        </div>
+      } @else if (state.tool() === 'text') {
+        <!-- Text Tool (2 Rows) -->
+        <div class="editor__dp-row">
+          <span class="editor__dp-label">Color:</span>
+          @for (c of penColorSwatches; track c) {
+            <button
+              type="button"
+              class="editor__dp-swatch"
+              [style.background-color]="c"
+              [class.editor__dp-swatch--active]="state.penColor() === c"
+              (click)="setPenColor(c)"
+              [title]="c"
+            ></button>
+          }
+        </div>
+        <div class="editor__dp-row">
+          <span class="editor__dp-label">Size:</span>
+          @for (sz of textFontSizePresets; track sz) {
+            <button
+              type="button"
+              class="editor__dp-pill"
+              [class.editor__dp-pill--active]="sz === 16"
+            >
+              {{ sz }}px
+            </button>
+          }
+        </div>
+      } @else if (state.tool() === 'highlight' || state.tool() === 'underline' || state.tool() === 'strikethrough') {
+        <!-- Markup Tools (2 Rows) -->
+        <div class="editor__dp-row">
+          <span class="editor__dp-label">Color:</span>
+          @for (c of highlightColorSwatches; track c) {
+            <button
+              type="button"
+              class="editor__dp-swatch"
+              [style.background-color]="c"
+              (click)="setPenColor(c)"
+              [title]="c"
+            ></button>
+          }
+        </div>
+        <div class="editor__dp-row">
+          <span class="editor__dp-label">Type:</span>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            [class.editor__dp-pill--active]="state.tool() === 'highlight'"
+            (click)="selectTool('highlight')"
+          >
+            <i class="fa-solid fa-highlighter"></i> Highlight
+          </button>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            [class.editor__dp-pill--active]="state.tool() === 'underline'"
+            (click)="selectTool('underline')"
+          >
+            <i class="fa-solid fa-underline"></i> Underline
+          </button>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            [class.editor__dp-pill--active]="state.tool() === 'strikethrough'"
+            (click)="selectTool('strikethrough')"
+          >
+            <i class="fa-solid fa-strikethrough"></i> Strike
+          </button>
+        </div>
       }
     </div>
-    <div class="editor__toolbar-actions">
-      <button type="button" class="pf-btn pf-btn--ghost pf-btn--sm" (click)="toggleFullscreen()" [disabled]="!docName()"
-        [title]="isFullscreen() ? 'Exit fullscreen (Esc)' : 'Edit in fullscreen'"
-        [attr.aria-label]="isFullscreen() ? 'Exit fullscreen' : 'Edit in fullscreen'">
-        <i [class]="isFullscreen() ? 'fa-solid fa-compress' : 'fa-solid fa-expand'"></i>
-        {{ isFullscreen() ? 'Exit fullscreen' : 'Fullscreen' }}
-      </button>
-      <button type="button" class="pf-btn pf-btn--primary pf-btn--sm" (click)="exportPdf()"
-        [disabled]="!docName() || exporting()" [attr.aria-label]="'Export edited PDF'" title="Export edited PDF">
-        @if (exporting()) {
-        <i class="fa-solid fa-spinner fa-spin"></i> Exporting…
-        } @else {
-        <i class="fa-solid fa-file-arrow-down"></i> Export PDF
+  }
+
+  @if (docName()) {
+    <div class="editor__toolbar">
+      <div class="editor__toolbar-group">
+        @for (group of toolGroups() | keyvalue; track group.key) {
+        <div class="editor__toolset">
+          @for (tool of group.value; track tool.id) {
+          <button type="button" class="editor__tool" [class.editor__tool--active]="state.tool() === tool.id"
+            [title]="tool.label + (tool.shortcut ? ' (' + tool.shortcut + ')' : '')" [attr.aria-label]="tool.label"
+            [attr.aria-pressed]="state.tool() === tool.id" (click)="selectTool(tool.id)">
+            <i [ngClass]="tool.icon"></i>
+          </button>
+          }
+        </div>
         }
-      </button>
-      <a class="pf-btn pf-btn--ghost pf-btn--sm" routerLink="/tools">
-        <i class="fa-solid fa-arrow-left"></i> Tools
-      </a>
+      </div>
+      <div class="editor__toolbar-actions">
+        <button type="button" class="pf-btn pf-btn--ghost pf-btn--sm" (click)="toggleFullscreen()" [disabled]="!docName()"
+          [title]="isFullscreen() ? 'Exit fullscreen (Esc)' : 'Edit in fullscreen'"
+          [attr.aria-label]="isFullscreen() ? 'Exit fullscreen' : 'Edit in fullscreen'">
+          <i [class]="isFullscreen() ? 'fa-solid fa-compress' : 'fa-solid fa-expand'"></i>
+          {{ isFullscreen() ? 'Exit fullscreen' : 'Fullscreen' }}
+        </button>
+        <button type="button" class="pf-btn pf-btn--primary pf-btn--sm" (click)="exportPdf()"
+          [disabled]="!docName() || exporting()" [attr.aria-label]="'Export edited PDF'" title="Export edited PDF">
+          @if (exporting()) {
+          <i class="fa-solid fa-spinner fa-spin"></i> Exporting…
+          } @else {
+          <i class="fa-solid fa-file-arrow-down"></i> Export PDF
+          }
+        </button>
+        <a class="pf-btn pf-btn--ghost pf-btn--sm" routerLink="/tools">
+          <i class="fa-solid fa-arrow-left"></i> Tools
+        </a>
+      </div>
     </div>
-  </div>
+  }
 
   @if (docName()) {
   <div class="editor__viewbar">
@@ -47,7 +483,10 @@
         aria-label="Previous page">
         <i class="fa-solid fa-chevron-left"></i>
       </button>
-      <span class="editor__pagenav-label">Page {{ currentPageNumber() }} / {{ totalPages() }}</span>
+      <button type="button" class="editor__pagenav-label editor__pagenav-btn" (click)="openPagesSheet()"
+        title="View document pages">
+        Page {{ currentPageNumber() }} / {{ totalPages() }}
+      </button>
       <button type="button" class="icon-btn" (click)="nextPage()" [disabled]="currentPageNumber() >= totalPages()"
         aria-label="Next page">
         <i class="fa-solid fa-chevron-right"></i>
@@ -64,17 +503,18 @@
       <button type="button" class="icon-btn" (click)="zoomIn()" aria-label="Zoom in">
         <i class="fa-solid fa-magnifying-glass-plus"></i>
       </button>
-      <button type="button" class="editor__chip" [class.editor__chip--active]="state.fitMode() === 'width'"
+      <button type="button" class="editor__chip editor__chip--fit-w" [class.editor__chip--active]="state.fitMode() === 'width'"
         (click)="setFit('width')">
         Fit width
       </button>
-      <button type="button" class="editor__chip" [class.editor__chip--active]="state.fitMode() === 'page'"
+      <button type="button" class="editor__chip editor__chip--fit-p" [class.editor__chip--active]="state.fitMode() === 'page'"
         (click)="setFit('page')">
         Fit page
       </button>
     </div>
 
-    <div class="editor__search">
+    <!-- Desktop Search Bar -->
+    <div class="editor__search editor__search--desktop">
       <i class="fa-solid fa-magnifying-glass"></i>
       <input type="search" class="pf-input editor__search-input" placeholder="Search in document…"
         [value]="searchQuery()" (input)="onSearch($any($event.target).value)" aria-label="Search in document" />
@@ -88,7 +528,80 @@
       <span class="editor__search-count">{{ searchCountLabel() }}</span>
       }
     </div>
+
+    <!-- Mobile Action Buttons (Search, Pages) -->
+    <div class="editor__mobile-actions">
+      <button
+        type="button"
+        class="icon-btn editor__mobile-btn"
+        [class.icon-btn--active]="isMobileSearchOpen()"
+        (click)="toggleMobileSearch()"
+        title="Search in document"
+        aria-label="Search in document"
+      >
+        <i class="fa-solid fa-magnifying-glass"></i>
+      </button>
+      <button
+        type="button"
+        class="icon-btn editor__mobile-btn"
+        [class.icon-btn--active]="state.mobilePagesOpen()"
+        (click)="openPagesSheet()"
+        title="Pages overview"
+        aria-label="Pages overview"
+      >
+        <i class="fa-solid fa-layer-group"></i>
+      </button>
+    </div>
   </div>
+
+  <!-- Expandable Mobile Search Overlay -->
+  @if (isMobileSearchOpen()) {
+    <div class="editor__mobile-search-bar">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input
+        type="search"
+        class="pf-input editor__mobile-search-input"
+        placeholder="Search in document…"
+        [value]="searchQuery()"
+        (input)="onSearch($any($event.target).value)"
+        aria-label="Search document on mobile"
+        autofocus
+      />
+      @if (searchQuery().trim()) {
+        <button type="button" class="icon-btn" (click)="searchPrev()" aria-label="Previous match">
+          <i class="fa-solid fa-chevron-up"></i>
+        </button>
+        <button type="button" class="icon-btn" (click)="searchNext()" aria-label="Next match">
+          <i class="fa-solid fa-chevron-down"></i>
+        </button>
+        <span class="editor__search-count">{{ searchCountLabel() }}</span>
+      }
+      <button type="button" class="icon-btn" (click)="closeMobileSearch()" aria-label="Close search">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  }
+
+    <!-- Mobile Option Bar (Always displays selected tool name, mode, and options trigger) -->
+    <div class="editor__mobile-option-bar" aria-label="Selected tool status">
+      <div class="editor__mob-opt-left">
+        <span class="editor__mob-opt-badge">
+          <i [class]="currentToolIcon()"></i>
+          <span class="editor__mob-opt-name">{{ currentToolName() }}</span>
+        </span>
+        <span class="editor__mob-opt-hint">{{ currentToolHint() }}</span>
+      </div>
+      <button
+        type="button"
+        class="editor__mob-opt-btn"
+        (click)="openPropertiesSheet()"
+        title="Open full options"
+        aria-label="Open full options"
+      >
+        <i class="fa-solid fa-sliders"></i>
+        <span>Options</span>
+      </button>
+    </div>
   }
 
   <div class="editor__body" [class.editor__body--pages-collapsed]="pagesPanelCollapsed()"
@@ -101,7 +614,7 @@
         <i class="fa-solid fa-layer-group"></i>
       </button>
       } @else {
-      <app-pages-panel (collapse)="togglePagesPanel()" />
+      <app-pages-panel (collapse)="togglePagesPanel()" (pageSelect)="onPageSelectFromPanel($event)" />
       }
     </aside>
 
@@ -128,14 +641,40 @@
         (pointerup)="onStagePointerUp($event)"
         (pointercancel)="onStagePointerUp($event)"
         (wheel)="onWorkspaceWheel($event)"
+        (scroll)="onStageScroll($event)"
       >
-        <div class="editor__page-frame" [style.width.px]="displaySize()?.width"
-          [style.height.px]="displaySize()?.height">
-          <app-pdf-page [pageIndex]="currentSourceIndex()" [scale]="displaySize()?.scale ?? 1"
-            [rotation]="currentRotation()"></app-pdf-page>
-          <app-editor-overlay [pageId]="currentPageId() ?? ''" [pageIndex]="currentSourceIndex()"
-            [annotations]="currentAnnotations()" [tool]="state.tool()" [selectedId]="state.selectedId()"
-            [width]="displaySize()?.width ?? 0" [height]="displaySize()?.height ?? 0"></app-editor-overlay>
+        <div class="editor__pages-stack">
+          @for (page of pagesStore.pages(); track page.id; let idx = $index) {
+            <div
+              class="editor__page-wrapper"
+              [id]="'page-wrapper-' + page.id"
+              [attr.data-page-id]="page.id"
+              [attr.data-page-index]="idx"
+              [class.editor__page-wrapper--active]="pagesStore.currentId() === page.id"
+              (pointerdown)="onPagePointerDown(page.id)"
+            >
+              <div
+                class="editor__page-frame"
+                [style.width.px]="getPageDisplaySize(page).width"
+                [style.height.px]="getPageDisplaySize(page).height"
+              >
+                <app-pdf-page
+                  [pageIndex]="page.sourceIndex"
+                  [scale]="getPageDisplaySize(page).scale"
+                  [rotation]="page.rotation"
+                ></app-pdf-page>
+                <app-editor-overlay
+                  [pageId]="page.id"
+                  [pageIndex]="page.sourceIndex"
+                  [annotations]="state.annotationsFor(page.id)"
+                  [tool]="state.tool()"
+                  [selectedId]="state.selectedId()"
+                  [width]="getPageDisplaySize(page).width"
+                  [height]="getPageDisplaySize(page).height"
+                ></app-editor-overlay>
+              </div>
+            </div>
+          }
         </div>
       </div>
       }
@@ -184,4 +723,46 @@
       }
     </aside>
   </div>
+
+  <!-- Mobile Properties Bottom Sheet -->
+  @if (state.mobilePropertiesOpen()) {
+    <div class="editor__bottomsheet-backdrop" (click)="closePropertiesSheet()"></div>
+    <div class="editor__bottomsheet" role="dialog" aria-modal="true" aria-label="Properties Sheet">
+      <div class="editor__bottomsheet-handle-bar" (click)="closePropertiesSheet()">
+        <div class="editor__bottomsheet-handle"></div>
+      </div>
+      <div class="editor__bottomsheet-header">
+        <span class="editor__bottomsheet-title">
+          <i class="fa-solid fa-sliders"></i> Tool Properties
+        </span>
+        <button type="button" class="icon-btn editor__bottomsheet-close" (click)="closePropertiesSheet()" aria-label="Close properties sheet">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="editor__bottomsheet-content">
+        <app-properties-panel (collapse)="closePropertiesSheet()" />
+      </div>
+    </div>
+  }
+
+  <!-- Mobile Pages Bottom Sheet -->
+  @if (state.mobilePagesOpen()) {
+    <div class="editor__bottomsheet-backdrop" (click)="closePagesSheet()"></div>
+    <div class="editor__bottomsheet editor__bottomsheet--pages" role="dialog" aria-modal="true" aria-label="Pages Sheet">
+      <div class="editor__bottomsheet-handle-bar" (click)="closePagesSheet()">
+        <div class="editor__bottomsheet-handle"></div>
+      </div>
+      <div class="editor__bottomsheet-header">
+        <span class="editor__bottomsheet-title">
+          <i class="fa-solid fa-layer-group"></i> Document Pages
+        </span>
+        <button type="button" class="icon-btn editor__bottomsheet-close" (click)="closePagesSheet()" aria-label="Close pages sheet">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="editor__bottomsheet-content">
+        <app-pages-panel (collapse)="closePagesSheet()" (pageSelect)="onPageSelectFromPanel($event)" />
+      </div>
+    </div>
+  }
 </div>
