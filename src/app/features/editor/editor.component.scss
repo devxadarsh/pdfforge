@@ -49,8 +49,11 @@
   display: none;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 6px 12px;
+  gap: 8px;
+  min-height: 28px;
+  height: 28px;
+  max-height: 28px;
+  padding: 2px 10px;
   background: var(--pf-surface-container-lowest);
   border-bottom: 1px solid var(--pf-outline-variant);
   z-index: 15;
@@ -59,7 +62,7 @@
 .editor__mob-opt-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
   flex: 1;
 }
@@ -67,18 +70,19 @@
 .editor__mob-opt-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 8px;
+  gap: 5px;
+  padding: 2px 7px;
   background: var(--pf-primary-container);
   color: var(--pf-on-primary-container);
   border-radius: var(--pf-radius-full);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
+  line-height: 1.2;
   white-space: nowrap;
   flex-shrink: 0;
 
   i {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--pf-primary);
   }
 }
@@ -88,7 +92,8 @@
 }
 
 .editor__mob-opt-hint {
-  font-size: 11px;
+  font-size: 10.5px;
+  line-height: 1.2;
   color: var(--pf-on-surface-variant);
   white-space: nowrap;
   overflow: hidden;
@@ -99,13 +104,14 @@
 .editor__mob-opt-btn {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
   background: var(--pf-surface-container);
   border: 1px solid var(--pf-outline-variant);
   border-radius: var(--pf-radius-full);
   color: var(--pf-on-surface);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
@@ -114,7 +120,7 @@
 
   i {
     color: var(--pf-primary);
-    font-size: 11px;
+    font-size: 10px;
   }
 
   &:hover {
@@ -911,6 +917,11 @@
     display: flex !important;
     order: 2;
     flex-shrink: 0;
+    min-height: 28px;
+    height: 28px;
+    max-height: 28px;
+    padding: 2px 10px;
+    gap: 8px;
   }
 
   /* Mobile Body containing Workspace */
