@@ -12,11 +12,11 @@ interface EditorNavItem {
 }
 
 @Component({
-    selector: 'app-editor-shell',
-    standalone: true,
-    imports: [RouterOutlet, RouterLink, RouterLinkActive, NgClass],
-    templateUrl: './editor-shell.component.html',
-    styleUrl: './editor-shell.component.scss'
+  selector: 'app-editor-shell',
+  standalone: true,
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, NgClass],
+  templateUrl: './editor-shell.component.html',
+  styleUrl: './editor-shell.component.scss'
 })
 export class EditorShellComponent {
   protected readonly theme = inject(ThemeService);

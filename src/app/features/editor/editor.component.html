@@ -156,6 +156,15 @@
           <span class="editor__dp-label">Mode:</span>
           <button
             type="button"
+            class="editor__dp-pill d-md-none"
+            [class.editor__dp-pill--active]="state.selectMode() === 'none'"
+            (click)="setSelectMode('none')"
+            title="Click Only: Tap individual items to select"
+          >
+            <i class="fa-solid fa-arrow-pointer"></i> None
+          </button>
+          <button
+            type="button"
             class="editor__dp-pill"
             [class.editor__dp-pill--active]="state.selectMode() === 'box'"
             (click)="setSelectMode('box')"

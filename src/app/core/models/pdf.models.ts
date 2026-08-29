@@ -38,7 +38,7 @@ export type EraserTarget = 'all' | 'drawing' | 'highlight';
 
 export type DrawingMode = 'continuous' | 'autoselect' | 'box';
 
-export type SelectMode = 'box' | 'lasso' | 'click';
+export type SelectMode = 'none' | 'box' | 'lasso' | 'click';
 
 export interface EraserSettings {
   mode: EraserMode;

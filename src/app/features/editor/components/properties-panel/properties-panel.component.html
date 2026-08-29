@@ -1205,6 +1205,15 @@
         <div class="props__seg-group props__seg-group--full">
           <button
             type="button"
+            class="props__seg-btn props__field--grow d-md-none"
+            [class.props__seg-btn--on]="selectMode() === 'none'"
+            (click)="setSelectMode('none')"
+            title="Click Only: Tap individual items to select"
+          >
+            <i class="fa-solid fa-arrow-pointer"></i> None
+          </button>
+          <button
+            type="button"
             class="props__seg-btn props__field--grow"
             [class.props__seg-btn--on]="selectMode() === 'box'"
             (click)="setSelectMode('box')"
@@ -1223,7 +1232,9 @@
           </button>
         </div>
         <p class="props__hint" style="font-size: 11px; margin-top: 4px; color: var(--pf-text-muted);">
-          @if (selectMode() === 'box') {
+          @if (selectMode() === 'none') {
+            <span><i class="fa-solid fa-arrow-pointer"></i> Click on individual items to select. No drag marquee.</span>
+          } @else if (selectMode() === 'box') {
             <span><i class="fa-solid fa-vector-square"></i> Drag across canvas to select enclosed items with a rectangle.</span>
           } @else {
             <span><i class="fa-solid fa-draw-polygon"></i> Draw a freeform loop around items to select all enclosed marks.</span>

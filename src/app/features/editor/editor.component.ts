@@ -178,7 +178,7 @@ export class EditorComponent implements OnDestroy {
   setEraserTarget(t: 'all' | 'drawing' | 'highlight'): void {
     this.state.setEraserTarget(t);
   }
-  setSelectMode(m: 'box' | 'lasso'): void {
+  setSelectMode(m: 'none' | 'box' | 'lasso'): void {
     this.state.setSelectMode(m);
   }
   selectAllAnnotations(): void {
@@ -618,6 +618,11 @@ export class EditorComponent implements OnDestroy {
       }
       void this.load(file);
     });
+
+    // On mobile, default to click-only selection (no drag marquee)
+    if (window.innerWidth < 768) {
+      this.state.setSelectMode('none');
+    }
 
     // Auto-restore last-opened document from IndexedDB on page reload.
     // Runs once on init — if no file is currently loaded, attempt to

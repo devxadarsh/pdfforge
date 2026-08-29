@@ -644,7 +644,10 @@ export class EditorOverlayComponent implements OnDestroy {
         }
         this.start = { x, y };
         const mode = this.state.selectMode();
-        if (mode === 'lasso') {
+        if (mode === 'none') {
+          // Click-only mode: no drag marquee
+          return;
+        } else if (mode === 'lasso') {
           this.draftLasso.set([{ x, y }]);
         } else {
           this.draftBox.set({ x, y, width: 0, height: 0 });
