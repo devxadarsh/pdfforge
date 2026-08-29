@@ -6,6 +6,8 @@ import {
   computed,
   inject,
   input,
+  effect,
+  OnDestroy,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import {
@@ -100,7 +102,7 @@ function isAnnotationInPolygon(a: PdfAnnotation, polygon: Point[]): boolean {
   templateUrl: './editor-overlay.component.html',
   styleUrl: './editor-overlay.component.scss',
 })
-export class EditorOverlayComponent {
+export class EditorOverlayComponent implements OnDestroy {
   protected readonly Math = Math;
   readonly state = inject(EditorStateService);
   private readonly svgRef = viewChild<ElementRef<SVGSVGElement>>('svg');
@@ -131,6 +133,143 @@ export class EditorOverlayComponent {
     strokeWidth: number;
     points: Point[];
   } | null>(null);
+
+  private currentSvg: SVGSVGElement | null = null;
+
+  private onNativeTouchStart = (event: TouchEvent): void => {
+    if (this.tool() !== 'hand') {
+      const target = event.target as Element | null;
+      if (
+        target?.closest('.handle') ||
+        target?.closest('.handles') ||
+        target?.closest('.sel') ||
+        target?.closest('.ann-item') ||
+        this.selectedId() !== null
+      ) {
+        event.stopPropagation();
+      }
+    }
+  };
+
+  private onNativeTouchMove = (event: TouchEvent): void => {
+    if (
+      this.resizeId !== null ||
+      this.multiDragStart !== null ||
+      this.isDrawing ||
+      this.isErasing ||
+      this.draft() !== null ||
+      this.draftBox() !== null ||
+      this.draftLasso() !== null
+    ) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
+
+  constructor() {
+    effect(() => {
+      const svg = this.svgRef()?.nativeElement;
+      if (this.currentSvg && this.currentSvg !== svg) {
+        this.currentSvg.removeEventListener('touchstart', this.onNativeTouchStart);
+        this.currentSvg.removeEventListener('touchmove', this.onNativeTouchMove);
+      }
+      this.currentSvg = svg ?? null;
+      if (svg) {
+        svg.addEventListener('touchstart', this.onNativeTouchStart, { passive: false });
+        svg.addEventListener('touchmove', this.onNativeTouchMove, { passive: false });
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.stopAutoScroll();
+    if (this.currentSvg) {
+      this.currentSvg.removeEventListener('touchstart', this.onNativeTouchStart);
+      this.currentSvg.removeEventListener('touchmove', this.onNativeTouchMove);
+      this.currentSvg = null;
+    }
+  }
+
+  private autoScrollRaf: number | null = null;
+  private lastPointerClientPos: { clientX: number; clientY: number } | null = null;
+
+  private checkAutoScroll(event: PointerEvent): void {
+    this.lastPointerClientPos = { clientX: event.clientX, clientY: event.clientY };
+    const svg = this.svgRef()?.nativeElement;
+    const stage = svg?.closest('.editor__canvas-stage') as HTMLElement | null;
+    if (!stage) {
+      this.stopAutoScroll();
+      return;
+    }
+
+    const stageRect = stage.getBoundingClientRect();
+    const edgeThreshold = 60;
+    let vx = 0;
+    let vy = 0;
+
+    if (event.clientY > stageRect.bottom - edgeThreshold) {
+      const delta = event.clientY - (stageRect.bottom - edgeThreshold);
+      vy = Math.min(26, Math.max(5, Math.round((delta / edgeThreshold) * 22)));
+    } else if (event.clientY < stageRect.top + edgeThreshold) {
+      const delta = (stageRect.top + edgeThreshold) - event.clientY;
+      vy = -Math.min(26, Math.max(5, Math.round((delta / edgeThreshold) * 22)));
+    }
+
+    if (event.clientX > stageRect.right - edgeThreshold) {
+      const delta = event.clientX - (stageRect.right - edgeThreshold);
+      vx = Math.min(26, Math.max(5, Math.round((delta / edgeThreshold) * 22)));
+    } else if (event.clientX < stageRect.left + edgeThreshold) {
+      const delta = (stageRect.left + edgeThreshold) - event.clientX;
+      vx = -Math.min(26, Math.max(5, Math.round((delta / edgeThreshold) * 22)));
+    }
+
+    if (vx !== 0 || vy !== 0) {
+      this.startAutoScroll(stage, vx, vy);
+    } else {
+      this.stopAutoScroll();
+    }
+  }
+
+  private startAutoScroll(stage: HTMLElement, vx: number, vy: number): void {
+    this.stopAutoScroll();
+    const step = () => {
+      if (!this.draftBox() && !this.draftLasso()) {
+        this.stopAutoScroll();
+        return;
+      }
+      if (vx !== 0) stage.scrollLeft += vx;
+      if (vy !== 0) stage.scrollTop += vy;
+
+      // Dynamically expand box selection as stage scrolls
+      if (this.lastPointerClientPos && this.start) {
+        const svg = this.svgRef()?.nativeElement;
+        if (svg) {
+          const rect = svg.getBoundingClientRect();
+          const x = this.lastPointerClientPos.clientX - rect.left;
+          const y = this.lastPointerClientPos.clientY - rect.top;
+          if (this.draftBox()) {
+            this.draftBox.set({
+              x: Math.min(this.start.x, x),
+              y: Math.min(this.start.y, y),
+              width: Math.abs(x - this.start.x),
+              height: Math.abs(y - this.start.y),
+            });
+          } else if (this.draftLasso()) {
+            this.draftLasso.update((pts) => (pts ? [...pts, { x, y }] : [{ x, y }]));
+          }
+        }
+      }
+      this.autoScrollRaf = requestAnimationFrame(step);
+    };
+    this.autoScrollRaf = requestAnimationFrame(step);
+  }
+
+  private stopAutoScroll(): void {
+    if (this.autoScrollRaf !== null) {
+      cancelAnimationFrame(this.autoScrollRaf);
+      this.autoScrollRaf = null;
+    }
+  }
 
   private start: { x: number; y: number } | null = null;
   private dragId: string | null = null;
@@ -570,6 +709,7 @@ export class EditorOverlayComponent {
   }
 
   onPointerLeave(): void {
+    this.stopAutoScroll();
     this.eraserPos.set(null);
   }
 
@@ -685,6 +825,8 @@ export class EditorOverlayComponent {
     }
 
     if (this.draftBox() && this.start) {
+      event.preventDefault();
+      event.stopPropagation();
       const { x, y } = this.localPoint(event);
       this.draftBox.set({
         x: Math.min(this.start.x, x),
@@ -692,12 +834,16 @@ export class EditorOverlayComponent {
         width: Math.abs(x - this.start.x),
         height: Math.abs(y - this.start.y),
       });
+      this.checkAutoScroll(event);
       return;
     }
 
     if (this.draftLasso()) {
+      event.preventDefault();
+      event.stopPropagation();
       const { x, y } = this.localPoint(event);
       this.draftLasso.update((pts) => (pts ? [...pts, { x, y }] : [{ x, y }]));
+      this.checkAutoScroll(event);
       return;
     }
 
@@ -715,6 +861,7 @@ export class EditorOverlayComponent {
   }
 
   onPointerUp(event: PointerEvent): void {
+    this.stopAutoScroll();
     this.svgRef()?.nativeElement.releasePointerCapture?.(event.pointerId);
     if (this.isErasing) {
       this.isErasing = false;
