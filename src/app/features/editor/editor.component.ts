@@ -619,6 +619,9 @@ export class EditorComponent implements OnDestroy {
       void this.load(file);
     });
 
+    document.addEventListener('touchstart', this.onGlobalTouchStart, { passive: false });
+    document.addEventListener('touchmove', this.onGlobalTouchStart, { passive: false });
+
     // On mobile, default to click-only selection (no drag marquee)
     if (window.innerWidth < 768) {
       this.state.setSelectMode('none');
@@ -804,6 +807,16 @@ export class EditorComponent implements OnDestroy {
   private pinchStartScale = 1;
   private pinchStartMidpoint: { x: number; y: number; scrollLeft: number; scrollTop: number } | null = null;
 
+  private onGlobalTouchStart = (event: TouchEvent): void => {
+    if (event.touches.length >= 2) {
+      const target = event.target as Element | null;
+      const insideStage = target?.closest('.editor__canvas-stage');
+      if (!insideStage) {
+        event.preventDefault();
+      }
+    }
+  };
+
   private onTouchStart = (event: TouchEvent): void => {
     if (event.touches.length === 2) {
       // 2 fingers pinch start
@@ -889,6 +902,8 @@ export class EditorComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    document.removeEventListener('touchstart', this.onGlobalTouchStart);
+    document.removeEventListener('touchmove', this.onGlobalTouchStart);
     if (this.currentStageElement) {
       this.currentStageElement.removeEventListener('touchstart', this.onTouchStart);
       this.currentStageElement.removeEventListener('touchmove', this.onTouchMove);

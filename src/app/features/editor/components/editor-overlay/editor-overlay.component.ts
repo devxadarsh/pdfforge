@@ -300,6 +300,7 @@ export class EditorOverlayComponent implements OnDestroy {
     x: number;
     y: number;
     rect: { x: number; y: number; width: number; height: number };
+    fontSize?: number;
   } | null = null;
 
   private isDrawing = false;
@@ -717,6 +718,7 @@ export class EditorOverlayComponent implements OnDestroy {
       x: p.x,
       y: p.y,
       rect: { ...ann.rect },
+      fontSize: ann.type === 'text' ? ann.fontSize : undefined,
     };
     this.svgRef()?.nativeElement.setPointerCapture?.(event.pointerId);
   }
@@ -818,6 +820,35 @@ export class EditorOverlayComponent implements OnDestroy {
           {
             rect: { x: rx, y: ry, width: rw, height: rh },
             points: scaledPts,
+          },
+          false,
+        );
+      } else if (a.type === 'text') {
+        const origRect = this.resizeStart.rect;
+        const origFontSize = this.resizeStart.fontSize ?? a.fontSize;
+        // Scale font size strictly on the basis of horizontal width
+        const scale = rw / Math.max(1, origRect.width);
+        const newFontSize = Math.max(6, Math.min(200, Math.round(origFontSize * scale)));
+        const m = this.measureText(
+          a.text,
+          newFontSize,
+          a.fontWeight >= 700,
+          a.fontFamily,
+          a.italic,
+          a.transform,
+          a.lineHeight ?? TEXT_LINE_HEIGHT,
+          a.letterSpacing ?? 0,
+        );
+        this.state.updateAnnotation(
+          a.id,
+          {
+            fontSize: newFontSize,
+            rect: {
+              x: rx,
+              y: ry,
+              width: Math.max(rw, m.width),
+              height: m.height,
+            },
           },
           false,
         );

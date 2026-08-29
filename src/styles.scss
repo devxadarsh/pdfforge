@@ -22,6 +22,21 @@ app-root {
   height: 100%;
 }
 
+/* Mobile UI Bars: prevent zooming & unwanted gestures on chrome bars */
+header,
+nav,
+.editor__viewbar,
+.editor__mobile-option-bar,
+.editor__mobile-drawing-panel,
+.editor__toolbar,
+.editor__bottom-sheet,
+.editor-shell__header,
+.props__sheet {
+  touch-action: pan-x;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 body {
   font-family: var(--pf-font-base);
   background-color: var(--pf-background);
