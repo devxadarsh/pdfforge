@@ -292,6 +292,7 @@ export class EditorOverlayComponent implements OnDestroy {
   }> | null = null;
   private dragPivot = { x: 0, y: 0 };
   private hasMovedDuringDrag = false;
+  private lastTap = { time: 0, id: '' };
 
   private resizeId: string | null = null;
   private resizeHandle: Handle | null = null;
@@ -621,11 +622,24 @@ export class EditorOverlayComponent implements OnDestroy {
       return;
     }
 
-    if (t === 'select') {
+    if (t === 'select' || t === 'text') {
       const hit = this.hitTest(x, y);
       if (hit) {
         event.preventDefault();
         event.stopPropagation();
+
+        const now = Date.now();
+        const isDoubleTap =
+          now - this.lastTap.time < 380 && this.lastTap.id === hit.id;
+        this.lastTap = { time: now, id: hit.id };
+
+        // Double click / double tap to edit text inline at any time (preserve existing text)
+        if (hit.type === 'text' && !hit.locked && isDoubleTap) {
+          const caret = this.caretIndexFromX(hit.text, x, hit);
+          this.startEditing(hit, caret, false);
+          return;
+        }
+
         const isCurrentlySelected = this.state.selectedIds().includes(hit.id);
         if (event.shiftKey || event.ctrlKey || event.metaKey) {
           this.state.toggleAnnotationSelection(hit.id);
@@ -648,7 +662,8 @@ export class EditorOverlayComponent implements OnDestroy {
           }));
         this.dragPivot = { x, y };
         this.svgRef()?.nativeElement.setPointerCapture?.(event.pointerId);
-      } else {
+        return;
+      } else if (t === 'select') {
         if (!event.shiftKey && !event.ctrlKey && !event.metaKey) {
           this.state.clearSelection();
         }
@@ -663,8 +678,11 @@ export class EditorOverlayComponent implements OnDestroy {
           this.draftBox.set({ x, y, width: 0, height: 0 });
         }
         this.svgRef()?.nativeElement.setPointerCapture?.(event.pointerId);
+        return;
+      } else if (t === 'text') {
+        this.createText(x, y);
+        return;
       }
-      return;
     }
 
     if (
@@ -679,8 +697,6 @@ export class EditorOverlayComponent implements OnDestroy {
       this.start = { x, y };
       this.draft.set({ type: t, x, y, width: 0, height: 0 });
       this.svgRef()?.nativeElement.setPointerCapture?.(event.pointerId);
-    } else if (t === 'text') {
-      this.createText(x, y);
     } else if (t === 'comment') {
       this.createComment(x, y);
     }
@@ -1020,7 +1036,7 @@ export class EditorOverlayComponent implements OnDestroy {
 
   private startEditing(
     a: TextAnnotation,
-    caret: number,
+    caret?: number,
     selectAll = false,
   ): void {
     this.state.pushHistorySnapshot('Edit Text');
@@ -1036,10 +1052,13 @@ export class EditorOverlayComponent implements OnDestroy {
       if (selectAll) {
         el.setSelectionRange(0, a.text.length);
       } else {
-        const pos = Math.max(0, Math.min(caret, a.text.length));
+        const pos =
+          typeof caret === 'number'
+            ? Math.max(0, Math.min(caret, a.text.length))
+            : a.text.length;
         el.setSelectionRange(pos, pos);
       }
-    });
+    }, 40);
   }
 
   onEditInput(event: Event): void {
