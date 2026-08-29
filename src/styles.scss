@@ -17,6 +17,11 @@ body {
   height: 100%;
 }
 
+app-root {
+  display: block;
+  height: 100%;
+}
+
 body {
   font-family: var(--pf-font-base);
   background-color: var(--pf-background);

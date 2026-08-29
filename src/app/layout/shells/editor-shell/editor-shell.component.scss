@@ -1,12 +1,19 @@
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
 }
 
 .editor-shell {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
+  min-height: 0;
   overflow: hidden;
+  position: relative;
 }
 
 /* ---- Header (48px) ---- */
@@ -15,10 +22,13 @@
   align-items: center;
   gap: 16px;
   height: 48px;
+  min-height: 48px;
+  max-height: 48px;
   flex-shrink: 0;
   padding-inline: 12px;
   background-color: var(--pf-surface-container-lowest);
   border-bottom: 1px solid var(--pf-outline-variant);
+  z-index: 60;
 }
 
 .editor-shell__header-left {
@@ -97,9 +107,12 @@
 
 /* ---- Body ---- */
 .editor-shell__body {
-  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
   min-height: 0;
   overflow: hidden;
+  position: relative;
 }
 
 @media (max-width: 1024px) {

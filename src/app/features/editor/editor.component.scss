@@ -1,6 +1,9 @@
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
   height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -21,9 +24,11 @@
 .editor {
   display: flex;
   flex-direction: column;
+  flex: 1 1 0;
   height: 100%;
   min-height: 0;
   overflow: hidden;
+  position: relative;
 }
 
 .editor:fullscreen {
@@ -888,16 +893,20 @@
 /* Mobile Layout: Toolbar on bottom, quick props directly above toolbar, optimized viewbar */
 @media (max-width: 768px) {
   .editor {
+    display: flex;
+    flex-direction: column;
     height: 100%;
     min-height: 0;
+    flex: 1 1 0;
+    overflow: hidden;
   }
 
   /* View bar at top under menu */
   .editor__viewbar {
     order: 1;
-    min-height: 40px;
-    height: 40px;
-    max-height: 40px;
+    min-height: 38px;
+    height: 38px;
+    max-height: 38px;
     padding: 2px 8px;
     gap: 6px;
     flex-wrap: nowrap !important;
@@ -906,44 +915,81 @@
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: none;
+    z-index: 30;
 
     &::-webkit-scrollbar {
       display: none;
     }
   }
 
+  /* Expandable Mobile Search Overlay */
+  .editor__mobile-search-bar {
+    order: 2;
+    flex-shrink: 0;
+  }
+
   /* Mobile Option Bar (Tool Name, Mode, Options Trigger) */
   .editor__mobile-option-bar {
     display: flex !important;
-    order: 2;
+    order: 3;
     flex-shrink: 0;
     min-height: 28px;
     height: 28px;
     max-height: 28px;
     padding: 2px 10px;
     gap: 8px;
+    z-index: 25;
   }
 
-  /* Mobile Body containing Workspace */
+  /* Mobile Body containing Workspace - automatically adjusts height to fill available space */
   .editor__body {
-    order: 3;
-    grid-template-columns: 1fr;
-    flex: 1 1 auto;
+    order: 4;
+    display: flex !important;
+    flex-direction: column;
+    grid-template-columns: 1fr !important;
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    overflow: hidden;
+  }
+
+  .editor__workspace {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .editor__canvas-stage {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    padding: 6px 4px 0 4px;
+    box-sizing: border-box;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Mobile Dedicated Drawing Panel (Directly above bottom toolbar with 2 scrollable rows) */
   .editor__mobile-drawing-panel {
     display: flex !important;
     flex-direction: column;
-    order: 4;
+    order: 5;
     flex-shrink: 0;
-    min-height: 84px;
+    min-height: 76px;
+    max-height: 80px;
     border-top: 1px solid var(--pf-outline-variant);
     border-bottom: 1px solid var(--pf-outline-variant);
-    padding: 6px 10px;
-    gap: 6px;
+    padding: 4px 8px;
+    gap: 4px;
     background: var(--pf-surface-container);
-    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
     z-index: 45;
 
     .editor__dp-row {
@@ -972,43 +1018,40 @@
     }
 
     .editor__dp-swatch {
-      width: 26px;
-      height: 26px;
+      width: 24px;
+      height: 24px;
       border-width: 2px;
     }
 
     .editor__dp-pill {
-      min-height: 32px;
-      height: 32px;
-      padding: 0 10px;
-      font-size: 12px;
+      min-height: 28px;
+      height: 28px;
+      padding: 0 8px;
+      font-size: 11.5px;
       font-weight: 600;
       border-radius: var(--pf-radius-full);
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 5px;
+      gap: 4px;
     }
 
     .editor__dp-divider {
-      height: 18px;
-      margin: 0 3px;
+      height: 16px;
+      margin: 0 2px;
     }
   }
 
-  .editor__canvas-stage {
-    padding: 4px 4px 0 4px;
-  }
-
-  /* Move toolbar to bottom */
+  /* Move toolbar to bottom — compact & clean */
   .editor__toolbar {
-    order: 5;
+    display: flex !important;
+    order: 6;
     flex-shrink: 0;
-    padding: 6px 6px max(8px, env(safe-area-inset-bottom, 8px)) 6px;
-    border-top: 2px solid var(--pf-outline-variant);
+    padding: 3px 6px max(4px, env(safe-area-inset-bottom, 4px)) 6px;
+    border-top: 1px solid var(--pf-outline-variant);
     border-bottom: none;
     background: var(--pf-surface-container-lowest);
-    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.06);
     z-index: 50;
     gap: 0;
   }
@@ -1019,8 +1062,9 @@
     flex-wrap: nowrap;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    gap: 6px;
-    padding: 2px 4px 4px 4px;
+    gap: 4px;
+    padding: 1px 2px;
+    align-items: center;
 
     &::-webkit-scrollbar {
       display: none;
@@ -1029,33 +1073,35 @@
 
   .editor__toolset {
     flex-shrink: 0;
-    gap: 4px;
-    padding: 3px 4px;
+    gap: 2px;
+    padding: 2px;
     background: var(--pf-surface-container);
     border: 1px solid var(--pf-outline-variant);
-    border-radius: var(--pf-radius);
+    border-radius: 8px;
   }
 
   .editor__tool {
-    width: 40px;
-    height: 40px;
-    min-width: 40px;
-    min-height: 40px;
-    font-size: 17px;
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    font-size: 13.5px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: var(--pf-radius);
-    color: var(--pf-on-surface);
+    border-radius: 6px;
+    color: var(--pf-on-surface-variant);
+    transition: all 0.15s ease;
 
     &:hover {
       background: var(--pf-surface-container-high);
+      color: var(--pf-on-surface);
     }
 
     &--active {
       background: var(--pf-primary) !important;
       color: var(--pf-on-primary) !important;
-      box-shadow: 0 2px 6px rgba(0, 102, 204, 0.35);
+      box-shadow: 0 1px 4px rgba(0, 102, 204, 0.25);
     }
   }
 
