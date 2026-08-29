@@ -207,6 +207,7 @@ export class EditorComponent implements OnDestroy {
 
   private readonly editorRef = viewChild<ElementRef<HTMLDivElement>>('editor');
   private readonly stageRef = viewChild<ElementRef<HTMLDivElement>>('stage');
+  private readonly pagesStackRef = viewChild<ElementRef<HTMLElement>>('pagesStack');
   readonly stageSize = signal<{ width: number; height: number }>({
     width: 0,
     height: 0,
@@ -256,7 +257,10 @@ export class EditorComponent implements OnDestroy {
     } else {
       scale = this.state.zoom();
     }
-    scale = Math.max(0.1, scale);
+    const isMobile = stage.width < 768;
+    const minZoom = isMobile ? 0.4 : 0.1;
+    const maxZoom = isMobile ? 3.5 : 5.0;
+    scale = Math.min(maxZoom, Math.max(minZoom, scale));
     return { width: Math.round(rotatedW * scale), height: Math.round(rotatedH * scale), scale };
   }
 
@@ -269,7 +273,13 @@ export class EditorComponent implements OnDestroy {
     return curr ? this.getPageDisplaySize(curr) : null;
   });
 
+  readonly pinchLiveZoom = signal<number | null>(null);
+
   readonly zoomLabel = computed(() => {
+    const live = this.pinchLiveZoom();
+    if (live !== null) {
+      return `${Math.round(live * 100)}%`;
+    }
     if (this.state.fitMode() === 'width') {
       return 'Fit width';
     }
@@ -803,9 +813,20 @@ export class EditorComponent implements OnDestroy {
   }
 
   private currentStageElement: HTMLElement | null = null;
-  private pinchStartDist: number | null = null;
+  private isPinchActive = false;
+  private pinchStartDist = 0;
   private pinchStartScale = 1;
-  private pinchStartMidpoint: { x: number; y: number; scrollLeft: number; scrollTop: number } | null = null;
+  private pinchCurrentScale = 1;
+  private pinchTargetPageId = '';
+  private pinchFocalPageX = 0;
+  private pinchFocalPageY = 0;
+  private pinchStartFocalDocX = 0;
+  private pinchStartFocalDocY = 0;
+  private pinchCurrentMidX = 0;
+  private pinchCurrentMidY = 0;
+  private pinchInitialStackLeft = 0;
+  private pinchInitialStackTop = 0;
+  private pinchRafId: number | null = null;
 
   private onGlobalTouchStart = (event: TouchEvent): void => {
     if (event.touches.length >= 2) {
@@ -819,52 +840,189 @@ export class EditorComponent implements OnDestroy {
 
   private onTouchStart = (event: TouchEvent): void => {
     if (event.touches.length === 2) {
-      // 2 fingers pinch start
-      event.preventDefault();
       const t1 = event.touches[0];
       const t2 = event.touches[1];
-      this.pinchStartDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-      this.pinchStartScale = this.displaySize()?.scale ?? this.state.zoom();
-      const stage = this.stageRef()?.nativeElement;
-      if (stage) {
-        this.pinchStartMidpoint = {
-          x: (t1.clientX + t2.clientX) / 2,
-          y: (t1.clientY + t2.clientY) / 2,
-          scrollLeft: stage.scrollLeft,
-          scrollTop: stage.scrollTop,
-        };
+      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      if (dist < 5) {
+        return;
       }
+      event.preventDefault();
+
+      const stage = this.stageRef()?.nativeElement;
+      const stack = this.pagesStackRef()?.nativeElement;
+      if (!stage || !stack) {
+        return;
+      }
+
+      const stageRect = stage.getBoundingClientRect();
+      const stackRect = stack.getBoundingClientRect();
+      const midX = (t1.clientX + t2.clientX) / 2;
+      const midY = (t1.clientY + t2.clientY) / 2;
+
+      // Find the page element directly under the pinch midpoint, or the closest active page
+      let targetWrapper = document
+        .elementFromPoint(midX, midY)
+        ?.closest('.editor__page-wrapper') as HTMLElement | null;
+
+      if (!targetWrapper) {
+        const activeId = this.pagesStore.currentId();
+        targetWrapper = activeId
+          ? stage.querySelector<HTMLElement>(`#page-wrapper-${activeId}`)
+          : stage.querySelector<HTMLElement>('.editor__page-wrapper');
+      }
+
+      const pageId =
+        targetWrapper?.getAttribute('data-page-id') ||
+        this.pagesStore.currentId() ||
+        '';
+      const pageFrame = targetWrapper?.querySelector<HTMLElement>(
+        '.editor__page-frame',
+      );
+      const pageRect = pageFrame
+        ? pageFrame.getBoundingClientRect()
+        : stackRect;
+
+      const currentScale = this.displaySize()?.scale ?? this.state.zoom();
+
+      // Focal point relative to the specific target page
+      const focalPageX = (midX - pageRect.left) / currentScale;
+      const focalPageY = (midY - pageRect.top) / currentScale;
+
+      // Physical document coordinates relative to the pages stack root (for live GPU transform)
+      const focalDocX = (midX - stackRect.left) / currentScale;
+      const focalDocY = (midY - stackRect.top) / currentScale;
+
+      this.isPinchActive = true;
+      this.pinchStartDist = dist;
+      this.pinchStartScale = currentScale;
+      this.pinchCurrentScale = currentScale;
+      this.pinchTargetPageId = pageId;
+      this.pinchFocalPageX = focalPageX;
+      this.pinchFocalPageY = focalPageY;
+      this.pinchStartFocalDocX = focalDocX;
+      this.pinchStartFocalDocY = focalDocY;
+      this.pinchCurrentMidX = midX;
+      this.pinchCurrentMidY = midY;
+      this.pinchInitialStackLeft = stackRect.left;
+      this.pinchInitialStackTop = stackRect.top;
+      this.pinchLiveZoom.set(currentScale);
+
+      stack.classList.add('editor__pages-stack--pinching');
     }
   };
 
   private onTouchMove = (event: TouchEvent): void => {
-    if (event.touches.length === 2 && this.pinchStartDist && this.pinchStartDist > 0) {
+    if (this.isPinchActive && event.touches.length === 2) {
       event.preventDefault();
       const t1 = event.touches[0];
       const t2 = event.touches[1];
-      const currentDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-      const ratio = currentDist / this.pinchStartDist;
-      
-      const newScale = Math.min(5.0, Math.max(0.15, this.pinchStartScale * ratio));
-      this.state.setZoom(newScale);
+      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      const ratio = dist / this.pinchStartDist;
+      const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+      const minZoom = isMobile ? 0.4 : 0.25;
+      const maxZoom = isMobile ? 3.5 : 5.0;
+      this.pinchCurrentScale = Math.min(maxZoom, Math.max(minZoom, this.pinchStartScale * ratio));
+      this.pinchCurrentMidX = (t1.clientX + t2.clientX) / 2;
+      this.pinchCurrentMidY = (t1.clientY + t2.clientY) / 2;
+      this.pinchLiveZoom.set(this.pinchCurrentScale);
 
-      // Smooth pan while pinching
-      const stage = this.stageRef()?.nativeElement;
-      if (stage && this.pinchStartMidpoint) {
-        const currentMidX = (t1.clientX + t2.clientX) / 2;
-        const currentMidY = (t1.clientY + t2.clientY) / 2;
-        const dx = currentMidX - this.pinchStartMidpoint.x;
-        const dy = currentMidY - this.pinchStartMidpoint.y;
-        stage.scrollLeft = this.pinchStartMidpoint.scrollLeft - dx;
-        stage.scrollTop = this.pinchStartMidpoint.scrollTop - dy;
+      if (!this.pinchRafId) {
+        this.pinchRafId = requestAnimationFrame(() => {
+          this.pinchRafId = null;
+          this.applyPinchTransform();
+        });
       }
     }
   };
 
+  private applyPinchTransform(): void {
+    if (!this.isPinchActive) {
+      return;
+    }
+    const stack = this.pagesStackRef()?.nativeElement;
+    if (!stack) {
+      return;
+    }
+
+    const effectiveRatio = this.pinchCurrentScale / this.pinchStartScale;
+    const localFocalX = this.pinchStartFocalDocX * this.pinchStartScale;
+    const localFocalY = this.pinchStartFocalDocY * this.pinchStartScale;
+
+    const tx = this.pinchCurrentMidX - this.pinchInitialStackLeft - localFocalX * effectiveRatio;
+    const ty = this.pinchCurrentMidY - this.pinchInitialStackTop - localFocalY * effectiveRatio;
+
+    stack.style.transformOrigin = '0 0';
+    stack.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${effectiveRatio})`;
+  }
+
   private onTouchEnd = (event: TouchEvent): void => {
-    if (event.touches.length < 2) {
-      this.pinchStartDist = null;
-      this.pinchStartMidpoint = null;
+    if (this.isPinchActive && event.touches.length < 2) {
+      this.isPinchActive = false;
+      this.pinchLiveZoom.set(null);
+      if (this.pinchRafId) {
+        cancelAnimationFrame(this.pinchRafId);
+        this.pinchRafId = null;
+      }
+
+      const stage = this.stageRef()?.nativeElement;
+      const stack = this.pagesStackRef()?.nativeElement;
+      if (!stage || !stack) {
+        return;
+      }
+
+      const finalScale = this.pinchCurrentScale;
+      const targetPageId = this.pinchTargetPageId;
+      const focalPageX = this.pinchFocalPageX;
+      const focalPageY = this.pinchFocalPageY;
+      const releaseMidX = this.pinchCurrentMidX;
+      const releaseMidY = this.pinchCurrentMidY;
+
+      // Prevent onStageScroll from interfering during commit
+      this.isAutoScrolling = true;
+
+      // Clean up temporary GPU styles
+      stack.style.transform = '';
+      stack.style.transformOrigin = '';
+      stack.classList.remove('editor__pages-stack--pinching');
+
+      // Commit final scale and active page
+      this.state.setZoom(finalScale);
+      if (targetPageId) {
+        this.pagesStore.setCurrent(targetPageId);
+      }
+
+      // Synchronize exact scroll position after DOM layout renders new page sizes
+      requestAnimationFrame(() => {
+        const targetWrapper = targetPageId
+          ? stage.querySelector<HTMLElement>(`#page-wrapper-${targetPageId}`)
+          : null;
+
+        if (targetWrapper) {
+          const frame = targetWrapper.querySelector<HTMLElement>(
+            '.editor__page-frame',
+          );
+          const frameRect = frame
+            ? frame.getBoundingClientRect()
+            : targetWrapper.getBoundingClientRect();
+
+          // Compute exact scroll delta needed to keep focal point under fingers
+          const currentFocalScreenX = frameRect.left + focalPageX * finalScale;
+          const currentFocalScreenY = frameRect.top + focalPageY * finalScale;
+
+          const deltaX = currentFocalScreenX - releaseMidX;
+          const deltaY = currentFocalScreenY - releaseMidY;
+
+          stage.scrollLeft = Math.max(0, Math.round(stage.scrollLeft + deltaX));
+          stage.scrollTop = Math.max(0, Math.round(stage.scrollTop + deltaY));
+        }
+
+        setTimeout(() => {
+          this.isAutoScrolling = false;
+          if (targetPageId) {
+            this.pagesStore.setCurrent(targetPageId);
+          }
+        }, 60);
+      });
     }
   };
 
@@ -902,6 +1060,10 @@ export class EditorComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.pinchRafId) {
+      cancelAnimationFrame(this.pinchRafId);
+      this.pinchRafId = null;
+    }
     document.removeEventListener('touchstart', this.onGlobalTouchStart);
     document.removeEventListener('touchmove', this.onGlobalTouchStart);
     if (this.currentStageElement) {
@@ -957,6 +1119,7 @@ export class EditorComponent implements OnDestroy {
     this.loading.set(true);
     this.state.reset();
     this.viewer.reset();
+    this.isAutoScrolling = true;
     if (this.docUrl) {
       URL.revokeObjectURL(this.docUrl);
     }
@@ -980,6 +1143,27 @@ export class EditorComponent implements OnDestroy {
       this.toasts.success(`Opened ${this.loadedRef.name}`);
     }
     this.loading.set(false);
+
+    // Ensure document always starts on page 1 with top scroll
+    this.isAutoScrolling = true;
+    const firstPageId = this.pagesStore.pages()[0]?.id;
+    if (firstPageId) {
+      this.pagesStore.setCurrent(firstPageId);
+    }
+
+    setTimeout(() => {
+      const stage = this.stageRef()?.nativeElement;
+      if (stage) {
+        stage.scrollTop = 0;
+        stage.scrollLeft = 0;
+      }
+      if (firstPageId) {
+        this.pagesStore.setCurrent(firstPageId);
+      }
+      setTimeout(() => {
+        this.isAutoScrolling = false;
+      }, 100);
+    }, 50);
   }
 
   private async prefetch(count: number): Promise<void> {
@@ -1074,10 +1258,89 @@ export class EditorComponent implements OnDestroy {
     this.zoomBy(1 / 1.1);
   }
 
-  /** Applies a relative zoom from the current rendered page scale. */
-  private zoomBy(factor: number): void {
+  private zoomBy(factor: number, clientX?: number, clientY?: number): void {
+    const stage = this.stageRef()?.nativeElement;
     const current = this.displaySize()?.scale ?? this.state.zoom();
-    this.state.setZoom(current * factor);
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const minZoom = isMobile ? 0.4 : 0.25;
+    const maxZoom = isMobile ? 3.5 : 5.0;
+    const next = Math.min(maxZoom, Math.max(minZoom, current * factor));
+    if (!stage) {
+      this.state.setZoom(next);
+      return;
+    }
+
+    const stageRect = stage.getBoundingClientRect();
+    const focalScreenX =
+      typeof clientX === 'number'
+        ? clientX
+        : stageRect.left + stageRect.width / 2;
+    const focalScreenY =
+      typeof clientY === 'number'
+        ? clientY
+        : stageRect.top + stageRect.height / 2;
+
+    // Find the page under focal point or current active page
+    let targetWrapper = document
+      .elementFromPoint(focalScreenX, focalScreenY)
+      ?.closest('.editor__page-wrapper') as HTMLElement | null;
+
+    if (!targetWrapper) {
+      const activeId = this.pagesStore.currentId();
+      targetWrapper = activeId
+        ? stage.querySelector<HTMLElement>(`#page-wrapper-${activeId}`)
+        : stage.querySelector<HTMLElement>('.editor__page-wrapper');
+    }
+
+    const targetPageId =
+      targetWrapper?.getAttribute('data-page-id') ||
+      this.pagesStore.currentId() ||
+      '';
+    const pageFrame = targetWrapper?.querySelector<HTMLElement>(
+      '.editor__page-frame',
+    );
+    const frameRect = pageFrame
+      ? pageFrame.getBoundingClientRect()
+      : stageRect;
+
+    const focalPageX = (focalScreenX - frameRect.left) / current;
+    const focalPageY = (focalScreenY - frameRect.top) / current;
+
+    this.isAutoScrolling = true;
+    this.state.setZoom(next);
+    if (targetPageId) {
+      this.pagesStore.setCurrent(targetPageId);
+    }
+
+    requestAnimationFrame(() => {
+      const updatedWrapper = targetPageId
+        ? stage.querySelector<HTMLElement>(`#page-wrapper-${targetPageId}`)
+        : null;
+      if (updatedWrapper) {
+        const frame = updatedWrapper.querySelector<HTMLElement>(
+          '.editor__page-frame',
+        );
+        const fRect = frame
+          ? frame.getBoundingClientRect()
+          : updatedWrapper.getBoundingClientRect();
+
+        const currentFocalScreenX = fRect.left + focalPageX * next;
+        const currentFocalScreenY = fRect.top + focalPageY * next;
+
+        const deltaX = currentFocalScreenX - focalScreenX;
+        const deltaY = currentFocalScreenY - focalScreenY;
+
+        stage.scrollLeft = Math.max(0, Math.round(stage.scrollLeft + deltaX));
+        stage.scrollTop = Math.max(0, Math.round(stage.scrollTop + deltaY));
+      }
+
+      setTimeout(() => {
+        this.isAutoScrolling = false;
+        if (targetPageId) {
+          this.pagesStore.setCurrent(targetPageId);
+        }
+      }, 60);
+    });
   }
 
   /** Ctrl/Cmd + wheel also receives trackpad pinch gestures in modern browsers. */
@@ -1090,7 +1353,7 @@ export class EditorComponent implements OnDestroy {
       1.2,
       Math.max(0.8, Math.exp(-event.deltaY * 0.001)),
     );
-    this.zoomBy(factor);
+    this.zoomBy(factor, event.clientX, event.clientY);
   }
 
   setFit(mode: 'width' | 'page'): void {

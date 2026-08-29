@@ -219,9 +219,12 @@ export class EditorStateService {
   }
 
   setZoom(zoom: number): void {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+    const minZoom = isMobile ? 0.4 : 0.25;
+    const maxZoom = isMobile ? 3.5 : 4.0;
     const next = Math.max(
-      0.25,
-      Math.min(4, Math.round(zoom * 100) / 100),
+      minZoom,
+      Math.min(maxZoom, Math.round(zoom * 100) / 100),
     );
     this._zoom.set(next);
     this._fitMode.set('none');

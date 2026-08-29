@@ -693,7 +693,7 @@
         (wheel)="onWorkspaceWheel($event)"
         (scroll)="onStageScroll($event)"
       >
-        <div class="editor__pages-stack">
+        <div class="editor__pages-stack" #pagesStack>
           @for (page of pagesStore.pages(); track page.id; let idx = $index) {
             <div
               class="editor__page-wrapper"
