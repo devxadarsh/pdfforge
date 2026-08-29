@@ -10,6 +10,7 @@
   (pointerdown)="onPointerDown($event)"
   (pointermove)="onPointerMove($event)"
   (pointerup)="onPointerUp($event)"
+  (pointerleave)="onPointerLeave()"
   (dblclick)="onDblClick($event)"
 >
   <defs>
@@ -60,6 +61,19 @@
               [attr.transform]="rotateTransform(a)"
             />
           }
+          @case ('line') {
+            <line
+              [attr.x1]="a.rect.x"
+              [attr.y1]="a.rect.y"
+              [attr.x2]="a.rect.x + a.rect.width"
+              [attr.y2]="a.rect.y + a.rect.height"
+              [attr.stroke]="a.strokeColor"
+              [attr.stroke-width]="a.strokeWidth"
+              [attr.stroke-dasharray]="strokeDashFor(a)"
+              [attr.opacity]="a.opacity"
+              [attr.transform]="rotateTransform(a)"
+            />
+          }
           @case ('arrow') {
             <line
               [attr.x1]="a.rect.x"
@@ -75,6 +89,18 @@
             />
           }
         }
+      }
+      @case ('drawing') {
+        <path
+          [attr.d]="pointsToSvgPath(a.points)"
+          [attr.stroke]="a.color"
+          [attr.stroke-width]="a.strokeWidth"
+          [attr.opacity]="a.opacity"
+          fill="none"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          [attr.transform]="rotateTransform(a)"
+        />
       }
       @case ('text') {
         @if (a.backgroundColor && a.backgroundColor !== 'transparent') {
@@ -192,7 +218,7 @@
       }
     }
 
-    @if (a.id === selectedId()) {
+    @if (tool() === 'select' && a.id === selectedId()) {
       <rect
         class="sel"
         [class.sel--locked]="a.locked"
@@ -329,6 +355,15 @@
           [attr.y2]="d.y + d.height"
         />
       }
+      @case ('line') {
+        <line
+          class="draft"
+          [attr.x1]="d.x"
+          [attr.y1]="d.y"
+          [attr.x2]="d.x + d.width"
+          [attr.y2]="d.y + d.height"
+        />
+      }
       @default {
         <rect
           class="draft"
@@ -339,6 +374,53 @@
         />
       }
     }
+  }
+
+  @if (draftDrawing(); as dd) {
+    <path
+      [attr.d]="pointsToSvgPath(dd.points)"
+      [attr.stroke]="dd.color"
+      [attr.stroke-width]="dd.strokeWidth"
+      fill="none"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      opacity="0.85"
+    />
+  }
+
+  @if (tool() === 'eraser' && eraserPos(); as ep) {
+    <!-- Nominal tool size boundary ring (when different from cut size) -->
+    @if (baseEraserRadius() !== eraserRadius()) {
+      <circle
+        [attr.cx]="ep.x"
+        [attr.cy]="ep.y"
+        [attr.r]="baseEraserRadius()"
+        fill="none"
+        stroke="#94a3b8"
+        stroke-width="1"
+        stroke-dasharray="2 2"
+        pointer-events="none"
+      />
+    }
+    <!-- Actual precision cut footprint -->
+    <circle
+      [attr.cx]="ep.x"
+      [attr.cy]="ep.y"
+      [attr.r]="eraserRadius()"
+      fill="rgba(239, 68, 68, 0.18)"
+      stroke="#ef4444"
+      stroke-width="1.5"
+      stroke-dasharray="3 2"
+      pointer-events="none"
+    />
+    <!-- Center pivot point -->
+    <circle
+      [attr.cx]="ep.x"
+      [attr.cy]="ep.y"
+      r="2"
+      fill="#ef4444"
+      pointer-events="none"
+    />
   }
 </svg>
 

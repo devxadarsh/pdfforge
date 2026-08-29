@@ -55,9 +55,9 @@ export async function verifyPdfMagic(
 export function safeFileName(name: string, fallbackExt = 'pdf'): string {
   const base = name.replace(/\.[^.]+$/, '');
   const cleaned = base
-    .replace(/[^\w\-\s]/g, '')
+    .replace(/[^\w\-\s]/g, ' ')
     .trim()
-    .replace(/\s+/g, '-')
+    .replace(/[\s\-_]+/g, '-')
     .toLowerCase();
   const final = cleaned || 'document';
   return `${final}.${fallbackExt}`;

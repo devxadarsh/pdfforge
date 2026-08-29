@@ -232,6 +232,19 @@
   color: var(--pf-on-primary) !important;
 }
 
+.props__seg-btn--danger {
+  color: var(--pf-error);
+  border: 1px solid var(--pf-outline-variant);
+  border-radius: var(--pf-radius);
+  justify-content: center;
+  height: 28px;
+}
+
+.props__seg-btn--danger:hover {
+  background: var(--pf-error-container);
+  color: var(--pf-on-error-container);
+}
+
 /* Swatches */
 .props__swatches {
   display: flex;

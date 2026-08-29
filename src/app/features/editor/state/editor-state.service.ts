@@ -2,6 +2,9 @@ import { Injectable, inject, signal } from '@angular/core';
 import {
   PdfToolId,
   PdfAnnotation,
+  DrawingAnnotation,
+  EraserMode,
+  EraserTarget,
 } from '../../../core/models/pdf.models';
 import { EditorPagesService } from './editor-pages.service';
 
@@ -20,12 +23,87 @@ export class EditorStateService {
   private readonly _selectedId = signal<string | null>(null);
   private readonly _modified = signal(false);
 
+  // Eraser options
+  private readonly _eraserMode = signal<EraserMode>('segment');
+  private readonly _eraserSize = signal<number>(16);
+  private readonly _eraserTolerance = signal<number>(1.0);
+  private readonly _eraserTarget = signal<EraserTarget>('all');
+  private readonly _eraserSizePreviewActive = signal<boolean>(false);
+  private previewTimer: ReturnType<typeof setTimeout> | null = null;
+
   readonly tool = this._tool.asReadonly();
   readonly zoom = this._zoom.asReadonly();
   readonly fitMode = this._fitMode.asReadonly();
   readonly selectedId = this._selectedId.asReadonly();
   readonly modified = this._modified.asReadonly();
   readonly annotationsByPage = this._annotations.asReadonly();
+
+  readonly eraserMode = this._eraserMode.asReadonly();
+  readonly eraserSize = this._eraserSize.asReadonly();
+  readonly eraserTolerance = this._eraserTolerance.asReadonly();
+  readonly eraserTarget = this._eraserTarget.asReadonly();
+  readonly eraserSizePreviewActive = this._eraserSizePreviewActive.asReadonly();
+
+  setEraserMode(mode: EraserMode): void {
+    this._eraserMode.set(mode);
+  }
+
+  triggerEraserPreview(persist = false): void {
+    this._eraserSizePreviewActive.set(true);
+    if (this.previewTimer) {
+      clearTimeout(this.previewTimer);
+      this.previewTimer = null;
+    }
+    if (!persist) {
+      this.previewTimer = setTimeout(() => {
+        this._eraserSizePreviewActive.set(false);
+        this.previewTimer = null;
+      }, 1500);
+    }
+  }
+
+  hideEraserPreview(): void {
+    if (this.previewTimer) {
+      clearTimeout(this.previewTimer);
+      this.previewTimer = null;
+    }
+    this.previewTimer = setTimeout(() => {
+      this._eraserSizePreviewActive.set(false);
+      this.previewTimer = null;
+    }, 800);
+  }
+
+  setEraserSize(size: number): void {
+    this._eraserSize.set(
+      Math.max(8, Math.min(72, Math.round(size * 10) / 10)),
+    );
+    this.triggerEraserPreview();
+  }
+
+  setEraserTolerance(tol: number): void {
+    this._eraserTolerance.set(
+      Math.max(0.5, Math.min(1.5, Math.round(tol * 100) / 100)),
+    );
+    this.triggerEraserPreview();
+  }
+
+  setEraserTarget(target: EraserTarget): void {
+    this._eraserTarget.set(target);
+  }
+
+  clearPageAnnotations(pageId: string): void {
+    const map = new Map(this._annotations());
+    const list = map.get(pageId) ?? [];
+    const remaining = list.filter((a) => a.locked);
+    if (remaining.length !== list.length) {
+      map.set(pageId, remaining);
+      this._annotations.set(map);
+      this._modified.set(true);
+      if (this._selectedId() && !remaining.some((a) => a.id === this._selectedId())) {
+        this._selectedId.set(null);
+      }
+    }
+  }
 
   setTool(tool: PdfToolId): void {
     this._tool.set(tool);
@@ -67,12 +145,18 @@ export class EditorStateService {
     return this._annotations().get(pageId) ?? [];
   };
 
-  addAnnotation(pageId: string, annotation: PdfAnnotation): void {
+  addAnnotation(
+    pageId: string,
+    annotation: PdfAnnotation,
+    select = true,
+  ): void {
     const map = new Map(this._annotations());
     const existing = map.get(pageId) ?? [];
     map.set(pageId, [...existing, annotation]);
     this._annotations.set(map);
-    this._selectedId.set(annotation.id);
+    if (select) {
+      this._selectedId.set(annotation.id);
+    }
     this._modified.set(true);
   }
 
@@ -109,7 +193,7 @@ export class EditorStateService {
       if (cur.locked) {
         return;
       }
-      const updated = {
+      let updated: PdfAnnotation = {
         ...cur,
         rect: {
           ...cur.rect,
@@ -117,6 +201,16 @@ export class EditorStateService {
           y: Math.round(cur.rect.y + dy),
         },
       } as PdfAnnotation;
+      if (cur.type === 'drawing') {
+        updated = {
+          ...cur,
+          rect: updated.rect,
+          points: cur.points.map((p) => ({
+            x: Math.round(p.x + dx),
+            y: Math.round(p.y + dy),
+          })),
+        } as DrawingAnnotation;
+      }
       const next = [...list];
       next[idx] = updated;
       map.set(pageId, next);
@@ -163,21 +257,37 @@ export class EditorStateService {
             height: annotation.rect.height * scaleY,
           },
         };
-        if (annotation.type !== 'text') {
-          return scaled;
+        if (annotation.type === 'text') {
+          return {
+            ...scaled,
+            fontSize: annotation.fontSize * textScale,
+            letterSpacing:
+              annotation.letterSpacing === undefined
+                ? undefined
+                : annotation.letterSpacing * textScale,
+            backgroundPadding:
+              annotation.backgroundPadding === undefined
+                ? undefined
+                : annotation.backgroundPadding * textScale,
+          };
         }
-        return {
-          ...scaled,
-          fontSize: annotation.fontSize * textScale,
-          letterSpacing:
-            annotation.letterSpacing === undefined
-              ? undefined
-              : annotation.letterSpacing * textScale,
-          backgroundPadding:
-            annotation.backgroundPadding === undefined
-              ? undefined
-              : annotation.backgroundPadding * textScale,
-        };
+        if (annotation.type === 'drawing') {
+          return {
+            ...scaled,
+            strokeWidth: annotation.strokeWidth * textScale,
+            points: annotation.points.map((p) => ({
+              x: p.x * scaleX,
+              y: p.y * scaleY,
+            })),
+          };
+        }
+        if (annotation.type === 'shape') {
+          return {
+            ...scaled,
+            strokeWidth: annotation.strokeWidth * textScale,
+          };
+        }
+        return scaled;
       }) as PdfAnnotation[],
     );
     this._annotations.set(map);
@@ -233,7 +343,7 @@ export class EditorStateService {
         continue;
       }
       const source = list[idx];
-      const copy = {
+      let copy: PdfAnnotation = {
         ...source,
         id: crypto.randomUUID(),
         rect: {
@@ -244,6 +354,15 @@ export class EditorStateService {
         },
         createdAt: Date.now(),
       } as PdfAnnotation;
+      if (source.type === 'drawing') {
+        copy = {
+          ...source,
+          id: copy.id,
+          rect: copy.rect,
+          createdAt: copy.createdAt,
+          points: source.points.map((p) => ({ x: p.x + 12, y: p.y + 12 })),
+        } as DrawingAnnotation;
+      }
       const next = [...list];
       next.splice(idx + 1, 0, copy);
       map.set(pageId, next);

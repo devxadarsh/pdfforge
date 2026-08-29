@@ -15,6 +15,10 @@ import {
   TextAnnotation,
   HighlightAnnotation,
   CommentAnnotation,
+  DrawingAnnotation,
+  Point,
+  Rect,
+  EraserTarget,
   TextTransform,
 } from '../../../../core/models/pdf.models';
 import { EditorStateService } from '../../state/editor-state.service';
@@ -23,6 +27,7 @@ type MarkType =
   | 'rectangle'
   | 'circle'
   | 'arrow'
+  | 'line'
   | 'highlight'
   | 'underline'
   | 'strikethrough';
@@ -51,7 +56,8 @@ const TEXT_BACKGROUND_PADDING = 6;
   styleUrl: './editor-overlay.component.scss',
 })
 export class EditorOverlayComponent {
-  private readonly state = inject(EditorStateService);
+  protected readonly Math = Math;
+  readonly state = inject(EditorStateService);
   private readonly svgRef = viewChild<ElementRef<SVGSVGElement>>('svg');
   private readonly textEditorRef =
     viewChild<ElementRef<HTMLTextAreaElement>>('textEditor');
@@ -73,6 +79,12 @@ export class EditorOverlayComponent {
   });
 
   readonly draft = signal<DraftMark | null>(null);
+  readonly draftDrawing = signal<{
+    color: string;
+    strokeWidth: number;
+    points: Point[];
+  } | null>(null);
+
   private start: { x: number; y: number } | null = null;
   private dragId: string | null = null;
   private dragOffset = { x: 0, y: 0 };
@@ -83,6 +95,21 @@ export class EditorOverlayComponent {
     y: number;
     rect: { x: number; y: number; width: number; height: number };
   } | null = null;
+
+  private isDrawing = false;
+  private isErasing = false;
+
+  readonly eraserPos = signal<{ x: number; y: number } | null>(null);
+  readonly baseEraserRadius = computed(() => this.state.eraserSize() / 2);
+  readonly eraserRadius = computed(
+    () => (this.state.eraserSize() / 2) * this.state.eraserTolerance(),
+  );
+  readonly cutSizePx = computed(
+    () =>
+      Math.round(
+        this.state.eraserSize() * this.state.eraserTolerance() * 10,
+      ) / 10,
+  );
 
   readonly arrowMarkers = computed(() =>
     this.annotations().filter(
@@ -102,8 +129,11 @@ export class EditorOverlayComponent {
     return this.selectedId() !== null || this.annotations().length > 0;
   });
 
-  readonly cursor = computed<'crosshair' | 'default'>(() => {
+  readonly cursor = computed<'crosshair' | 'default' | 'none'>(() => {
     const t = this.tool();
+    if (t === 'eraser') {
+      return 'none'; // custom circular SVG eraser cursor is drawn
+    }
     return t !== 'select' && t !== 'hand' ? 'crosshair' : 'default';
   });
 
@@ -136,12 +166,183 @@ export class EditorOverlayComponent {
     return null;
   }
 
+  private shouldErase(a: PdfAnnotation, target: EraserTarget): boolean {
+    if (a.locked) {
+      return false;
+    }
+    if (target === 'drawing') {
+      return a.type === 'drawing';
+    }
+    if (target === 'highlight') {
+      return (
+        a.type === 'highlight' ||
+        a.type === 'underline' ||
+        a.type === 'strikethrough'
+      );
+    }
+    return true;
+  }
+
+  private calcDrawingRect(points: Point[], strokeWidth: number): Rect {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const p of points) {
+      minX = Math.min(minX, p.x);
+      minY = Math.min(minY, p.y);
+      maxX = Math.max(maxX, p.x);
+      maxY = Math.max(maxY, p.y);
+    }
+    return {
+      x: Math.max(0, minX - strokeWidth),
+      y: Math.max(0, minY - strokeWidth),
+      width: Math.max(10, maxX - minX + strokeWidth * 2),
+      height: Math.max(10, maxY - minY + strokeWidth * 2),
+    };
+  }
+
+  private resamplePoints(points: readonly Point[], step = 2): Point[] {
+    if (points.length < 2) {
+      return [...points];
+    }
+    const result: Point[] = [points[0]];
+    for (let i = 0; i < points.length - 1; i++) {
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      if (dist > step) {
+        const count = Math.floor(dist / step);
+        for (let j = 1; j <= count; j++) {
+          const t = j / (count + 1);
+          result.push({
+            x: p1.x + t * (p2.x - p1.x),
+            y: p1.y + t * (p2.y - p1.y),
+          });
+        }
+      }
+      result.push(p2);
+    }
+    return result;
+  }
+
+  private eraseAt(x: number, y: number): void {
+    const mode = this.state.eraserMode();
+    const target = this.state.eraserTarget();
+    const radius = this.eraserRadius();
+    const list = this.annotations();
+
+    for (let i = list.length - 1; i >= 0; i--) {
+      const a = list[i];
+      if (!this.shouldErase(a, target)) {
+        continue;
+      }
+      const r = a.rect;
+      const margin = radius + 4;
+      const inBox =
+        x >= r.x - margin &&
+        x <= r.x + r.width + margin &&
+        y >= r.y - margin &&
+        y <= r.y + r.height + margin;
+
+      if (!inBox) {
+        continue;
+      }
+
+      if (a.type === 'drawing') {
+        const threshold = radius + a.strokeWidth / 2;
+        if (mode === 'stroke') {
+          // Whole-stroke erase
+          const hitPoint = a.points.some(
+            (p) => Math.hypot(p.x - x, p.y - y) <= threshold,
+          );
+          if (hitPoint) {
+            this.state.removeAnnotation(a.id);
+            return;
+          }
+        } else {
+          // Precision / segment erase with dense sub-pixel sampling
+          const dense = this.resamplePoints(a.points, 2);
+          const segments: Point[][] = [];
+          let current: Point[] = [];
+          let erasedAny = false;
+
+          for (const p of dense) {
+            if (Math.hypot(p.x - x, p.y - y) > threshold) {
+              current.push(p);
+            } else {
+              erasedAny = true;
+              if (current.length >= 2) {
+                segments.push(current);
+              }
+              current = [];
+            }
+          }
+          if (current.length >= 2) {
+            segments.push(current);
+          }
+
+          if (!erasedAny) {
+            continue;
+          }
+
+          if (segments.length === 0) {
+            this.state.removeAnnotation(a.id);
+            return;
+          }
+
+          // Update first segment into existing annotation
+          const firstPts = segments[0];
+          this.state.updateAnnotation(a.id, {
+            points: firstPts,
+            rect: this.calcDrawingRect(firstPts, a.strokeWidth),
+          });
+
+          // Add additional segments as new DrawingAnnotations
+          for (let s = 1; s < segments.length; s++) {
+            const extraPts = segments[s];
+            const extraAnn: DrawingAnnotation = {
+              ...a,
+              id: crypto.randomUUID(),
+              points: extraPts,
+              rect: this.calcDrawingRect(extraPts, a.strokeWidth),
+              createdAt: Date.now(),
+            };
+            this.state.addAnnotation(this.pageId(), extraAnn, false);
+          }
+          return;
+        }
+      } else {
+        // Shapes, text, highlights
+        this.state.removeAnnotation(a.id);
+        return;
+      }
+    }
+  }
+
   onPointerDown(event: PointerEvent): void {
     const { x, y } = this.localPoint(event);
     const t = this.tool();
 
     if (this.editingId()) {
       this.stopEditing();
+    }
+
+    if (t === 'eraser') {
+      this.state.selectAnnotation(null);
+      this.isErasing = true;
+      this.eraseAt(x, y);
+      this.svgRef()?.nativeElement.setPointerCapture?.(event.pointerId);
+      return;
+    }
+
+    if (t === 'pen' || t === 'freehand') {
+      this.isDrawing = true;
+      const color = t === 'freehand' ? '#dc2626' : '#111827';
+      const strokeWidth = t === 'freehand' ? 4 : 2;
+      this.draftDrawing.set({ color, strokeWidth, points: [{ x, y }] });
+      this.svgRef()?.nativeElement.setPointerCapture?.(event.pointerId);
+      return;
     }
 
     if (t === 'select' || t === 'hand') {
@@ -163,6 +364,7 @@ export class EditorOverlayComponent {
       t === 'rectangle' ||
       t === 'circle' ||
       t === 'arrow' ||
+      t === 'line' ||
       t === 'highlight' ||
       t === 'underline' ||
       t === 'strikethrough'
@@ -212,7 +414,37 @@ export class EditorOverlayComponent {
     }
   }
 
+  onPointerLeave(): void {
+    this.eraserPos.set(null);
+  }
+
   onPointerMove(event: PointerEvent): void {
+    if (this.tool() === 'eraser') {
+      const { x, y } = this.localPoint(event);
+      this.eraserPos.set({ x, y });
+      if (this.isErasing) {
+        this.eraseAt(x, y);
+      }
+      return;
+    }
+    if (this.eraserPos()) {
+      this.eraserPos.set(null);
+    }
+
+    if (this.isDrawing) {
+      const { x, y } = this.localPoint(event);
+      const cur = this.draftDrawing();
+      if (cur) {
+        const pts = cur.points;
+        const last = pts[pts.length - 1];
+        const dist = Math.hypot(x - last.x, y - last.y);
+        if (dist >= 2) {
+          this.draftDrawing.set({ ...cur, points: [...pts, { x, y }] });
+        }
+      }
+      return;
+    }
+
     if (this.resizeId && this.resizeHandle && this.resizeStart) {
       const a = this.annotations().find((it) => it.id === this.resizeId);
       if (!a) {
@@ -243,9 +475,23 @@ export class EditorOverlayComponent {
       if (rh < 8) {
         rh = 8;
       }
-      this.state.updateAnnotation(a.id, {
-        rect: { x: rx, y: ry, width: rw, height: rh },
-      });
+      if (a.type === 'drawing') {
+        const origRect = this.resizeStart.rect;
+        const sx = rw / Math.max(1, origRect.width);
+        const sy = rh / Math.max(1, origRect.height);
+        const scaledPts = a.points.map((p) => ({
+          x: rx + (p.x - origRect.x) * sx,
+          y: ry + (p.y - origRect.y) * sy,
+        }));
+        this.state.updateAnnotation(a.id, {
+          rect: { x: rx, y: ry, width: rw, height: rh },
+          points: scaledPts,
+        });
+      } else {
+        this.state.updateAnnotation(a.id, {
+          rect: { x: rx, y: ry, width: rw, height: rh },
+        });
+      }
       return;
     }
 
@@ -255,9 +501,20 @@ export class EditorOverlayComponent {
         return;
       }
       const { x, y } = this.localPoint(event);
-      this.state.updateAnnotation(a.id, {
-        rect: { ...a.rect, x: x - this.dragOffset.x, y: y - this.dragOffset.y },
-      });
+      const newX = x - this.dragOffset.x;
+      const newY = y - this.dragOffset.y;
+      const dx = newX - a.rect.x;
+      const dy = newY - a.rect.y;
+      if (a.type === 'drawing') {
+        this.state.updateAnnotation(a.id, {
+          rect: { ...a.rect, x: newX, y: newY },
+          points: a.points.map((p) => ({ x: p.x + dx, y: p.y + dy })),
+        });
+      } else {
+        this.state.updateAnnotation(a.id, {
+          rect: { ...a.rect, x: newX, y: newY },
+        });
+      }
       return;
     }
     if (this.draft() && this.start) {
@@ -275,6 +532,50 @@ export class EditorOverlayComponent {
 
   onPointerUp(event: PointerEvent): void {
     this.svgRef()?.nativeElement.releasePointerCapture?.(event.pointerId);
+    if (this.isErasing) {
+      this.isErasing = false;
+      return;
+    }
+    if (this.isDrawing) {
+      this.isDrawing = false;
+      const cur = this.draftDrawing();
+      this.draftDrawing.set(null);
+      if (cur && cur.points.length >= 2) {
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        for (const p of cur.points) {
+          minX = Math.min(minX, p.x);
+          minY = Math.min(minY, p.y);
+          maxX = Math.max(maxX, p.x);
+          maxY = Math.max(maxY, p.y);
+        }
+        const pad = cur.strokeWidth;
+        const ann: DrawingAnnotation = {
+          id: crypto.randomUUID(),
+          type: 'drawing',
+          kind: this.tool() === 'freehand' ? 'freehand' : 'pen',
+          pageIndex: this.pageIndex(),
+          rect: {
+            x: Math.max(0, minX - pad),
+            y: Math.max(0, minY - pad),
+            width: Math.max(10, maxX - minX + pad * 2),
+            height: Math.max(10, maxY - minY + pad * 2),
+          },
+          rotation: 0,
+          opacity: 1,
+          createdAt: Date.now(),
+          color: cur.color,
+          strokeWidth: cur.strokeWidth,
+          points: cur.points,
+        };
+        this.state.addAnnotation(this.pageId(), ann);
+        this.state.setTool('select');
+        this.state.selectAnnotation(ann.id);
+      }
+      return;
+    }
     if (this.resizeId) {
       this.resizeId = null;
       this.resizeHandle = null;
@@ -549,9 +850,35 @@ export class EditorOverlayComponent {
       author: 'You',
     };
     this.state.addAnnotation(this.pageId(), ann);
+    this.state.setTool('select');
+    this.state.selectAnnotation(ann.id);
+  }
+
+  pointsToSvgPath(points: readonly Point[]): string {
+    if (!points || points.length === 0) {
+      return '';
+    }
+    if (points.length === 1) {
+      return `M ${points[0].x} ${points[0].y} L ${points[0].x} ${points[0].y}`;
+    }
+    if (points.length === 2) {
+      return `M ${points[0].x} ${points[0].y} L ${points[1].x} ${points[1].y}`;
+    }
+    let d = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 1; i < points.length - 1; i++) {
+      const p0 = points[i];
+      const p1 = points[i + 1];
+      const mx = (p0.x + p1.x) / 2;
+      const my = (p0.y + p1.y) / 2;
+      d += ` Q ${p0.x} ${p0.y}, ${mx} ${my}`;
+    }
+    const last = points[points.length - 1];
+    d += ` L ${last.x} ${last.y}`;
+    return d;
   }
 
   private commitShape(d: DraftMark): void {
+    const isLineOrArrow = d.type === 'arrow' || d.type === 'line';
     const ann: ShapeAnnotation = {
       id: crypto.randomUUID(),
       type: 'shape',
@@ -562,11 +889,13 @@ export class EditorOverlayComponent {
       opacity: 1,
       createdAt: Date.now(),
       strokeColor: '#2563eb',
-      fillColor: d.type === 'arrow' ? 'transparent' : 'rgba(37,99,235,0.12)',
+      fillColor: isLineOrArrow ? 'transparent' : 'rgba(37,99,235,0.12)',
       strokeWidth: 2,
       strokeStyle: 'solid',
     };
     this.state.addAnnotation(this.pageId(), ann);
+    this.state.setTool('select');
+    this.state.selectAnnotation(ann.id);
   }
 
   private commitHighlight(d: DraftMark): void {
@@ -588,5 +917,7 @@ export class EditorOverlayComponent {
       quote: '',
     };
     this.state.addAnnotation(this.pageId(), ann);
+    this.state.setTool('select');
+    this.state.selectAnnotation(ann.id);
   }
 }

@@ -63,3 +63,17 @@
   z-index: 5;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
+
+.eraser-center-preview {
+  animation: eraserFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes eraserFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

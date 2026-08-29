@@ -1,7 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { EditorStateService } from './editor-state.service';
 import { EditorPagesService } from './editor-pages.service';
-import { ShapeAnnotation, TextAnnotation } from '../../../core/models/pdf.models';
+import {
+  ShapeAnnotation,
+  TextAnnotation,
+  DrawingAnnotation,
+} from '../../../core/models/pdf.models';
 
 class EditorPagesStub {
   currentId(): string | null {
@@ -155,6 +159,35 @@ describe('EditorStateService', () => {
     expect(scaled.backgroundPadding).toBe(9);
   });
 
+  it('scales drawing points, strokeWidth, and shape properties with the rendered page viewport', () => {
+    const drawing: DrawingAnnotation = {
+      id: 'd1',
+      type: 'drawing',
+      kind: 'freehand',
+      pageIndex: 0,
+      rect: { x: 10, y: 20, width: 50, height: 50 },
+      rotation: 0,
+      opacity: 1,
+      createdAt: Date.now(),
+      color: '#dc2626',
+      strokeWidth: 4,
+      points: [
+        { x: 10, y: 20 },
+        { x: 60, y: 70 },
+      ],
+    };
+    state.addAnnotation('page-2', drawing);
+    state.scaleAnnotations('page-2', 2, 2);
+
+    const scaled = state.annotationsFor('page-2')[0] as DrawingAnnotation;
+    expect(scaled.rect).toEqual({ x: 20, y: 40, width: 100, height: 100 });
+    expect(scaled.strokeWidth).toBe(8);
+    expect(scaled.points).toEqual([
+      { x: 20, y: 40 },
+      { x: 120, y: 140 },
+    ]);
+  });
+
   it('locks an annotation against updates, nudges, and deletion', () => {
     const text = makeText({ id: 'locked-text' });
     state.addAnnotation('page-1', text);
@@ -172,6 +205,65 @@ describe('EditorStateService', () => {
     expect(state.toggleLock(text.id)).toBeFalse();
     state.removeAnnotation(text.id);
     expect(state.annotationsFor('page-1')).toHaveSize(0);
+  });
+
+  it('adds and updates drawing annotations', () => {
+    const drawing: DrawingAnnotation = {
+      id: 'draw-1',
+      type: 'drawing',
+      kind: 'freehand',
+      pageIndex: 0,
+      rect: { x: 10, y: 10, width: 80, height: 80 },
+      rotation: 0,
+      opacity: 1,
+      createdAt: Date.now(),
+      color: '#dc2626',
+      strokeWidth: 4,
+      points: [
+        { x: 10, y: 10 },
+        { x: 50, y: 60 },
+        { x: 90, y: 90 },
+      ],
+    };
+    state.addAnnotation('page-1', drawing);
+    expect(state.annotationsFor('page-1')).toHaveSize(1);
+    expect(state.selectedId()).toBe('draw-1');
+
+    state.updateAnnotation('draw-1', { color: '#2563eb', strokeWidth: 8 });
+    const updated = state.annotationsFor('page-1')[0] as DrawingAnnotation;
+    expect(updated.color).toBe('#2563eb');
+    expect(updated.strokeWidth).toBe(8);
+  });
+
+  it('configures eraser settings and clears page marks while preserving locked objects', () => {
+    state.setEraserMode('segment');
+    expect(state.eraserMode()).toBe('segment');
+
+    state.setEraserSize(5);
+    expect(state.eraserSize()).toBe(8); // clamped to min 8
+
+    state.setEraserSize(72.00);
+    expect(state.eraserSize()).toBe(72);
+
+    state.setEraserSize(24.5);
+    expect(state.eraserSize()).toBe(24.5);
+
+    state.setEraserTolerance(0.85);
+    expect(state.eraserTolerance()).toBe(0.85);
+
+    state.setEraserTarget('drawing');
+    expect(state.eraserTarget()).toBe('drawing');
+
+    const unlocked = makeText({ id: 'u1' });
+    const locked = makeText({ id: 'l1', locked: true });
+    state.addAnnotation('page-1', unlocked);
+    state.addAnnotation('page-1', locked);
+    expect(state.annotationsFor('page-1')).toHaveSize(2);
+
+    state.clearPageAnnotations('page-1');
+    const remaining = state.annotationsFor('page-1');
+    expect(remaining).toHaveSize(1);
+    expect(remaining[0].id).toBe('l1');
   });
 
   it('returns null from duplicate when the id is missing', () => {

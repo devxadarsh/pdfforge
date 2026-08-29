@@ -171,6 +171,20 @@ export class EditorComponent implements OnDestroy {
     return `${matches} · ${pages}`;
   });
 
+  readonly eraserSvgSize = computed(() => {
+    const s = Math.max(
+      this.state.eraserSize(),
+      this.state.eraserSize() * this.state.eraserTolerance(),
+    );
+    return s + 24;
+  });
+
+  readonly eraserSvgViewBox = computed(() => {
+    const s = this.eraserSvgSize();
+    const half = s / 2;
+    return `-${half} -${half} ${s} ${s}`;
+  });
+
   constructor() {
     effect(() => {
       const file = this.files.currentFiles()[0];

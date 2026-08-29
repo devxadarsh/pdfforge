@@ -144,10 +144,34 @@
 }
 
 .editor__workspace {
+  position: relative;
   display: block;
   padding: 0;
   background: var(--pf-surface-container);
   overflow: hidden;
+}
+
+.editor__eraser-preview-hub {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: eraserFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  filter: drop-shadow(0 2px 10px rgba(0, 0, 0, 0.18));
+}
+
+@keyframes eraserFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .editor__canvas-stage {

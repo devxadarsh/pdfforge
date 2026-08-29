@@ -32,20 +32,20 @@ describe('file.util', () => {
     });
 
     it('rejects empty files', () => {
-      expect(() => validatePdfFile(makeFile('', 'empty.pdf'))).toThrow(
+      expect(() => validatePdfFile(makeFile('', 'empty.pdf'))).toThrowError(
         FileValidationError,
       );
     });
 
     it('rejects non-pdf types', () => {
-      expect(() => validatePdfFile(makeFile('x', 'note.txt', 'text/plain'))).toThrow(
+      expect(() => validatePdfFile(makeFile('x', 'note.txt', 'text/plain'))).toThrowError(
         FileValidationError,
       );
     });
 
     it('rejects files over the size limit', () => {
       const big = makeFile('x', 'big.pdf', 'application/pdf', 600 * 1024 * 1024);
-      expect(() => validatePdfFile(big)).toThrow(FileValidationError);
+      expect(() => validatePdfFile(big)).toThrowError(FileValidationError);
     });
   });
 

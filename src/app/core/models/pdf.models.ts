@@ -10,6 +10,7 @@ export type PdfToolId =
   | 'pen'
   | 'freehand'
   | 'eraser'
+  | 'line'
   | 'rectangle'
   | 'circle'
   | 'arrow'
@@ -31,6 +32,16 @@ export type AnnotationType =
   | 'comment';
 
 export type ShapeKind = 'rectangle' | 'circle' | 'arrow' | 'line';
+
+export type EraserMode = 'stroke' | 'segment';
+export type EraserTarget = 'all' | 'drawing' | 'highlight';
+
+export interface EraserSettings {
+  mode: EraserMode;
+  size: number;
+  tolerance: number;
+  target: EraserTarget;
+}
 
 export type EditorTheme = 'light' | 'dark' | 'system';
 

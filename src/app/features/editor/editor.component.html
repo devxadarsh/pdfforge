@@ -129,6 +129,37 @@
         </div>
       </div>
       }
+
+      @if (state.tool() === 'eraser' && state.eraserSizePreviewActive()) {
+        <div class="editor__eraser-preview-hub">
+          <svg
+            [attr.width]="eraserSvgSize()"
+            [attr.height]="eraserSvgSize()"
+            [attr.viewBox]="eraserSvgViewBox()"
+          >
+            <!-- Tool nominal size boundary ring (when different from cut size) -->
+            @if (state.eraserTolerance() !== 1) {
+              <circle
+                [attr.r]="state.eraserSize() / 2"
+                fill="none"
+                stroke="#94a3b8"
+                stroke-width="1.2"
+                stroke-dasharray="2 2"
+              />
+            }
+            <!-- Actual cut footprint -->
+            <circle
+              [attr.r]="(state.eraserSize() / 2) * state.eraserTolerance()"
+              fill="rgba(239, 68, 68, 0.18)"
+              stroke="#ef4444"
+              stroke-width="1.5"
+              stroke-dasharray="3 2"
+            />
+            <!-- Center dot -->
+            <circle r="2" fill="#ef4444" />
+          </svg>
+        </div>
+      }
     </section>
 
     <aside id="editor-properties-panel" class="editor__properties"

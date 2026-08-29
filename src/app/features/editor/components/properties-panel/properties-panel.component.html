@@ -423,6 +423,53 @@
         }
       }
 
+      <!-- DRAWING CONTROLS -->
+      @if (ann.type === 'drawing') {
+        <div class="props__group">
+          <label class="props__label">Stroke</label>
+          <div class="props__row props__row--inline">
+            <div class="props__swatches">
+              @for (s of shapeSwatches; track s.value) {
+                <button
+                  type="button"
+                  class="props__swatch"
+                  [class.props__swatch--on]="ann.color === s.value"
+                  [style.background]="s.value"
+                  [title]="s.label"
+                  [disabled]="ann.locked"
+                  [attr.aria-label]="'Set stroke to ' + s.label"
+                  (click)="setDrawingColor(ann, s.value)"
+                ></button>
+              }
+              <input
+                class="pf-color props__swatch-input"
+                type="color"
+                [value]="toColor(ann.color)"
+                [disabled]="ann.locked"
+                (input)="setDrawingColor(ann, $any($event.target).value)"
+                title="Custom stroke color"
+                aria-label="Stroke color"
+              />
+            </div>
+          </div>
+
+          <div class="props__row props__row--inline">
+            <span class="props__sublabel">Width</span>
+            <input
+              class="pf-input props__field--grow"
+              type="range"
+              min="1"
+              max="32"
+              [value]="ann.strokeWidth"
+              [disabled]="ann.locked"
+              (input)="setDrawingStrokeWidth(ann, $any($event.target).value)"
+              aria-label="Stroke width slider"
+            />
+            <span class="props__value-badge">{{ ann.strokeWidth }}px</span>
+          </div>
+        </div>
+      }
+
       <!-- HIGHLIGHT / UNDERLINE / STRIKETHROUGH -->
       @if (
         ann.type === 'highlight' ||
@@ -586,6 +633,142 @@
             <i class="fa-solid fa-forward-step"></i> Front
           </button>
         </div>
+      </div>
+    </app-panel-section>
+  } @else if (activeTool() === 'eraser') {
+    <app-panel-section title="Eraser Options" icon="fa-solid fa-eraser">
+      <div class="props__group">
+        <label class="props__label">Erase Mode</label>
+        <div class="props__seg-group props__seg-group--full">
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            [class.props__seg-btn--on]="eraserMode() === 'stroke'"
+            (click)="setEraserMode('stroke')"
+            title="Erase entire strokes / objects when touched"
+          >
+            <i class="fa-solid fa-wand-magic-sparkles"></i> Stroke
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            [class.props__seg-btn--on]="eraserMode() === 'segment'"
+            (click)="setEraserMode('segment')"
+            title="Cut and erase only the touched segment"
+          >
+            <i class="fa-solid fa-scissors"></i> Precision
+          </button>
+        </div>
+      </div>
+
+      <div class="props__group">
+        <div class="props__row props__row--between">
+          <label class="props__label">Eraser Size</label>
+          <span class="props__value-badge">{{ eraserSize() | number: '1.0-1' }}px</span>
+        </div>
+
+        <div class="props__row props__row--inline">
+          <input
+            class="pf-input props__field--grow"
+            type="range"
+            min="8"
+            max="72"
+            step="1"
+            [value]="eraserSize()"
+            (input)="setEraserSize($any($event.target).value)"
+            (pointerdown)="onEraserSliderStart()"
+            (pointerup)="onEraserSliderEnd()"
+            (focus)="onEraserSliderStart()"
+            (blur)="onEraserSliderEnd()"
+            aria-label="Eraser size slider"
+          />
+          <input
+            class="pf-input props__input-size"
+            type="number"
+            min="8"
+            max="72"
+            step="1"
+            [value]="eraserSize()"
+            (input)="setEraserSize($any($event.target).value)"
+            (focus)="onEraserSliderStart()"
+            (blur)="onEraserSliderEnd()"
+            title="Eraser size in pixels (8 - 72px)"
+            aria-label="Eraser size"
+          />
+        </div>
+      </div>
+
+      <div class="props__group">
+        <div class="props__row props__row--between">
+          <label class="props__label">Cut Sensitivity</label>
+          <span class="props__value-badge">{{ (eraserTolerance() * 100) | number: '1.0-0' }}%</span>
+        </div>
+
+        <div class="props__row props__row--inline">
+          <span class="props__sublabel">Tight</span>
+          <input
+            class="pf-input props__field--grow"
+            type="range"
+            min="0.5"
+            max="1.5"
+            step="0.05"
+            [value]="eraserTolerance()"
+            (input)="setEraserTolerance($any($event.target).value)"
+            (pointerdown)="onEraserSliderStart()"
+            (pointerup)="onEraserSliderEnd()"
+            (focus)="onEraserSliderStart()"
+            (blur)="onEraserSliderEnd()"
+            aria-label="Eraser cut sensitivity slider"
+          />
+          <span class="props__sublabel" style="text-align: right;">Broad</span>
+        </div>
+      </div>
+
+      <div class="props__group">
+        <label class="props__label">Erase Target</label>
+        <div class="props__seg-group props__seg-group--full">
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            [class.props__seg-btn--on]="eraserTarget() === 'all'"
+            (click)="setEraserTarget('all')"
+            title="Erase all drawings, shapes, and highlights"
+          >
+            All
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            [class.props__seg-btn--on]="eraserTarget() === 'drawing'"
+            (click)="setEraserTarget('drawing')"
+            title="Erase pen and freehand drawings only"
+          >
+            Ink Only
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            [class.props__seg-btn--on]="eraserTarget() === 'highlight'"
+            (click)="setEraserTarget('highlight')"
+            title="Erase highlights only"
+          >
+            Highlights
+          </button>
+        </div>
+      </div>
+
+      <div class="props__divider"></div>
+
+      <div class="props__group">
+        <label class="props__label">Quick Actions</label>
+        <button
+          type="button"
+          class="props__seg-btn props__seg-btn--danger props__seg-group--full"
+          (click)="clearCurrentPage()"
+          title="Clear all unlocked annotations on the current page"
+        >
+          <i class="fa-solid fa-trash-can"></i> Clear Page Marks
+        </button>
       </div>
     </app-panel-section>
   } @else {

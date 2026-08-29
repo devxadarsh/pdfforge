@@ -12,6 +12,9 @@ import {
   TextAnnotation,
   HighlightAnnotation,
   CommentAnnotation,
+  DrawingAnnotation,
+  EraserMode,
+  EraserTarget,
 } from '../../../../core/models/pdf.models';
 import { PanelSectionComponent } from '../../../../shared/components/panel/panel-section.component';
 import { EditorStateService } from '../../state/editor-state.service';
@@ -75,6 +78,18 @@ export class PropertiesPanelComponent {
   private readonly state = inject(EditorStateService);
   readonly pages = inject(EditorPagesService);
   readonly collapse = output<void>();
+
+  readonly activeTool = this.state.tool;
+  readonly eraserMode = this.state.eraserMode;
+  readonly eraserSize = this.state.eraserSize;
+  readonly eraserTolerance = this.state.eraserTolerance;
+  readonly eraserTarget = this.state.eraserTarget;
+  readonly effectiveCutSize = computed(
+    () =>
+      Math.round(
+        this.state.eraserSize() * this.state.eraserTolerance() * 10,
+      ) / 10,
+  );
 
   readonly selected = computed(() =>
     this.state.getSelected(this.pages.currentId()),
@@ -208,6 +223,11 @@ export class PropertiesPanelComponent {
     if (ann.type === 'comment') {
       return 'fa-solid fa-comment';
     }
+    if (ann.type === 'drawing') {
+      return (ann as DrawingAnnotation).kind === 'freehand'
+        ? 'fa-solid fa-pen-ruler'
+        : 'fa-solid fa-pen';
+    }
     return 'fa-solid fa-pen';
   }
 
@@ -217,6 +237,11 @@ export class PropertiesPanelComponent {
     }
     if (ann.type === 'shape') {
       return ann.kind.charAt(0).toUpperCase() + ann.kind.slice(1);
+    }
+    if (ann.type === 'drawing') {
+      return (ann as DrawingAnnotation).kind === 'freehand'
+        ? 'Freehand'
+        : 'Pen Drawing';
     }
     if (ann.type === 'highlight') {
       return 'Highlight';
@@ -231,6 +256,17 @@ export class PropertiesPanelComponent {
       return 'Comment';
     }
     return ann.type;
+  }
+
+  setDrawingColor(ann: PdfAnnotation, color: string): void {
+    this.state.updateAnnotation(ann.id, { color } as Partial<DrawingAnnotation>);
+  }
+
+  setDrawingStrokeWidth(ann: PdfAnnotation, value: string): void {
+    const n = Number(value);
+    if (!Number.isNaN(n) && n >= 1 && n <= 64) {
+      this.state.updateAnnotation(ann.id, { strokeWidth: n } as Partial<DrawingAnnotation>);
+    }
   }
 
   toColor(value: string): string {
@@ -446,5 +482,42 @@ export class PropertiesPanelComponent {
 
   delete(ann: PdfAnnotation): void {
     this.state.removeAnnotation(ann.id);
+  }
+
+  setEraserMode(mode: EraserMode): void {
+    this.state.setEraserMode(mode);
+  }
+
+  setEraserSize(size: number | string): void {
+    const n = Number(size);
+    if (!Number.isNaN(n)) {
+      this.state.setEraserSize(n);
+    }
+  }
+
+  setEraserTolerance(tol: number | string): void {
+    const n = Number(tol);
+    if (!Number.isNaN(n)) {
+      this.state.setEraserTolerance(n);
+    }
+  }
+
+  onEraserSliderStart(): void {
+    this.state.triggerEraserPreview(true);
+  }
+
+  onEraserSliderEnd(): void {
+    this.state.hideEraserPreview();
+  }
+
+  setEraserTarget(target: EraserTarget): void {
+    this.state.setEraserTarget(target);
+  }
+
+  clearCurrentPage(): void {
+    const id = this.pages.currentId();
+    if (id) {
+      this.state.clearPageAnnotations(id);
+    }
   }
 }
