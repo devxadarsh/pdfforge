@@ -5,6 +5,7 @@ export interface DialogConfig {
   readonly message: string;
   readonly confirmLabel?: string;
   readonly cancelLabel?: string;
+  readonly secondaryLabel?: string;
   readonly destructive?: boolean;
   readonly input?: 'none' | 'password' | 'text';
   readonly inputLabel?: string;
@@ -12,6 +13,7 @@ export interface DialogConfig {
 
 export interface DialogResult {
   readonly confirmed: boolean;
+  readonly secondary?: boolean;
   readonly value?: string;
 }
 
@@ -55,6 +57,15 @@ export class DialogService {
       return;
     }
     cur.resolve({ confirmed, value: cur.value });
+    this._active.set(null);
+  }
+
+  closeSecondary(): void {
+    const cur = this._active();
+    if (!cur) {
+      return;
+    }
+    cur.resolve({ confirmed: false, secondary: true, value: cur.value });
     this._active.set(null);
   }
 }

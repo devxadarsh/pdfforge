@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { StoredEditorState } from '../../models/file.models';
 
 /** Key used inside the IndexedDB object store. */
 const DOC_KEY = 'last';
@@ -10,17 +11,20 @@ const DB_NAME = 'pdfforge-docs';
 const STORE_NAME = 'last-document';
 
 /** Schema version — bump when the store structure changes. */
-const DB_VERSION = 1;
+const DB_VERSION = 2;
+
+const RECENT_STORE = 'recent-files';
 
 export interface StoredDocument {
   readonly name: string;
   readonly data: ArrayBuffer;
   readonly storedAt: number;
+  readonly editorState?: StoredEditorState;
 }
 
 /**
  * Lightweight IndexedDB wrapper that persists the last-opened PDF document
- * so it can be restored after a page reload.
+ * and its full editor state (annotations + pages) so it can be restored after a page reload.
  *
  * All data stays entirely local in the browser — nothing is uploaded.
  */
@@ -45,6 +49,9 @@ export class DocumentStorageService {
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           db.createObjectStore(STORE_NAME);
         }
+        if (!db.objectStoreNames.contains(RECENT_STORE)) {
+          db.createObjectStore(RECENT_STORE, { keyPath: 'id' });
+        }
       };
 
       request.onsuccess = () => resolve(request.result);
@@ -58,8 +65,12 @@ export class DocumentStorageService {
     return this.dbPromise;
   }
 
-  /** Persist the current document's raw bytes and filename. */
-  async saveDocument(name: string, data: ArrayBuffer): Promise<void> {
+  /** Persist the current document's raw bytes, filename, and editor state. */
+  async saveDocument(
+    name: string,
+    data: ArrayBuffer,
+    editorState?: StoredEditorState,
+  ): Promise<void> {
     try {
       const db = await this.openDb();
       const tx = db.transaction(STORE_NAME, 'readwrite');
@@ -69,6 +80,7 @@ export class DocumentStorageService {
         name,
         data,
         storedAt: Date.now(),
+        editorState,
       };
 
       store.put(record, DOC_KEY);
@@ -78,8 +90,6 @@ export class DocumentStorageService {
         tx.onerror = () => reject(tx.error);
       });
     } catch {
-      // Storage failures are non-critical — the app still works,
-      // the document just won't survive a reload.
       console.warn('[DocumentStorage] Could not save document to IndexedDB.');
     }
   }

@@ -192,22 +192,32 @@ export class EditorPagesService {
       return false;
     }
     try {
-      const src = await PDFDocument.load(file.data.slice(0));
+      const src = await PDFDocument.load(file.data.slice(0), { ignoreEncryption: true });
       const out = await PDFDocument.create();
+      const totalPages = src.getPageCount();
       const ordered = this._pages().filter((p) => sel.has(p.id));
-      const indices = ordered.map((p) => p.sourceIndex);
-      const copied = await out.copyPages(src, indices);
-      ordered.forEach((p, i) => {
-        copied[i].setRotation(degrees(p.rotation));
-        out.addPage(copied[i]);
-      });
+
+      for (const p of ordered) {
+        if (p.sourceIndex >= 0 && p.sourceIndex < totalPages) {
+          const [copied] = await out.copyPages(src, [p.sourceIndex]);
+          if (copied) {
+            copied.setRotation(degrees(p.rotation));
+            out.addPage(copied);
+          }
+        }
+      }
+
+      if (out.getPageCount() === 0) {
+        throw new Error('No valid pages could be extracted.');
+      }
+
       const bytes = await out.save();
       const base = file.name.replace(/\.pdf$/i, '');
       this.downloads.download(
         new Blob([bytes], { type: 'application/pdf' }),
         `${base}-extracted.pdf`,
       );
-      this.toasts.success(`Extracted ${ordered.length} page(s).`);
+      this.toasts.success(`Extracted ${out.getPageCount()} page(s).`);
       return true;
     } catch {
       this.toasts.error('Could not extract the selected pages.');

@@ -9,6 +9,8 @@ import {
   input,
 } from '@angular/core';
 import { FileService } from '../../../core/services/file/file.service';
+import { DialogService } from '../../../core/services/dialog.service';
+import { EditorStateService } from '../../../features/editor/state/editor-state.service';
 import { LoadedFile } from '../../../core/models/file.models';
 import { formatBytes } from '../../../core/utilities/file.util';
 
@@ -20,6 +22,8 @@ import { formatBytes } from '../../../core/utilities/file.util';
 })
 export class FileDropzoneComponent {
   private readonly files = inject(FileService);
+  private readonly dialog = inject(DialogService);
+  private readonly state = inject(EditorStateService);
   private readonly zone = inject(NgZone);
   private readonly fileInput =
     viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
@@ -63,6 +67,30 @@ export class FileDropzoneComponent {
     if (!files.length) {
       return;
     }
+
+    if (this.state.modified()) {
+      const result = await this.dialog.confirm({
+        title: 'Unsaved Changes',
+        message:
+          'You have unsaved edits in this document. What would you like to do?',
+        confirmLabel: 'Save & Open',
+        secondaryLabel: "Don't Save",
+        cancelLabel: 'Cancel',
+        destructive: false,
+      });
+
+      if (!result.confirmed && !result.secondary) {
+        return;
+      }
+
+      if (result.confirmed) {
+        const saved = await this.state.saveLocally();
+        if (!saved) {
+          return;
+        }
+      }
+    }
+
     const loaded = await this.files.loadFiles(files);
     if (loaded.length) {
       this.zone.run(() => this.filesLoaded.emit(loaded));

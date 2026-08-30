@@ -12,9 +12,17 @@
       </button>
       <div class="editor-shell__doc">
         <span class="editor-shell__doc-name" [title]="documentName()">{{ documentName() }}</span>
-        <span class="editor-shell__doc-status">
-          <i class="fa-solid fa-cloud-arrow-down"></i> Saved locally
-        </span>
+        @if (hasDocument()) {
+          @if (modified()) {
+            <span class="editor-shell__doc-status editor-shell__doc-status--unsaved" title="Unsaved changes">
+              <i class="fa-solid fa-circle"></i> Unsaved changes
+            </span>
+          } @else {
+            <span class="editor-shell__doc-status" title="Saved locally">
+              <i class="fa-solid fa-cloud-arrow-down"></i> Saved locally
+            </span>
+          }
+        }
       </div>
     </div>
 
@@ -23,6 +31,7 @@
         <a
           class="editor-shell__nav-link"
           [routerLink]="item.path"
+          (click)="onNavClick($event, item.path)"
           routerLinkActive="editor-shell__nav-link--active"
           [routerLinkActiveOptions]="{ exact: item.path === '/editor' }"
         >
@@ -32,6 +41,115 @@
     </nav>
 
     <div class="editor-shell__header-right">
+      <div class="editor-shell__open-group">
+        <button
+          class="pf-btn pf-btn--ghost pf-btn--sm editor-shell__open-btn"
+          type="button"
+          (click)="openFile()"
+          title="Open another PDF (Ctrl+O)"
+          aria-label="Open another PDF"
+        >
+          <i class="fa-solid fa-folder-open"></i>
+          <span class="editor-shell__btn-text">Open</span>
+        </button>
+        <button
+          class="pf-btn pf-btn--ghost pf-btn--sm editor-shell__recent-chevron"
+          type="button"
+          (click)="toggleRecentDropdown($event)"
+          title="Recent files"
+          aria-label="Recent files"
+          [attr.aria-expanded]="showRecentDropdown()"
+        >
+          <i class="fa-solid fa-chevron-down"></i>
+        </button>
+
+        @if (showRecentDropdown()) {
+          <div class="editor-shell__recent-dropdown" (click)="$event.stopPropagation()">
+            <div class="editor-shell__recent-header">
+              <span class="editor-shell__recent-title">Recent Files</span>
+              <a class="editor-shell__recent-all-link" routerLink="/recent" (click)="closeRecentDropdown()">
+                View all
+              </a>
+            </div>
+
+            @if (recentEntries().length > 3) {
+              <div class="editor-shell__recent-search-wrap">
+                <input
+                  type="text"
+                  class="editor-shell__recent-search"
+                  placeholder="Search recent..."
+                  [value]="recentSearch()"
+                  (input)="onSearchInput($any($event.target).value)"
+                />
+              </div>
+            }
+
+            @if (filteredRecentEntries().length === 0) {
+              <p class="editor-shell__recent-empty">No recent files found</p>
+            } @else {
+              <div class="editor-shell__recent-list">
+                @for (entry of filteredRecentEntries(); track entry.id) {
+                  <div class="editor-shell__recent-item">
+                    <button
+                      type="button"
+                      class="editor-shell__recent-item-btn"
+                      (click)="openRecentEntry(entry)"
+                      title="Open {{ entry.name }}"
+                    >
+                      <i class="fa-solid fa-file-pdf editor-shell__recent-icon"></i>
+                      <div class="editor-shell__recent-item-info">
+                        <div class="editor-shell__recent-item-row">
+                          <span class="editor-shell__recent-item-name">{{ entry.name }}</span>
+                          @if (entry.pinned) {
+                            <i class="fa-solid fa-thumbtack editor-shell__recent-pinned-icon" title="Pinned"></i>
+                          }
+                        </div>
+                        <div class="editor-shell__recent-item-meta">
+                          <span>{{ getRelativeTime(entry.lastOpenedAt) }}</span>
+                          @if (entry.name === documentName() && modified()) {
+                            <span class="editor-shell__recent-unsaved-badge">
+                              <i class="fa-solid fa-circle"></i> Unsaved
+                            </span>
+                          }
+                        </div>
+                      </div>
+                    </button>
+
+                    <div class="editor-shell__recent-item-actions">
+                      <button
+                        type="button"
+                        class="editor-shell__recent-pin-btn"
+                        [class.editor-shell__recent-pin-btn--active]="entry.pinned"
+                        (click)="togglePin(entry.id, $event)"
+                        [title]="entry.pinned ? 'Unpin file' : 'Pin file'"
+                        aria-label="Pin file"
+                      >
+                        <i class="fa-solid fa-thumbtack"></i>
+                      </button>
+                      <button
+                        type="button"
+                        class="editor-shell__recent-remove-btn"
+                        (click)="removeRecentEntry(entry.id, $event)"
+                        title="Remove from recent"
+                        aria-label="Remove from recent"
+                      >
+                        <i class="fa-solid fa-xmark"></i>
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            <div class="editor-shell__recent-footer">
+              <button type="button" class="editor-shell__recent-browse-btn" (click)="openFile()">
+                <i class="fa-solid fa-folder-open"></i> Browse from device…
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+
       <button
         class="pf-icon-btn"
         type="button"

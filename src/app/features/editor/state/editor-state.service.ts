@@ -20,6 +20,7 @@ export interface HistorySnapshot {
   readonly currentId: string | null;
   readonly selectedIds: string[];
   readonly pageSelectedIds: string[];
+  readonly revisionId: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -34,7 +35,8 @@ export class EditorStateService {
   );
   private readonly _selectedIds = signal<string[]>([]);
   private readonly _selectedId = computed(() => this._selectedIds()[0] ?? null);
-  private readonly _modified = signal(false);
+  private _savedRevision = 0;
+  private readonly _currentRevision = signal(0);
 
   // Selection mode options
   private readonly _selectMode = signal<SelectMode>('box');
@@ -76,7 +78,7 @@ export class EditorStateService {
   readonly selectedIds = this._selectedIds.asReadonly();
   readonly selectedId = this._selectedId;
   readonly selectMode = this._selectMode.asReadonly();
-  readonly modified = this._modified.asReadonly();
+  readonly modified = computed(() => this._currentRevision() !== this._savedRevision);
   readonly annotationsByPage = this._annotations.asReadonly();
 
   readonly canUndo = this._canUndo.asReadonly();
@@ -102,6 +104,19 @@ export class EditorStateService {
   readonly eraserTolerance = this._eraserTolerance.asReadonly();
   readonly eraserTarget = this._eraserTarget.asReadonly();
   readonly eraserSizePreviewActive = this._eraserSizePreviewActive.asReadonly();
+
+  private _saveLocallyHandler: (() => Promise<boolean>) | null = null;
+
+  setSaveLocallyHandler(handler: () => Promise<boolean>): void {
+    this._saveLocallyHandler = handler;
+  }
+
+  async saveLocally(): Promise<boolean> {
+    if (this._saveLocallyHandler) {
+      return await this._saveLocallyHandler();
+    }
+    return true;
+  }
 
   requestExport(): void {
     this._exportTrigger.update((n) => n + 1);
@@ -205,7 +220,7 @@ export class EditorStateService {
     if (remaining.length !== list.length) {
       map.set(pageId, remaining);
       this._annotations.set(map);
-      this._modified.set(true);
+      this._currentRevision.update(r => r + 1);
       const remainingIds = new Set(remaining.map((a) => a.id));
       this._selectedIds.update((ids) => ids.filter((id) => remainingIds.has(id)));
     }
@@ -262,7 +277,10 @@ export class EditorStateService {
     return copy;
   }
 
-  private createSnapshot(description: string): HistorySnapshot {
+  private createSnapshot(
+    description: string,
+    revisionId = this._currentRevision(),
+  ): HistorySnapshot {
     const pageSel =
       typeof this.pages.selected === 'function'
         ? Array.from(this.pages.selected())
@@ -282,6 +300,7 @@ export class EditorStateService {
       currentId: curId,
       selectedIds: [...this._selectedIds()],
       pageSelectedIds: pageSel,
+      revisionId,
     };
   }
 
@@ -293,7 +312,7 @@ export class EditorStateService {
   }
 
   pushHistorySnapshot(description = 'Edit'): void {
-    const snapshot = this.createSnapshot(description);
+    const snapshot = this.createSnapshot(description, this._currentRevision());
     this.undoStack.push(snapshot);
     if (this.undoStack.length > 100) {
       this.undoStack.shift();
@@ -302,6 +321,7 @@ export class EditorStateService {
     this._canUndo.set(true);
     this._canRedo.set(false);
     this.updateActionLabels();
+    this._currentRevision.update((r) => r + 1);
   }
 
   undo(): { success: boolean; description?: string } {
@@ -309,7 +329,10 @@ export class EditorStateService {
       return { success: false };
     }
     const previous = this.undoStack.pop()!;
-    const current = this.createSnapshot(previous.description);
+    const current = this.createSnapshot(
+      previous.description,
+      this._currentRevision(),
+    );
     this.redoStack.push(current);
 
     this._annotations.set(this.cloneAnnotationsMap(previous.annotations));
@@ -323,7 +346,7 @@ export class EditorStateService {
     this._selectedIds.set([...previous.selectedIds]);
     this._canUndo.set(this.undoStack.length > 0);
     this._canRedo.set(true);
-    this._modified.set(true);
+    this._currentRevision.set(previous.revisionId);
     this.updateActionLabels();
     return { success: true, description: previous.description };
   }
@@ -333,7 +356,10 @@ export class EditorStateService {
       return { success: false };
     }
     const next = this.redoStack.pop()!;
-    const current = this.createSnapshot(next.description);
+    const current = this.createSnapshot(
+      next.description,
+      this._currentRevision(),
+    );
     this.undoStack.push(current);
 
     this._annotations.set(this.cloneAnnotationsMap(next.annotations));
@@ -347,7 +373,7 @@ export class EditorStateService {
     this._selectedIds.set([...next.selectedIds]);
     this._canUndo.set(true);
     this._canRedo.set(this.redoStack.length > 0);
-    this._modified.set(true);
+    this._currentRevision.set(next.revisionId);
     this.updateActionLabels();
     return { success: true, description: next.description };
   }
@@ -358,6 +384,39 @@ export class EditorStateService {
     }
     return this._annotations().get(pageId) ?? [];
   };
+
+  getSerializedAnnotations(): Record<string, PdfAnnotation[]> {
+    const map = this._annotations();
+    const result: Record<string, PdfAnnotation[]> = {};
+    for (const [k, v] of map.entries()) {
+      if (v && v.length > 0) {
+        result[k] = JSON.parse(JSON.stringify(v));
+      }
+    }
+    return result;
+  }
+
+  restoreAnnotations(
+    annotations?: Record<string, PdfAnnotation[]> | Map<string, PdfAnnotation[]> | null,
+  ): void {
+    const map = new Map<string, PdfAnnotation[]>();
+    if (annotations instanceof Map) {
+      for (const [k, v] of annotations.entries()) {
+        map.set(k, JSON.parse(JSON.stringify(v)));
+      }
+    } else if (annotations && typeof annotations === 'object') {
+      for (const [k, v] of Object.entries(annotations)) {
+        if (Array.isArray(v)) {
+          map.set(k, JSON.parse(JSON.stringify(v)));
+        }
+      }
+    }
+    this._annotations.set(map);
+  }
+
+  getAllAnnotations(): Map<string, PdfAnnotation[]> {
+    return this.cloneAnnotationsMap(this._annotations());
+  }
 
   addAnnotation(
     pageId: string,
@@ -379,7 +438,7 @@ export class EditorStateService {
     if (select) {
       this._selectedIds.set([annotation.id]);
     }
-    this._modified.set(true);
+    this._currentRevision.update(r => r + 1);
   }
 
   updateAnnotation(
@@ -407,7 +466,7 @@ export class EditorStateService {
       next[idx] = updated;
       map.set(pageId, next);
       this._annotations.set(map);
-      this._modified.set(true);
+      this._currentRevision.update(r => r + 1);
       return;
     }
   }
@@ -445,7 +504,7 @@ export class EditorStateService {
       next[idx] = updated;
       map.set(pageId, next);
       this._annotations.set(map);
-      this._modified.set(true);
+      this._currentRevision.update(r => r + 1);
       return;
     }
   }
@@ -537,7 +596,7 @@ export class EditorStateService {
       next[idx] = updated;
       map.set(pageId, next);
       this._annotations.set(map);
-      this._modified.set(true);
+      this._currentRevision.update(r => r + 1);
       return locked;
     }
     return false;
@@ -557,7 +616,7 @@ export class EditorStateService {
       this.pushHistorySnapshot();
       map.set(pageId, next);
       this._annotations.set(map);
-      this._modified.set(true);
+      this._currentRevision.update(r => r + 1);
       this._selectedIds.update((ids) => ids.filter((i) => i !== id));
       return;
     }
@@ -598,7 +657,7 @@ export class EditorStateService {
       map.set(pageId, next);
       this._annotations.set(map);
       this._selectedIds.set([copy.id]);
-      this._modified.set(true);
+      this._currentRevision.update(r => r + 1);
       return copy.id;
     }
     return null;
@@ -625,7 +684,7 @@ export class EditorStateService {
       next.splice(target, 0, moved);
       map.set(pageId, next);
       this._annotations.set(map);
-      this._modified.set(true);
+      this._currentRevision.update(r => r + 1);
       return target;
     }
     return -1;
@@ -644,7 +703,7 @@ export class EditorStateService {
       next.push(moved);
       map.set(pageId, next);
       this._annotations.set(map);
-      this._modified.set(true);
+      this._currentRevision.update(r => r + 1);
       return;
     }
   }
@@ -662,7 +721,7 @@ export class EditorStateService {
       next.unshift(moved);
       map.set(pageId, next);
       this._annotations.set(map);
-      this._modified.set(true);
+      this._currentRevision.update(r => r + 1);
       return;
     }
   }
@@ -793,7 +852,7 @@ export class EditorStateService {
     map.set(pageId, next);
     this._annotations.set(map);
     this._selectedIds.set([]);
-    this._modified.set(true);
+    this._currentRevision.update(r => r + 1);
   }
 
   duplicateSelected(pageId: string | null): string[] {
@@ -842,7 +901,7 @@ export class EditorStateService {
       map.set(pageId, [...list, ...newCopies]);
       this._annotations.set(map);
       this._selectedIds.set(newIds);
-      this._modified.set(true);
+      this._currentRevision.update(r => r + 1);
     }
     return newIds;
   }
@@ -911,7 +970,7 @@ export class EditorStateService {
 
     map.set(pageId, next);
     this._annotations.set(map);
-    this._modified.set(true);
+    this._currentRevision.update(r => r + 1);
   }
 
   setBatchOpacity(pageId: string | null, opacity: number): void {
@@ -929,7 +988,7 @@ export class EditorStateService {
     );
     map.set(pageId, next);
     this._annotations.set(map);
-    this._modified.set(true);
+    this._currentRevision.update(r => r + 1);
   }
 
   toggleBatchLock(pageId: string | null): void {
@@ -950,7 +1009,7 @@ export class EditorStateService {
     );
     map.set(pageId, next);
     this._annotations.set(map);
-    this._modified.set(true);
+    this._currentRevision.update(r => r + 1);
   }
 
   /** Group selected annotations together under a shared groupId */
@@ -968,7 +1027,7 @@ export class EditorStateService {
     );
     map.set(pageId, next);
     this._annotations.set(map);
-    this._modified.set(true);
+    this._currentRevision.update(r => r + 1);
     return newGroupId;
   }
 
@@ -997,7 +1056,7 @@ export class EditorStateService {
     );
     map.set(pageId, next);
     this._annotations.set(map);
-    this._modified.set(true);
+    this._currentRevision.update(r => r + 1);
     return selectedIds;
   }
 
@@ -1027,7 +1086,7 @@ export class EditorStateService {
     map.set(pageId, next);
     this._annotations.set(map);
     this._selectedIds.set(validIds);
-    this._modified.set(true);
+    this._currentRevision.update(r => r + 1);
     return newGroupId;
   }
 
@@ -1098,7 +1157,7 @@ export class EditorStateService {
       });
       map.set(pageId, next);
       this._annotations.set(map);
-      this._modified.set(true);
+      this._currentRevision.update(r => r + 1);
     } else {
       const minY = first.rect.y;
       const maxY = last.rect.y + last.rect.height;
@@ -1133,7 +1192,7 @@ export class EditorStateService {
       });
       map.set(pageId, next);
       this._annotations.set(map);
-      this._modified.set(true);
+      this._currentRevision.update(r => r + 1);
     }
   }
 
@@ -1152,7 +1211,7 @@ export class EditorStateService {
     const selected = list.filter((a) => ids.has(a.id));
     map.set(pageId, [...unselected, ...selected]);
     this._annotations.set(map);
-    this._modified.set(true);
+    this._currentRevision.update(r => r + 1);
   }
 
   sendSelectedToBack(pageId: string | null): void {
@@ -1170,7 +1229,7 @@ export class EditorStateService {
     const selected = list.filter((a) => ids.has(a.id));
     map.set(pageId, [...selected, ...unselected]);
     this._annotations.set(map);
-    this._modified.set(true);
+    this._currentRevision.update(r => r + 1);
   }
 
   /** Select all drawings or the latest drawn ink mark on the page for transformation */
@@ -1192,7 +1251,8 @@ export class EditorStateService {
   reset(): void {
     this._annotations.set(new Map());
     this._selectedIds.set([]);
-    this._modified.set(false);
+    this._savedRevision = 0;
+    this._currentRevision.set(0);
     this._tool.set('select');
     this._zoom.set(1);
     this._fitMode.set('width');
@@ -1201,6 +1261,11 @@ export class EditorStateService {
     this._canUndo.set(false);
     this._canRedo.set(false);
     this.updateActionLabels();
+  }
+
+  /** Mark the current state as "saved" so modified() returns false. */
+  markSaved(): void {
+    this._savedRevision = this._currentRevision();
   }
 
   get pageService(): EditorPagesService {

@@ -1,21 +1,146 @@
 <section class="recent-page">
   <div class="pf-container">
     <header class="recent-page__header">
-      <h1>Recent documents</h1>
-      <p class="pf-text-muted">
-        Stored locally in this browser. Nothing is uploaded.
-      </p>
+      <div class="recent-page__header-content">
+        <div>
+          <h1>Recent documents</h1>
+          <p class="pf-text-muted">
+            Stored locally in this browser. Retained for 30 days. Nothing is uploaded.
+          </p>
+        </div>
+        @if (entries().length > 0) {
+          <div class="recent-page__header-actions">
+            <a class="pf-btn pf-btn--primary pf-btn--sm" routerLink="/editor">
+              <i class="fa-solid fa-folder-open"></i> Open PDF
+            </a>
+            <button type="button" class="pf-btn pf-btn--ghost pf-btn--sm" (click)="clearAll()">
+              <i class="fa-solid fa-trash-can"></i> Clear all history
+            </button>
+          </div>
+        }
+      </div>
+
+      @if (entries().length > 0) {
+        <div class="recent-page__controls">
+          <div class="recent-page__search-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input
+              type="text"
+              class="recent-page__search"
+              placeholder="Search recent files..."
+              [value]="searchQuery()"
+              (input)="onSearchChange($any($event.target).value)"
+            />
+          </div>
+
+          <div class="recent-page__filter-group">
+            <span class="recent-page__filter-label">Sort:</span>
+            <button
+              type="button"
+              class="recent-page__filter-chip"
+              [class.recent-page__filter-chip--active]="sortBy() === 'recent'"
+              (click)="setSortBy('recent')"
+            >
+              Recently Opened
+            </button>
+            <button
+              type="button"
+              class="recent-page__filter-chip"
+              [class.recent-page__filter-chip--active]="sortBy() === 'pinned'"
+              (click)="setSortBy('pinned')"
+            >
+              <i class="fa-solid fa-thumbtack"></i> Pinned First
+            </button>
+            <button
+              type="button"
+              class="recent-page__filter-chip"
+              [class.recent-page__filter-chip--active]="sortBy() === 'name'"
+              (click)="setSortBy('name')"
+            >
+              Name (A-Z)
+            </button>
+          </div>
+        </div>
+      }
     </header>
 
-    <div class="empty-state pf-card">
-      <i class="fa-solid fa-clock-rotate-left empty-state__icon"></i>
-      <h3>No recent documents yet</h3>
-      <p class="pf-text-muted">
-        Documents you open will appear here for quick access.
-      </p>
-      <a class="pf-btn pf-btn--primary" routerLink="/editor">
-        <i class="fa-solid fa-folder-open"></i> Open a PDF
-      </a>
-    </div>
+    @if (entries().length === 0) {
+      <div class="empty-state pf-card">
+        <i class="fa-solid fa-clock-rotate-left empty-state__icon"></i>
+        <h3>No recent documents yet</h3>
+        <p class="pf-text-muted">
+          Documents you open will appear here for quick access within 30 days.
+        </p>
+        <a class="pf-btn pf-btn--primary" routerLink="/editor">
+          <i class="fa-solid fa-folder-open"></i> Open a PDF
+        </a>
+      </div>
+    } @else if (filteredEntries().length === 0) {
+      <div class="empty-state pf-card">
+        <i class="fa-solid fa-magnifying-glass empty-state__icon"></i>
+        <h3>No matching documents</h3>
+        <p class="pf-text-muted">
+          No recent files found matching "{{ searchQuery() }}"
+        </p>
+        <button type="button" class="pf-btn pf-btn--ghost" (click)="onSearchChange('')">
+          Clear Search
+        </button>
+      </div>
+    } @else {
+      <div class="recent-grid">
+        @for (entry of filteredEntries(); track entry.id) {
+          <div class="recent-card pf-card" (click)="openEntry(entry)" role="button" tabindex="0"
+            (keydown.enter)="openEntry(entry)">
+            <div class="recent-card__icon">
+              <i class="fa-solid fa-file-pdf"></i>
+            </div>
+            <div class="recent-card__body">
+              <div class="recent-card__title-wrap">
+                <h3 class="recent-card__title" [title]="entry.name">{{ entry.name }}</h3>
+                @if (entry.pinned) {
+                  <i class="fa-solid fa-thumbtack recent-card__pinned-badge" title="Pinned"></i>
+                }
+              </div>
+              <div class="recent-card__meta">
+                <span>{{ formatSize(entry.sizeBytes) }}</span>
+                @if (entry.pageCount) {
+                  <span>·</span>
+                  <span>{{ entry.pageCount }} {{ entry.pageCount === 1 ? 'page' : 'pages' }}</span>
+                }
+                <span>·</span>
+                <span>{{ getRelativeTime(entry.lastOpenedAt) }}</span>
+                @if (entry.name === currentDocName() && isModified()) {
+                  <span>·</span>
+                  <span class="recent-card__unsaved-badge">
+                    <i class="fa-solid fa-circle"></i> Unsaved
+                  </span>
+                }
+              </div>
+            </div>
+            <div class="recent-card__actions">
+              <button
+                type="button"
+                class="pf-icon-btn pf-icon-btn--sm recent-card__pin-btn"
+                [class.recent-card__pin-btn--active]="entry.pinned"
+                (click)="togglePin(entry.id, $event)"
+                [title]="entry.pinned ? 'Unpin file' : 'Pin file'"
+                aria-label="Pin file"
+              >
+                <i class="fa-solid fa-thumbtack"></i>
+              </button>
+              <button
+                type="button"
+                class="pf-icon-btn pf-icon-btn--sm recent-card__remove-btn"
+                (click)="removeEntry(entry.id, $event)"
+                title="Remove from recent"
+                aria-label="Remove from recent"
+              >
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
   </div>
 </section>

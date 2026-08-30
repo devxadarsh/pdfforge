@@ -48,4 +48,8 @@ export class DialogHostComponent {
   cancel(): void {
     this.dialogs.close(false);
   }
+
+  secondary(): void {
+    this.dialogs.closeSecondary();
+  }
 }

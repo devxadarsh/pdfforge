@@ -10,7 +10,7 @@ import {
   OnDestroy,
   HostListener,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { NgClass, KeyValuePipe } from '@angular/common';
 import {
   NgxExtendedPdfViewerModule,
@@ -33,6 +33,10 @@ import { DownloadService } from '../../core/services/download/download.service';
 import { PdfViewerService, PageSize } from '../../core/services/pdf/pdf-viewer.service';
 import { PdfExportService } from '../../core/services/pdf/pdf-export.service';
 import { ToastService } from '../../core/services/toast.service';
+import { DialogService } from '../../core/services/dialog.service';
+import { DocumentStorageService } from '../../core/services/storage/document-storage.service';
+import { RecentFilesService, RecentFileEntry } from '../../core/services/storage/recent-files.service';
+import { formatRelativeTime } from '../../core/utilities/time.util';
 import { PdfPageComponent } from './components/pdf-page/pdf-page.component';
 import { EditorOverlayComponent } from './components/editor-overlay/editor-overlay.component';
 import { PropertiesPanelComponent } from './components/properties-panel/properties-panel.component';
@@ -65,6 +69,10 @@ export class EditorComponent implements OnDestroy {
   private readonly exporter = inject(PdfExportService);
   private readonly downloads = inject(DownloadService);
   private readonly toasts = inject(ToastService);
+  private readonly dialog = inject(DialogService);
+  private readonly router = inject(Router);
+  private readonly storage = inject(DocumentStorageService);
+  private readonly recentFiles = inject(RecentFilesService);
   readonly pagesStore = inject(EditorPagesService);
   readonly state = inject(EditorStateService);
 
@@ -73,6 +81,32 @@ export class EditorComponent implements OnDestroy {
   /** Session-level workspace preferences; collapsed panels remain as icon rails. */
   readonly pagesPanelCollapsed = signal(false);
   readonly propertiesPanelCollapsed = signal(false);
+
+  /** Recent file entries for landing page and dropdown. */
+  readonly recentEntries = signal<RecentFileEntry[]>([]);
+  /** Controls visibility of the recent files dropdown on desktop. */
+  readonly showRecentDropdown = signal(false);
+  readonly recentSearch = signal<string>('');
+
+  readonly currentDocName = computed(
+    () => this.files.currentFiles()[0]?.name ?? '',
+  );
+
+  readonly filteredRecentEntries = computed(() => {
+    const q = this.recentSearch().trim().toLowerCase();
+    const currentName = this.currentDocName().trim().toLowerCase();
+    let list = this.recentEntries();
+
+    // Filter out the currently opened file
+    if (currentName) {
+      list = list.filter((e) => e.name.toLowerCase() !== currentName);
+    }
+
+    if (!q) {
+      return list;
+    }
+    return list.filter((e) => e.name.toLowerCase().includes(q));
+  });
 
   /** Blob URL handed to ngx-extended-pdf-viewer to load the document. */
   readonly docSrc = signal<string | null>(null);
@@ -661,6 +695,9 @@ export class EditorComponent implements OnDestroy {
       void this.files.restoreLastDocument();
     }
 
+    // Load recent files list from IndexedDB for landing page and dropdown
+    void this.loadRecentEntries();
+
     effect(() => {
       this.pagesStore.currentId();
       this.state.clearSelection();
@@ -827,6 +864,276 @@ export class EditorComponent implements OnDestroy {
 
   closePagesSheet(): void {
     this.state.setMobilePagesOpen(false);
+  }
+
+  // ── Recent Files & File Switching ──────────────────────────────────
+
+  /** Load recent file entries from IndexedDB. */
+  async loadRecentEntries(): Promise<void> {
+    const entries = await this.recentFiles.getAll();
+    this.recentEntries.set(entries);
+  }
+
+  /** Format a timestamp as relative time for display. */
+  getRelativeTime(timestamp: number): string {
+    return formatRelativeTime(timestamp);
+  }
+
+  /** Toggle the recent files dropdown on desktop. */
+  toggleRecentDropdown(): void {
+    if (!this.showRecentDropdown()) {
+      void this.loadRecentEntries();
+    }
+    this.showRecentDropdown.update((v) => !v);
+  }
+
+  /** Close the recent files dropdown. */
+  closeRecentDropdown(): void {
+    this.showRecentDropdown.set(false);
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (this.showRecentDropdown()) {
+      const target = event.target as HTMLElement | null;
+      if (!target?.closest('.editor__open-file-group')) {
+        this.showRecentDropdown.set(false);
+      }
+    }
+  }
+
+  async ngOnInit(): Promise<void> {
+    this.state.setSaveLocallyHandler(() => this.saveDocumentLocally());
+    await this.loadRecentEntries();
+  }
+
+  /**
+   * Saves the current document and all edits locally to IndexedDB & Recent Files.
+   * Resets the dirty/modified state without downloading to disk.
+   */
+  async saveDocumentLocally(): Promise<boolean> {
+    const file = this.files.currentFiles()[0];
+    if (!file) {
+      return false;
+    }
+    try {
+      const pages = this.pagesStore.pages().map((p) => ({ ...p }));
+      const pageSpecs = pages.map((p) => ({
+        sourceIndex: p.sourceIndex,
+        rotation: p.rotation,
+      }));
+      const bytes = await this.exporter.exportDocument(
+        new Uint8Array(file.data.slice(0)),
+        pageSpecs,
+        { title: file.name.replace(/\.pdf$/i, '') },
+      );
+
+      const editorState = {
+        pages,
+        annotations: this.state.getSerializedAnnotations(),
+        currentId: this.pagesStore.currentId(),
+      };
+
+      // Save into RecentFilesService and DocumentStorageService in IndexedDB
+      await this.recentFiles.addOrUpdate(
+        file.name,
+        bytes.buffer,
+        bytes.byteLength,
+        pages.length,
+        editorState,
+      );
+      await this.storage.saveDocument(file.name, bytes.buffer, editorState);
+
+      // Update current loaded file in memory so future edits build upon saved state
+      const updatedBlob = new Blob([bytes.buffer], { type: 'application/pdf' });
+      const updatedFile = new File([updatedBlob], file.name, { type: 'application/pdf' });
+      const updatedLoaded: LoadedFile = {
+        file: updatedFile,
+        name: file.name,
+        sizeBytes: bytes.byteLength,
+        data: bytes.buffer,
+        loadedAt: Date.now(),
+        editorState,
+      };
+      this.files.setCurrent([updatedLoaded]);
+      this.state.markSaved();
+      await this.loadRecentEntries();
+      this.toasts.success(`Saved "${file.name}" and all edits locally in browser.`);
+      return true;
+    } catch (err) {
+      console.error('[Editor] Could not save document locally:', err);
+      const message =
+        err instanceof Error ? err.message : 'Could not save changes locally.';
+      this.toasts.error(message);
+      return false;
+    }
+  }
+
+  /**
+   * Open a new file with unsaved-changes guard.
+   * Used by the "Open File" button on desktop and mobile.
+   */
+  async openNewFile(): Promise<void> {
+    if (this.state.modified()) {
+      const result = await this.dialog.confirm({
+        title: 'Unsaved Changes',
+        message:
+          'You have unsaved edits in this document. What would you like to do?',
+        confirmLabel: 'Save & Open',
+        secondaryLabel: "Don't Save",
+        cancelLabel: 'Cancel',
+        destructive: false,
+      });
+
+      if (!result.confirmed && !result.secondary) {
+        // User clicked Cancel
+        return;
+      }
+
+      if (result.confirmed) {
+        // User clicked "Save & Open" — save locally without downloading
+        const saved = await this.saveDocumentLocally();
+        if (!saved) {
+          return; // Abort switching if save failed
+        }
+      }
+      // If secondary ("Don't Save"), fall through to file picker
+    }
+
+    const picked = await this.files.pickFile(false);
+    if (picked.length > 0) {
+      await this.files.loadFiles(picked);
+    }
+  }
+
+  /**
+   * Open a specific recent file entry with unsaved-changes guard.
+   * If it matches the stored document in IndexedDB, restores it directly.
+   * Otherwise opens file picker to reload the document from disk.
+   */
+  async openRecentFile(entry: RecentFileEntry): Promise<void> {
+    if (this.state.modified()) {
+      const result = await this.dialog.confirm({
+        title: 'Unsaved Changes',
+        message:
+          'You have unsaved edits in this document. What would you like to do?',
+        confirmLabel: 'Save & Open',
+        secondaryLabel: "Don't Save",
+        cancelLabel: 'Cancel',
+        destructive: false,
+      });
+
+      if (!result.confirmed && !result.secondary) {
+        return;
+      }
+
+      if (result.confirmed) {
+        const saved = await this.saveDocumentLocally();
+        if (!saved) {
+          return; // Abort switching if save failed
+        }
+      }
+    }
+
+    // 1. Load document data directly from RecentFilesService
+    const recentDoc = await this.recentFiles.getFileData(entry.id) ?? await this.recentFiles.getFileDataByName(entry.name);
+    if (recentDoc && recentDoc.data) {
+      const blob = new Blob([recentDoc.data], { type: 'application/pdf' });
+      const file = new File([blob], recentDoc.name, { type: 'application/pdf' });
+      const loaded: LoadedFile = {
+        file,
+        name: recentDoc.name,
+        sizeBytes: recentDoc.data.byteLength,
+        data: recentDoc.data,
+        loadedAt: Date.now(),
+        editorState: recentDoc.editorState,
+      };
+      this.files.setCurrent([loaded]);
+      return;
+    }
+
+    // 2. Fallback: Check last-document in storage
+    const lastDoc = await this.storage.loadDocument();
+    if (lastDoc && lastDoc.name.toLowerCase() === entry.name.toLowerCase()) {
+      const blob = new Blob([lastDoc.data], { type: 'application/pdf' });
+      const file = new File([blob], lastDoc.name, { type: 'application/pdf' });
+      const loaded: LoadedFile = {
+        file,
+        name: lastDoc.name,
+        sizeBytes: lastDoc.data.byteLength,
+        data: lastDoc.data,
+        loadedAt: Date.now(),
+        editorState: lastDoc.editorState,
+      };
+      this.files.setCurrent([loaded]);
+      return;
+    }
+
+    // 3. Fallback: Prompt user if file data is not available in storage
+    this.toasts.info(`Please select "${entry.name}" from your device to reopen.`);
+    const picked = await this.files.pickFile(false);
+    if (picked.length > 0) {
+      await this.files.loadFiles(picked);
+    }
+  }
+
+  /** Toggle pinned state for a recent file entry. */
+  async togglePin(id: string, event: Event): Promise<void> {
+    event.stopPropagation();
+    await this.recentFiles.togglePin(id);
+    await this.loadRecentEntries();
+  }
+
+  onRecentSearchInput(value: string): void {
+    this.recentSearch.set(value);
+  }
+
+  /** Remove a file from the recent list. */
+  async removeRecentEntry(id: string): Promise<void> {
+    await this.recentFiles.remove(id);
+    await this.loadRecentEntries();
+  }
+
+  /** Clear all recent file entries. */
+  async clearRecentEntries(): Promise<void> {
+    await this.recentFiles.clearAll();
+    this.recentEntries.set([]);
+  }
+
+  /** Browser close/reload protection when document has unsaved changes. */
+  @HostListener('window:beforeunload', ['$event'])
+  onBeforeUnload(event: BeforeUnloadEvent): void {
+    if (this.state.modified()) {
+      event.preventDefault();
+    }
+  }
+
+  /** Navigate to /tools with unsaved-changes confirmation. */
+  async onToolsClick(event: MouseEvent): Promise<void> {
+    if (this.state.modified()) {
+      event.preventDefault();
+      const result = await this.dialog.confirm({
+        title: 'Unsaved Changes',
+        message:
+          'You have unsaved edits in this document. What would you like to do before leaving?',
+        confirmLabel: 'Save & Leave',
+        secondaryLabel: "Don't Save",
+        cancelLabel: 'Cancel',
+        destructive: false,
+      });
+
+      if (!result.confirmed && !result.secondary) {
+        return;
+      }
+
+      if (result.confirmed) {
+        const saved = await this.saveDocumentLocally();
+        if (!saved) {
+          return;
+        }
+      }
+      void this.router.navigate(['/tools']);
+    }
   }
 
   private currentStageElement: HTMLElement | null = null;
@@ -1157,19 +1464,47 @@ export class EditorComponent implements OnDestroy {
     this.viewer.setDocument(doc);
     const count = event.pagesCount;
     this.docName.set(this.loadedRef?.name ?? null);
-    this.pagesStore.init(count);
+
+    // If we have saved editor state (pages and annotations), restore them!
+    const savedState = this.loadedRef?.editorState;
+    if (savedState && savedState.pages && savedState.pages.length > 0) {
+      this.pagesStore.restoreState(
+        savedState.pages.map((p) => ({ ...p })),
+        undefined,
+        savedState.currentId,
+      );
+      if (savedState.annotations) {
+        this.state.restoreAnnotations(savedState.annotations);
+      }
+    } else {
+      this.pagesStore.init(count);
+    }
+
     this.clearSearch();
     void this.prefetch(count);
     if (this.loadedRef) {
       this.toasts.success(`Opened ${this.loadedRef.name}`);
+      // Register in recent files and reset dirty state
+      void this.recentFiles.addOrUpdate(
+        this.loadedRef.name,
+        this.loadedRef.data,
+        this.loadedRef.sizeBytes,
+        count,
+        savedState,
+      ).then(() => this.loadRecentEntries());
+      this.state.markSaved();
     }
     this.loading.set(false);
 
-    // Ensure document always starts on page 1 with top scroll
+    // Ensure document always starts on page 1 or saved active page with top scroll
     this.isAutoScrolling = true;
-    const firstPageId = this.pagesStore.pages()[0]?.id;
-    if (firstPageId) {
-      this.pagesStore.setCurrent(firstPageId);
+    const initialPageId =
+      (savedState?.currentId && this.pagesStore.pages().some((p) => p.id === savedState.currentId))
+        ? savedState.currentId
+        : this.pagesStore.pages()[0]?.id;
+
+    if (initialPageId) {
+      this.pagesStore.setCurrent(initialPageId);
     }
 
     setTimeout(() => {
@@ -1178,8 +1513,8 @@ export class EditorComponent implements OnDestroy {
         stage.scrollTop = 0;
         stage.scrollLeft = 0;
       }
-      if (firstPageId) {
-        this.pagesStore.setCurrent(firstPageId);
+      if (initialPageId) {
+        this.pagesStore.setCurrent(initialPageId);
       }
       setTimeout(() => {
         this.isAutoScrolling = false;
@@ -1237,11 +1572,11 @@ export class EditorComponent implements OnDestroy {
     }
   }
 
-  async exportPdf(): Promise<void> {
+  async exportPdf(): Promise<boolean> {
     const file = this.files.currentFiles()[0];
     if (!file) {
       this.toasts.error('No document is loaded.');
-      return;
+      return false;
     }
     this.exporting.set(true);
     this.state.setIsExporting(true);
@@ -1254,16 +1589,33 @@ export class EditorComponent implements OnDestroy {
         pages,
         { title: file.name.replace(/\.pdf$/i, '') },
       );
+      const editorState = {
+        pages: this.pagesStore.pages().map((p) => ({ ...p })),
+        annotations: this.state.getSerializedAnnotations(),
+        currentId: this.pagesStore.currentId(),
+      };
+      await this.recentFiles.addOrUpdate(
+        file.name,
+        bytes.buffer,
+        bytes.byteLength,
+        pages.length,
+        editorState,
+      );
+      await this.storage.saveDocument(file.name, bytes.buffer, editorState);
+
       const base = file.name.replace(/\.pdf$/i, '');
       this.downloads.download(
         new Blob([bytes], { type: 'application/pdf' }),
         `${base}-edited.pdf`,
       );
-      this.toasts.success('Exported the edited PDF.');
+      this.toasts.success('Exported and downloaded the edited PDF.');
+      this.state.markSaved();
+      return true;
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Could not export the document.';
       this.toasts.error(message);
+      return false;
     } finally {
       this.exporting.set(false);
       this.state.setIsExporting(false);
@@ -1507,6 +1859,23 @@ export class EditorComponent implements OnDestroy {
     }
 
     const hasZoomModifier = event.ctrlKey || event.metaKey;
+
+    // Ctrl/Cmd+O — Open new file
+    if (hasZoomModifier && event.key.toLowerCase() === 'o') {
+      event.preventDefault();
+      void this.openNewFile();
+      return;
+    }
+
+    // Ctrl/Cmd+S — Save (export) current document
+    if (hasZoomModifier && event.key.toLowerCase() === 's' && !event.shiftKey) {
+      event.preventDefault();
+      if (this.docName()) {
+        void this.exportPdf();
+      }
+      return;
+    }
+
     const isZoomIn = event.key === '+' || event.key === '=' || event.code === 'NumpadAdd';
     const isZoomOut = event.key === '-' || event.key === '_' || event.code === 'NumpadSubtract';
     if (hasZoomModifier && (isZoomIn || isZoomOut)) {

@@ -471,14 +471,14 @@
           {{ isFullscreen() ? 'Exit fullscreen' : 'Fullscreen' }}
         </button>
         <button type="button" class="pf-btn pf-btn--primary pf-btn--sm" (click)="exportPdf()"
-          [disabled]="!docName() || exporting()" [attr.aria-label]="'Export edited PDF'" title="Export edited PDF">
+          [disabled]="!docName() || exporting()" [attr.aria-label]="'Export edited PDF'" title="Export edited PDF (Ctrl+S)">
           @if (exporting()) {
           <i class="fa-solid fa-spinner fa-spin"></i> Exporting…
           } @else {
           <i class="fa-solid fa-file-arrow-down"></i> Export PDF
           }
         </button>
-        <a class="pf-btn pf-btn--ghost pf-btn--sm" routerLink="/tools">
+        <a class="pf-btn pf-btn--ghost pf-btn--sm" routerLink="/tools" (click)="onToolsClick($event)">
           <i class="fa-solid fa-arrow-left"></i> Tools
         </a>
       </div>
@@ -678,6 +678,79 @@
             <span class="editor__feat-pill"><i class="fa-solid fa-shapes"></i> Shapes</span>
             <span class="editor__feat-pill"><i class="fa-solid fa-layer-group"></i> Organize Pages</span>
           </div>
+
+          @if (recentEntries().length > 0) {
+            <div class="editor__recent-section">
+              <div class="editor__recent-section-header">
+                <h3 class="editor__recent-section-title">
+                  <i class="fa-solid fa-clock-rotate-left"></i> Recent Files
+                </h3>
+                <div class="editor__recent-header-right">
+                  <a class="editor__recent-view-all" routerLink="/recent">View all</a>
+                  <button type="button" class="editor__recent-clear-link" (click)="clearRecentEntries()">
+                    Clear all
+                  </button>
+                </div>
+              </div>
+
+              @if (recentEntries().length > 3) {
+                <div class="editor__recent-search-bar">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                  <input
+                    type="text"
+                    placeholder="Search recent files..."
+                    [value]="recentSearch()"
+                    (input)="onRecentSearchInput($any($event.target).value)"
+                  />
+                </div>
+              }
+
+              <div class="editor__recent-grid">
+                @for (entry of filteredRecentEntries(); track entry.id) {
+                  <div class="editor__recent-card"
+                    (click)="openRecentFile(entry)"
+                    (keydown.enter)="openRecentFile(entry)"
+                    role="button"
+                    tabindex="0"
+                    title="Open {{ entry.name }}">
+                    <div class="editor__recent-card-icon">
+                      <i class="fa-solid fa-file-pdf"></i>
+                    </div>
+                    <div class="editor__recent-card-info">
+                      <div class="editor__recent-card-title-row">
+                        <span class="editor__recent-card-name">{{ entry.name }}</span>
+                        @if (entry.pinned) {
+                          <i class="fa-solid fa-thumbtack editor__recent-card-pinned" title="Pinned"></i>
+                        }
+                      </div>
+                      <div class="editor__recent-card-meta-row">
+                        <span class="editor__recent-card-meta">{{ getRelativeTime(entry.lastOpenedAt) }}</span>
+                        @if (entry.name === docName() && state.modified()) {
+                          <span class="editor__recent-card-unsaved">
+                            <i class="fa-solid fa-circle"></i> Unsaved
+                          </span>
+                        }
+                      </div>
+                    </div>
+                    <div class="editor__recent-card-actions">
+                      <button type="button" class="editor__recent-card-pin"
+                        [class.editor__recent-card-pin--active]="entry.pinned"
+                        (click)="togglePin(entry.id, $event)"
+                        [title]="entry.pinned ? 'Unpin file' : 'Pin file'"
+                        aria-label="Pin file">
+                        <i class="fa-solid fa-thumbtack"></i>
+                      </button>
+                      <button type="button" class="editor__recent-card-remove"
+                        (click)="removeRecentEntry(entry.id); $event.stopPropagation()"
+                        title="Remove from recent" aria-label="Remove from recent">
+                        <i class="fa-solid fa-xmark"></i>
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
         </div>
       </div>
       } @else {

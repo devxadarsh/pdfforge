@@ -5,6 +5,7 @@ import { verifyPdfMagic } from '../../utilities/file.util';
 import { LoadedFile } from '../../models/file.models';
 import { DownloadService } from '../download/download.service';
 import { DocumentStorageService } from '../storage/document-storage.service';
+import { RecentFilesService } from '../storage/recent-files.service';
 
 @Injectable({ providedIn: 'root' })
 export class FileService {
@@ -12,6 +13,7 @@ export class FileService {
   private readonly router = inject(Router);
   private readonly downloader = inject(DownloadService);
   private readonly storage = inject(DocumentStorageService);
+  private readonly recentFiles = inject(RecentFilesService);
 
   readonly currentFiles = signal<LoadedFile[]>([]);
 
@@ -51,8 +53,13 @@ export class FileService {
     }
     if (loaded.length) {
       this.currentFiles.set(loaded);
-      // Persist the first file so it survives a page reload
+      // Persist the first file so it survives a page reload and recent files
       void this.storage.saveDocument(loaded[0].name, loaded[0].data);
+      void this.recentFiles.addOrUpdate(
+        loaded[0].name,
+        loaded[0].data,
+        loaded[0].sizeBytes,
+      );
     }
     return loaded;
   }
@@ -74,6 +81,7 @@ export class FileService {
       sizeBytes: stored.data.byteLength,
       data: stored.data,
       loadedAt: Date.now(),
+      editorState: stored.editorState,
     };
     this.currentFiles.set([loaded]);
     return true;

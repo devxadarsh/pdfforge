@@ -33,6 +33,11 @@
         <button class="pf-btn pf-btn--ghost" type="button" (click)="cancel()">
           {{ active()!.cancelLabel }}
         </button>
+        @if (active()!.secondaryLabel) {
+          <button class="pf-btn pf-btn--ghost" type="button" (click)="secondary()">
+            {{ active()!.secondaryLabel }}
+          </button>
+        }
         <button
           class="pf-btn"
           type="button"
