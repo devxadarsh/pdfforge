@@ -9,6 +9,7 @@ import {
   EraserMode,
   EraserTarget,
   PendingPlacement,
+  IconStyleType,
 } from '../../../core/models/pdf.models';
 import { EditorPage } from '../models/editor-page.model';
 import { EditorPagesService } from './editor-pages.service';
@@ -58,13 +59,17 @@ export class EditorStateService {
   private readonly _textBold = signal<boolean>(false);
   private readonly _textItalic = signal<boolean>(false);
 
-  // Shape tool options
+  // Shape & Icon tool options
   private readonly _shapeKind = signal<ShapeKind>('rectangle');
+  private readonly _iconKind = signal<ShapeKind>('ui-browser');
+  private readonly _iconStyle = signal<IconStyleType>('outlined');
   private readonly _shapeRenderMode = signal<'shape' | 'icon'>('shape');
   private readonly _shapeStrokeColor = signal<string>('#2563eb');
   private readonly _shapeFillColor = signal<string>('rgba(37,99,235,0.12)');
   private readonly _shapeStrokeWidth = signal<number>(2);
   private readonly _shapeFillEnabled = signal<boolean>(true);
+  // Resize Mode: 'fixed' (1:1 ratio, default) or 'free' (freehand)
+  private readonly _resizeMode = signal<'fixed' | 'free'>('fixed');
 
   // Markup options
   private readonly _highlightColor = signal<string>('#fde047');
@@ -132,11 +137,34 @@ export class EditorStateService {
   readonly textItalic = this._textItalic.asReadonly();
 
   readonly shapeKind = this._shapeKind.asReadonly();
+  readonly iconKind = this._iconKind.asReadonly();
+  readonly iconStyle = this._iconStyle.asReadonly();
   readonly shapeRenderMode = this._shapeRenderMode.asReadonly();
   readonly shapeStrokeColor = this._shapeStrokeColor.asReadonly();
   readonly shapeFillColor = this._shapeFillColor.asReadonly();
   readonly shapeStrokeWidth = this._shapeStrokeWidth.asReadonly();
   readonly shapeFillEnabled = this._shapeFillEnabled.asReadonly();
+  readonly resizeMode = this._resizeMode.asReadonly();
+
+  setIconStyle(style: IconStyleType): void {
+    this._iconStyle.set(style);
+  }
+
+  cycleIconStyle(): void {
+    const styles: IconStyleType[] = ['outlined', 'filled', 'filled-outline', 'duotone', '3d'];
+    const curr = this._iconStyle();
+    const idx = styles.indexOf(curr);
+    const next = styles[(idx + 1) % styles.length];
+    this._iconStyle.set(next);
+  }
+
+  setResizeMode(mode: 'fixed' | 'free'): void {
+    this._resizeMode.set(mode);
+  }
+
+  toggleResizeMode(): void {
+    this._resizeMode.update((m) => (m === 'fixed' ? 'free' : 'fixed'));
+  }
 
   readonly highlightColor = this._highlightColor.asReadonly();
   readonly underlineColor = this._underlineColor.asReadonly();
@@ -178,6 +206,10 @@ export class EditorStateService {
 
   setShapeKind(kind: ShapeKind): void {
     this._shapeKind.set(kind);
+  }
+
+  setIconKind(kind: ShapeKind): void {
+    this._iconKind.set(kind);
   }
 
   setShapeStrokeColor(color: string): void {
@@ -345,6 +377,11 @@ export class EditorStateService {
     const currentPending = this._pendingPlacement();
     if (currentPending && tool !== currentPending.type) {
       this._pendingPlacement.set(null);
+    }
+    if (tool === 'shape') {
+      this._shapeRenderMode.set('shape');
+    } else if (tool === 'icon') {
+      this._shapeRenderMode.set('icon');
     }
     this._tool.set(tool);
     if (tool !== 'select' && tool !== 'hand') {

@@ -37,36 +37,21 @@
       @case ('shape') {
         @if (a.renderMode === 'icon') {
           <g [attr.transform]="rotateTransform(a)">
-            @if (a.fillColor && a.fillColor !== 'transparent') {
-              <rect
-                [attr.x]="a.rect.x"
-                [attr.y]="a.rect.y"
-                [attr.width]="a.rect.width"
-                [attr.height]="a.rect.height"
-                [attr.fill]="a.fillColor"
-                [attr.stroke]="a.strokeColor"
-                [attr.stroke-width]="a.strokeWidth"
-                [attr.stroke-dasharray]="strokeDashFor(a)"
-                rx="8"
-                [attr.opacity]="a.opacity"
-              />
-            }
             <foreignObject
               [attr.x]="a.rect.x"
               [attr.y]="a.rect.y"
               [attr.width]="a.rect.width"
               [attr.height]="a.rect.height"
               [attr.opacity]="a.opacity"
-              style="overflow: hidden; pointer-events: none;"
+              style="overflow: visible; pointer-events: none;"
             >
               <div
                 xmlns="http://www.w3.org/1999/xhtml"
-                style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;"
+                [ngStyle]="getIconBoxStyle(a)"
               >
                 <i
                   [class]="getShapeIconClass(a)"
-                  [style.color]="a.strokeColor"
-                  [style.font-size.px]="getIconFontSize(a)"
+                  [ngStyle]="getIconGlyphStyle(a)"
                 ></i>
               </div>
             </foreignObject>
@@ -157,6 +142,7 @@
           [attr.fill]="a.color"
           [attr.fill-opacity]="0.4"
           [attr.opacity]="a.opacity"
+          [attr.transform]="rotateTransform(a)"
         />
       }
       @case ('underline') {
@@ -168,6 +154,7 @@
           [attr.stroke]="a.color"
           [attr.stroke-width]="2"
           [attr.opacity]="a.opacity"
+          [attr.transform]="rotateTransform(a)"
         />
       }
       @case ('strikethrough') {
@@ -179,10 +166,11 @@
           [attr.stroke]="a.color"
           [attr.stroke-width]="2"
           [attr.opacity]="a.opacity"
+          [attr.transform]="rotateTransform(a)"
         />
       }
       @case ('comment') {
-        <g class="comment" (dblclick)="startEditingComment(a, $event)">
+        <g class="comment" (dblclick)="startEditingComment(a, $event)" [attr.transform]="rotateTransform(a)">
           <circle
             [attr.cx]="a.rect.x + a.rect.width / 2"
             [attr.cy]="a.rect.y + a.rect.height / 2"
@@ -299,110 +287,71 @@
     }
 
     @if (tool() === 'select' && isSelected(a.id)) {
-      <rect
-        class="sel"
-        [class.sel--locked]="a.locked"
-        [attr.x]="a.rect.x"
-        [attr.y]="a.rect.y"
-        [attr.width]="a.rect.width"
-        [attr.height]="a.rect.height"
-      />
-      @if (a.locked) {
-        <g
-          class="lock-badge"
-          [attr.transform]="'translate(' + (a.rect.x + a.rect.width - 20) + ',' + (a.rect.y - 10) + ')'"
-        >
-          <circle cx="9" cy="9" r="9" fill="#1f2937" />
-          <path
-            d="M6 7V5.5a3 3 0 0 1 6 0V7h.5A1.5 1.5 0 0 1 14 8.5v4a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 4 12.5v-4A1.5 1.5 0 0 1 5.5 7H6zm1.5 0h3V5.5a1.5 1.5 0 0 0-3 0V7z"
-            fill="#f59e0b"
-            transform="scale(0.8) translate(2, 2)"
-          />
-        </g>
-      } @else if (state.selectedIds().length === 1) {
-        <g class="handles">
+      <g [attr.transform]="rotateTransform(a)">
+        <rect
+          class="sel"
+          [class.sel--locked]="a.locked"
+          [attr.x]="a.rect.x"
+          [attr.y]="a.rect.y"
+          [attr.width]="a.rect.width"
+          [attr.height]="a.rect.height"
+        />
+        <!-- Expanded border drag touch target for mobile devices -->
+        @if (isMobile() && !a.locked) {
           <rect
-            class="handle"
-            [attr.x]="a.rect.x - 6"
-            [attr.y]="a.rect.y - 6"
-            width="12"
-            height="12"
-            rx="3"
-            [style.cursor]="handleCursor('nw')"
-            (pointerdown)="onHandleDown($event, 'nw')"
+            class="sel-touch-border"
+            [attr.x]="a.rect.x - 12"
+            [attr.y]="a.rect.y - 12"
+            [attr.width]="a.rect.width + 24"
+            [attr.height]="a.rect.height + 24"
+            fill="none"
+            stroke="transparent"
+            stroke-width="24"
+            style="pointer-events: stroke; cursor: move;"
           />
-          <rect
-            class="handle"
-            [attr.x]="a.rect.x + a.rect.width / 2 - 6"
-            [attr.y]="a.rect.y - 6"
-            width="12"
-            height="12"
-            rx="3"
-            [style.cursor]="handleCursor('n')"
-            (pointerdown)="onHandleDown($event, 'n')"
-          />
-          <rect
-            class="handle"
-            [attr.x]="a.rect.x + a.rect.width - 6"
-            [attr.y]="a.rect.y - 6"
-            width="12"
-            height="12"
-            rx="3"
-            [style.cursor]="handleCursor('ne')"
-            (pointerdown)="onHandleDown($event, 'ne')"
-          />
-          <rect
-            class="handle"
-            [attr.x]="a.rect.x + a.rect.width - 6"
-            [attr.y]="a.rect.y + a.rect.height / 2 - 6"
-            width="12"
-            height="12"
-            rx="3"
-            [style.cursor]="handleCursor('e')"
-            (pointerdown)="onHandleDown($event, 'e')"
-          />
-          <rect
-            class="handle"
-            [attr.x]="a.rect.x + a.rect.width - 6"
-            [attr.y]="a.rect.y + a.rect.height - 6"
-            width="12"
-            height="12"
-            rx="3"
-            [style.cursor]="handleCursor('se')"
-            (pointerdown)="onHandleDown($event, 'se')"
-          />
-          <rect
-            class="handle"
-            [attr.x]="a.rect.x + a.rect.width / 2 - 6"
-            [attr.y]="a.rect.y + a.rect.height - 6"
-            width="12"
-            height="12"
-            rx="3"
-            [style.cursor]="handleCursor('s')"
-            (pointerdown)="onHandleDown($event, 's')"
-          />
-          <rect
-            class="handle"
-            [attr.x]="a.rect.x - 6"
-            [attr.y]="a.rect.y + a.rect.height - 6"
-            width="12"
-            height="12"
-            rx="3"
-            [style.cursor]="handleCursor('sw')"
-            (pointerdown)="onHandleDown($event, 'sw')"
-          />
-          <rect
-            class="handle"
-            [attr.x]="a.rect.x - 6"
-            [attr.y]="a.rect.y + a.rect.height / 2 - 6"
-            width="12"
-            height="12"
-            rx="3"
-            [style.cursor]="handleCursor('w')"
-            (pointerdown)="onHandleDown($event, 'w')"
-          />
-        </g>
-      }
+        }
+        @if (a.locked) {
+          <g
+            class="lock-badge"
+            [attr.transform]="'translate(' + (a.rect.x + a.rect.width - 20) + ',' + (a.rect.y - 10) + ')'"
+          >
+            <circle cx="9" cy="9" r="9" fill="#1f2937" />
+            <path
+              d="M6 7V5.5a3 3 0 0 1 6 0V7h.5A1.5 1.5 0 0 1 14 8.5v4a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 4 12.5v-4A1.5 1.5 0 0 1 5.5 7H6zm1.5 0h3V5.5a1.5 1.5 0 0 0-3 0V7z"
+              fill="#f59e0b"
+              transform="scale(0.8) translate(2, 2)"
+            />
+          </g>
+        } @else if (state.selectedIds().length === 1) {
+          <g class="handles" [class.handles--mobile]="isMobile()">
+            @for (h of getHandles(a.rect); track h.key) {
+              <g class="handle-target" (pointerdown)="onHandleDown($event, h.key)">
+                @if (isMobile()) {
+                  <rect
+                    class="handle-hit"
+                    [attr.x]="h.cx - 20"
+                    [attr.y]="h.cy - 20"
+                    width="40"
+                    height="40"
+                    fill="transparent"
+                    style="pointer-events: all;"
+                  />
+                }
+                <rect
+                  class="handle"
+                  [attr.x]="h.cx - (isMobile() ? 7 : 6)"
+                  [attr.y]="h.cy - (isMobile() ? 7 : 6)"
+                  [attr.width]="isMobile() ? 14 : 12"
+                  [attr.height]="isMobile() ? 14 : 12"
+                  rx="3"
+                  [style.cursor]="handleCursor(h.key, a.rotation)"
+                  style="pointer-events: all;"
+                />
+              </g>
+            }
+          </g>
+        }
+      </g>
     }
   }
 
@@ -439,16 +388,15 @@
             [attr.y]="0"
             [attr.width]="d.width"
             [attr.height]="d.height"
-            style="overflow: hidden; pointer-events: none;"
+            style="overflow: visible; pointer-events: none;"
           >
             <div
               xmlns="http://www.w3.org/1999/xhtml"
-              style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;"
+              [ngStyle]="getDraftIconBoxStyle()"
             >
               <i
                 [class]="activeShapeIconClass()"
-                [style.color]="state.shapeStrokeColor()"
-                [style.font-size.px]="draftIconFontSize()"
+                [ngStyle]="getDraftIconGlyphStyle()"
               ></i>
             </div>
           </foreignObject>

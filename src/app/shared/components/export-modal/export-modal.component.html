@@ -1,0 +1,280 @@
+<div class="export-modal-backdrop" (click)="close()" role="dialog" aria-modal="true" aria-labelledby="export-modal-title">
+  <div class="export-modal pf-card" (click)="$event.stopPropagation()">
+    <!-- Modal Header -->
+    <header class="export-modal__header">
+      <div class="export-modal__title-wrap">
+        <div class="export-modal__icon-badge">
+          <i class="fa-solid fa-file-arrow-down"></i>
+        </div>
+        <div>
+          <h2 id="export-modal-title" class="export-modal__title">Export PDF</h2>
+          <span class="export-modal__subtitle">
+            <i class="fa-solid fa-shield-halved"></i> Processed 100% locally in your browser
+          </span>
+        </div>
+      </div>
+      <button
+        type="button"
+        class="pf-icon-btn pf-icon-btn--sm"
+        (click)="close()"
+        [disabled]="isExporting()"
+        title="Close export dialog (Esc)"
+        aria-label="Close"
+      >
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </header>
+
+    <!-- Modal Body -->
+    <div class="export-modal__body">
+      <!-- 1. Filename Input -->
+      <div class="export-modal__field">
+        <label for="export-filename" class="export-modal__label">
+          <span>File Name</span>
+        </label>
+        <div class="export-modal__input-wrap">
+          <i class="fa-solid fa-file-lines export-modal__input-icon"></i>
+          <input
+            id="export-filename"
+            type="text"
+            class="pf-input export-modal__input"
+            [ngModel]="filename()"
+            (ngModelChange)="filename.set($event)"
+            [disabled]="isExporting()"
+            placeholder="document-edited.pdf"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+      </div>
+
+      <!-- 2. Page Range Selector -->
+      <div class="export-modal__field">
+        <div class="export-modal__label-row">
+          <label class="export-modal__label">Page Selection</label>
+          <span class="export-modal__badge">
+            {{ effectivePageCount() }} of {{ totalPages() }} {{ totalPages() === 1 ? 'page' : 'pages' }}
+          </span>
+        </div>
+        <div class="export-modal__seg-group" role="radiogroup" aria-label="Page Selection">
+          <button
+            type="button"
+            class="export-modal__seg-btn"
+            [class.export-modal__seg-btn--active]="pageRange() === 'all'"
+            (click)="setPageRange('all')"
+            [disabled]="isExporting()"
+          >
+            <i class="fa-solid fa-copy"></i>
+            <span>All ({{ totalPages() }})</span>
+          </button>
+          <button
+            type="button"
+            class="export-modal__seg-btn"
+            [class.export-modal__seg-btn--active]="pageRange() === 'current'"
+            (click)="setPageRange('current')"
+            [disabled]="isExporting()"
+          >
+            <i class="fa-solid fa-file"></i>
+            <span>Current (p. {{ currentPage() }})</span>
+          </button>
+          @if (hasSelectedPages()) {
+            <button
+              type="button"
+              class="export-modal__seg-btn"
+              [class.export-modal__seg-btn--active]="pageRange() === 'selected'"
+              (click)="setPageRange('selected')"
+              [disabled]="isExporting()"
+            >
+              <i class="fa-solid fa-check-double"></i>
+              <span>Selected ({{ selectedPagesCount() }})</span>
+            </button>
+          }
+          <button
+            type="button"
+            class="export-modal__seg-btn"
+            [class.export-modal__seg-btn--active]="pageRange() === 'custom'"
+            (click)="setPageRange('custom')"
+            [disabled]="isExporting()"
+          >
+            <i class="fa-solid fa-sliders"></i>
+            <span>Custom Range</span>
+          </button>
+        </div>
+
+        <!-- Custom Page Range Input -->
+        @if (pageRange() === 'custom') {
+          <div class="export-modal__custom-range-wrap">
+            <input
+              type="text"
+              class="pf-input export-modal__custom-input"
+              [class.export-modal__custom-input--invalid]="!isCustomRangeValid()"
+              [ngModel]="customRangeStr()"
+              (ngModelChange)="customRangeStr.set($event)"
+              [disabled]="isExporting()"
+              placeholder="e.g. 1-3, 5, 8"
+              aria-label="Custom page numbers or ranges"
+            />
+            <div class="export-modal__range-hint">
+              @if (isCustomRangeValid()) {
+                <i class="fa-solid fa-circle-check text-success"></i>
+                <span>Exporting pages: {{ parsedCustomPagesDisplay() }}</span>
+              } @else {
+                <i class="fa-solid fa-circle-exclamation text-danger"></i>
+                <span class="text-danger">Enter valid page numbers within 1 - {{ totalPages() }}</span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- 3. Content Inclusions -->
+      <div class="export-modal__field">
+        <label class="export-modal__label">Include Elements</label>
+        <div class="export-modal__checkboxes">
+          <label class="export-modal__checkbox-item">
+            <input
+              type="checkbox"
+              [ngModel]="includeAnnotations()"
+              (ngModelChange)="includeAnnotations.set($event)"
+              [disabled]="isExporting()"
+            />
+            <span class="export-modal__checkbox-custom"></span>
+            <span class="export-modal__checkbox-text">
+              <i class="fa-solid fa-pen-nib"></i> Annotations, Drawings & Text
+            </span>
+          </label>
+
+          <label class="export-modal__checkbox-item">
+            <input
+              type="checkbox"
+              [ngModel]="includeImagesAndSignatures()"
+              (ngModelChange)="includeImagesAndSignatures.set($event)"
+              [disabled]="isExporting()"
+            />
+            <span class="export-modal__checkbox-custom"></span>
+            <span class="export-modal__checkbox-text">
+              <i class="fa-solid fa-signature"></i> Images & Signatures
+            </span>
+          </label>
+
+          <label class="export-modal__checkbox-item">
+            <input
+              type="checkbox"
+              [ngModel]="includeStamps()"
+              (ngModelChange)="includeStamps.set($event)"
+              [disabled]="isExporting()"
+            />
+            <span class="export-modal__checkbox-custom"></span>
+            <span class="export-modal__checkbox-text">
+              <i class="fa-solid fa-stamp"></i> Document Stamps
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <!-- 4. Document Metadata (Collapsible) -->
+      <div class="export-modal__field">
+        <button
+          type="button"
+          class="export-modal__accordion-btn"
+          (click)="toggleMetadata()"
+          [disabled]="isExporting()"
+          aria-expanded="showMetadata()"
+        >
+          <span><i class="fa-solid fa-tags"></i> PDF Metadata (Optional)</span>
+          <i class="fa-solid" [class.fa-chevron-down]="!showMetadata()" [class.fa-chevron-up]="showMetadata()"></i>
+        </button>
+
+        @if (showMetadata()) {
+          <div class="export-modal__metadata-grid">
+            <div class="export-modal__subfield">
+              <label for="meta-title" class="export-modal__sublabel">Title</label>
+              <input
+                id="meta-title"
+                type="text"
+                class="pf-input"
+                [ngModel]="docTitle()"
+                (ngModelChange)="docTitle.set($event)"
+                [disabled]="isExporting()"
+                placeholder="Document title"
+              />
+            </div>
+            <div class="export-modal__subfield">
+              <label for="meta-author" class="export-modal__sublabel">Author</label>
+              <input
+                id="meta-author"
+                type="text"
+                class="pf-input"
+                [ngModel]="docAuthor()"
+                (ngModelChange)="docAuthor.set($event)"
+                [disabled]="isExporting()"
+                placeholder="Author name"
+              />
+            </div>
+            <div class="export-modal__subfield">
+              <label for="meta-subject" class="export-modal__sublabel">Subject / Keywords</label>
+              <input
+                id="meta-subject"
+                type="text"
+                class="pf-input"
+                [ngModel]="docSubject()"
+                (ngModelChange)="docSubject.set($event)"
+                [disabled]="isExporting()"
+                placeholder="Subject description"
+              />
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- 5. Export Progress Bar (Visible while exporting) -->
+      @if (isExporting()) {
+        <div class="export-modal__progress-box" role="status" aria-live="polite">
+          <div class="export-modal__progress-header">
+            <span class="export-modal__progress-stage">
+              <i class="fa-solid fa-spinner fa-spin"></i>
+              {{ exportProgress()?.stage || 'Generating PDF…' }}
+            </span>
+            <span class="export-modal__progress-pct">
+              {{ exportProgress()?.percentage ?? 25 }}%
+            </span>
+          </div>
+          <div class="export-modal__progress-track">
+            <div
+              class="export-modal__progress-bar"
+              [style.width.%]="exportProgress()?.percentage ?? 25"
+            ></div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Modal Footer -->
+    <footer class="export-modal__footer">
+      <button
+        type="button"
+        class="pf-btn pf-btn--ghost"
+        (click)="close()"
+        [disabled]="isExporting()"
+      >
+        Cancel
+      </button>
+
+      <button
+        type="button"
+        class="pf-btn pf-btn--primary"
+        (click)="submit()"
+        [disabled]="!canSubmit()"
+        title="Export and download PDF (Ctrl+Enter)"
+      >
+        @if (isExporting()) {
+          <i class="fa-solid fa-spinner fa-spin"></i>
+          <span>Exporting…</span>
+        } @else {
+          <i class="fa-solid fa-download"></i>
+          <span>Export & Download PDF</span>
+        }
+      </button>
+    </footer>
+  </div>
+</div>

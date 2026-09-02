@@ -11,6 +11,7 @@ export type PdfToolId =
   | 'freehand'
   | 'eraser'
   | 'shape'
+  | 'icon'
   | 'line'
   | 'rectangle'
   | 'circle'
@@ -278,6 +279,7 @@ export interface BaseAnnotation {
   createdAt: number;
   locked?: boolean;
   groupId?: string;
+  resizeMode?: 'fixed' | 'free';
 }
 
 export type TextTransform = 'none' | 'uppercase' | 'lowercase' | 'capitalize';
@@ -314,10 +316,13 @@ export interface DrawingAnnotation extends BaseAnnotation {
   points: ReadonlyArray<Point>;
 }
 
+export type IconStyleType = 'outlined' | 'filled' | 'filled-outline' | 'duotone' | '3d';
+
 export interface ShapeAnnotation extends BaseAnnotation {
   type: 'shape';
   kind: ShapeKind;
   renderMode?: 'shape' | 'icon';
+  iconStyle?: IconStyleType;
   strokeColor: string;
   fillColor: string;
   strokeWidth: number;

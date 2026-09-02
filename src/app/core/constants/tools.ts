@@ -97,6 +97,13 @@ export const EDITOR_TOOLS: EditorTool[] = [
     group: 'shapes',
   },
   {
+    id: 'icon',
+    label: 'Icons',
+    icon: 'fa-solid fa-icons',
+    shortcut: 'I',
+    group: 'shapes',
+  },
+  {
     id: 'image',
     label: 'Image',
     icon: 'fa-solid fa-image',

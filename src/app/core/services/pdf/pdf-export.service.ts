@@ -2,7 +2,9 @@ import { Injectable } from '@angular/core';
 import { PDFDocument, degrees, rgb, StandardFonts, BlendMode as PdfBlendMode } from 'pdf-lib';
 import { PdfAnnotation, ImageAnnotation } from '../../models/pdf.models';
 import { generateShapeSvgPath } from '../../utilities/shape-paths.util';
-import { SHAPE_DEFINITIONS } from '../../constants/shapes';
+import { ALL_SHAPE_DEFINITIONS, getIconBoxStyles, getIconGlyphStyles } from '../../constants/shapes';
+import { DetailedExportOptions, ExportProgressUpdate, parsePageRange } from '../../models/export.models';
+import { InvalidPdfError, PdfExportError } from '../../errors/pdf-errors';
 
 export interface ExportPageSpec {
   readonly sourceIndex: number;
@@ -16,6 +18,12 @@ export interface ExportOptions {
   readonly filename?: string;
   readonly author?: string;
   readonly title?: string;
+  readonly subject?: string;
+  readonly pageRange?: 'all' | 'current' | 'custom' | 'selected';
+  readonly customPageRange?: string;
+  readonly includeAnnotations?: boolean;
+  readonly includeImagesAndSignatures?: boolean;
+  readonly includeStamps?: boolean;
 }
 
 function mapBlendMode(mode?: string): PdfBlendMode | undefined {
@@ -84,17 +92,17 @@ function buildPageSvg(
   for (const a of annotations) {
     if (a.type === 'shape') {
       if (a.renderMode === 'icon') {
-        const iconDef = SHAPE_DEFINITIONS.find((s) => s.id === a.kind);
+        const iconDef = ALL_SHAPE_DEFINITIONS.find((s) => s.id === a.kind);
         const iconClass = iconDef ? iconDef.icon : 'fa-solid fa-shapes';
         const fontSize = Math.max(10, Math.min(a.rect.width, a.rect.height) * 0.72);
         const transform = a.rotation
           ? `transform="rotate(${a.rotation}, ${a.rect.x + a.rect.width / 2}, ${a.rect.y + a.rect.height / 2})"`
           : '';
-        let bg = '';
-        if (a.fillColor && a.fillColor !== 'transparent') {
-          bg = `<rect x="${a.rect.x}" y="${a.rect.y}" width="${a.rect.width}" height="${a.rect.height}" fill="${a.fillColor}" stroke="${a.strokeColor}" stroke-width="${a.strokeWidth}" rx="8" opacity="${a.opacity ?? 1}" />`;
-        }
-        svgContent += `<g ${transform}>${bg}<foreignObject x="${a.rect.x}" y="${a.rect.y}" width="${a.rect.width}" height="${a.rect.height}" opacity="${a.opacity ?? 1}"><div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;"><i class="${iconClass}" style="color:${a.strokeColor};font-size:${fontSize}px;"></i></div></foreignObject></g>`;
+        const boxStyles = getIconBoxStyles(a.iconStyle || 'outlined', a.strokeColor, a.fillColor, a.strokeWidth);
+        const glyphStyles = getIconGlyphStyles(a.iconStyle || 'outlined', a.strokeColor, fontSize);
+        const boxCss = Object.entries(boxStyles).map(([k, v]) => `${k}:${v}`).join(';');
+        const glyphCss = Object.entries(glyphStyles).map(([k, v]) => `${k}:${v}`).join(';');
+        svgContent += `<g ${transform}><foreignObject x="${a.rect.x}" y="${a.rect.y}" width="${a.rect.width}" height="${a.rect.height}" opacity="${a.opacity ?? 1}"><div xmlns="http://www.w3.org/1999/xhtml" style="${boxCss}"><i class="${iconClass}" style="${glyphCss}"></i></div></foreignObject></g>`;
       } else {
         const isLine = a.kind === 'line';
         const pathD = generateShapeSvgPath(a.kind, Math.max(1, a.rect.width), Math.max(1, a.rect.height));
@@ -132,11 +140,20 @@ function buildPageSvg(
         svgContent += `<path d="${d}" fill="none" stroke="${a.color}" stroke-width="${a.strokeWidth}" stroke-linecap="round" stroke-linejoin="round" opacity="${a.opacity ?? 1}" ${transform} />`;
       }
     } else if (a.type === 'highlight') {
-      svgContent += `<rect x="${a.rect.x}" y="${a.rect.y}" width="${a.rect.width}" height="${a.rect.height}" fill="${a.color}" fill-opacity="0.4" opacity="${a.opacity ?? 1}" />`;
+      const transform = a.rotation
+        ? `transform="rotate(${a.rotation}, ${a.rect.x + a.rect.width / 2}, ${a.rect.y + a.rect.height / 2})"`
+        : '';
+      svgContent += `<rect x="${a.rect.x}" y="${a.rect.y}" width="${a.rect.width}" height="${a.rect.height}" fill="${a.color}" fill-opacity="0.4" opacity="${a.opacity ?? 1}" ${transform} />`;
     } else if (a.type === 'underline') {
-      svgContent += `<line x1="${a.rect.x}" y1="${a.rect.y + a.rect.height - 2}" x2="${a.rect.x + a.rect.width}" y2="${a.rect.y + a.rect.height - 2}" stroke="${a.color}" stroke-width="2" opacity="${a.opacity ?? 1}" />`;
+      const transform = a.rotation
+        ? `transform="rotate(${a.rotation}, ${a.rect.x + a.rect.width / 2}, ${a.rect.y + a.rect.height / 2})"`
+        : '';
+      svgContent += `<line x1="${a.rect.x}" y1="${a.rect.y + a.rect.height - 2}" x2="${a.rect.x + a.rect.width}" y2="${a.rect.y + a.rect.height - 2}" stroke="${a.color}" stroke-width="2" opacity="${a.opacity ?? 1}" ${transform} />`;
     } else if (a.type === 'strikethrough') {
-      svgContent += `<line x1="${a.rect.x}" y1="${a.rect.y + a.rect.height / 2}" x2="${a.rect.x + a.rect.width}" y2="${a.rect.y + a.rect.height / 2}" stroke="${a.color}" stroke-width="2" opacity="${a.opacity ?? 1}" />`;
+      const transform = a.rotation
+        ? `transform="rotate(${a.rotation}, ${a.rect.x + a.rect.width / 2}, ${a.rect.y + a.rect.height / 2})"`
+        : '';
+      svgContent += `<line x1="${a.rect.x}" y1="${a.rect.y + a.rect.height / 2}" x2="${a.rect.x + a.rect.width}" y2="${a.rect.y + a.rect.height / 2}" stroke="${a.color}" stroke-width="2" opacity="${a.opacity ?? 1}" ${transform} />`;
     } else if (a.type === 'text') {
       const transform = a.rotation
         ? `transform="rotate(${a.rotation}, ${a.rect.x + a.rect.width / 2}, ${a.rect.y + a.rect.height / 2})"`
@@ -211,186 +228,263 @@ export class PdfExportService {
   async exportDocument(
     sourceBytes: Uint8Array,
     pages?: readonly ExportPageSpec[],
-    options?: ExportOptions,
+    options?: ExportOptions | DetailedExportOptions,
+    onProgress?: (update: ExportProgressUpdate) => void,
   ): Promise<Uint8Array> {
     if (!sourceBytes || sourceBytes.byteLength === 0) {
-      throw new Error('Invalid PDF: document bytes are empty.');
+      throw new InvalidPdfError('Document bytes are empty or corrupted.');
     }
 
-    const src = await PDFDocument.load(sourceBytes, { ignoreEncryption: true });
-    const out = await PDFDocument.create();
+    onProgress?.({
+      currentStep: 1,
+      totalSteps: 10,
+      percentage: 10,
+      stage: 'Loading document…',
+    });
 
-    if (options?.title) {
-      out.setTitle(options.title);
+    let src: PDFDocument;
+    try {
+      src = await PDFDocument.load(sourceBytes, { ignoreEncryption: true });
+    } catch (loadErr) {
+      throw new InvalidPdfError('Failed to parse the PDF document.', loadErr);
     }
-    if (options?.author) {
-      out.setAuthor(options.author);
-    }
 
-    const totalPages = src.getPageCount();
-    if (totalPages === 0) {
-      throw new Error('The PDF document contains no pages.');
-    }
+    try {
+      const out = await PDFDocument.create();
 
-    // Filter valid page specs with bounds checking
-    const validPages = (pages ?? []).filter(
-      (p) =>
-        p &&
-        typeof p.sourceIndex === 'number' &&
-        p.sourceIndex >= 0 &&
-        p.sourceIndex < totalPages,
-    );
+      // Document Metadata
+      if (options?.title) {
+        out.setTitle(options.title);
+      }
+      if (options?.author) {
+        out.setAuthor(options.author);
+      }
+      if (options?.subject) {
+        out.setSubject(options.subject);
+      }
+      out.setProducer('PDFForge (Client-Side)');
+      out.setCreator('PDFForge');
 
-    let helveticaBoldFont: any = null;
+      const totalPages = src.getPageCount();
+      if (totalPages === 0) {
+        throw new InvalidPdfError('The PDF document contains no readable pages.');
+      }
 
-    if (validPages.length > 0) {
-      for (const spec of validPages) {
-        try {
-          const [copiedPage] = await out.copyPages(src, [spec.sourceIndex]);
-          if (copiedPage) {
-            const rot = typeof spec.rotation === 'number' ? spec.rotation : 0;
-            const normalized = ((rot % 360) + 360) % 360;
-            copiedPage.setRotation(degrees(normalized));
+      // Filter valid page specs with bounds checking
+      let validPages = (pages ?? []).filter(
+        (p) =>
+          p &&
+          typeof p.sourceIndex === 'number' &&
+          p.sourceIndex >= 0 &&
+          p.sourceIndex < totalPages,
+      );
 
-            // Embed annotations onto the copied page if present
-            if (spec.annotations && spec.annotations.length > 0) {
-              const pageWidth = copiedPage.getWidth();
-              const pageHeight = copiedPage.getHeight();
-              const baseW = spec.baseWidth || pageWidth;
-              const baseH = spec.baseHeight || pageHeight;
-              const scaleX = pageWidth / baseW;
-              const scaleY = pageHeight / baseH;
+      // Handle custom page range filtering
+      if (options?.pageRange === 'custom' && options?.customPageRange) {
+        const allowedZeroIndices = parsePageRange(options.customPageRange, validPages.length);
+        if (allowedZeroIndices.length > 0) {
+          validPages = validPages.filter((_, idx) => allowedZeroIndices.includes(idx));
+        }
+      }
 
-              // Render vector overlay (shapes, drawings, text, highlights, etc.)
-              const vectorAnns = spec.annotations.filter(
-                (a) =>
-                  a.type === 'shape' ||
-                  a.type === 'drawing' ||
-                  a.type === 'text' ||
-                  a.type === 'highlight' ||
-                  a.type === 'underline' ||
-                  a.type === 'strikethrough',
-              );
+      const totalValidPages = validPages.length;
+      let helveticaBoldFont: any = null;
 
-              if (vectorAnns.length > 0) {
-                try {
-                  const svg = buildPageSvg(vectorAnns, baseW, baseH);
-                  const pngBytes = await renderSvgOverlayToPng(svg, baseW, baseH);
-                  if (pngBytes) {
-                    const overlayImg = await out.embedPng(pngBytes);
-                    copiedPage.drawImage(overlayImg, {
-                      x: 0,
-                      y: 0,
-                      width: pageWidth,
-                      height: pageHeight,
-                    });
-                  }
-                } catch (svgErr) {
-                  console.warn('[PdfExportService] Failed to render vector overlay:', svgErr);
+      if (totalValidPages > 0) {
+        for (let i = 0; i < totalValidPages; i++) {
+          const spec = validPages[i];
+          const pageProgressPct = Math.round(15 + ((i + 1) / totalValidPages) * 70);
+          onProgress?.({
+            currentStep: i + 1,
+            totalSteps: totalValidPages,
+            percentage: pageProgressPct,
+            stage: `Processing page ${i + 1} of ${totalValidPages}…`,
+          });
+
+          try {
+            const [copiedPage] = await out.copyPages(src, [spec.sourceIndex]);
+            if (copiedPage) {
+              const rot = typeof spec.rotation === 'number' ? spec.rotation : 0;
+              const normalized = ((rot % 360) + 360) % 360;
+              copiedPage.setRotation(degrees(normalized));
+
+              // Filter annotations according to options
+              const rawAnnotations = spec.annotations || [];
+              const filteredAnns = rawAnnotations.filter((ann) => {
+                if (ann.type === 'shape' || ann.type === 'drawing' || ann.type === 'text' || ann.type === 'highlight' || ann.type === 'underline' || ann.type === 'strikethrough') {
+                  return options?.includeAnnotations !== false;
                 }
-              }
+                if (ann.type === 'image' || ann.type === 'signature') {
+                  return options?.includeImagesAndSignatures !== false;
+                }
+                if (ann.type === 'stamp') {
+                  return options?.includeStamps !== false;
+                }
+                return true;
+              });
 
-              for (const ann of spec.annotations) {
-                try {
-                  const pdfX = ann.rect.x * scaleX;
-                  const pdfY =
-                    pageHeight - (ann.rect.y + ann.rect.height) * scaleY;
-                  const pdfW = ann.rect.width * scaleX;
-                  const pdfH = ann.rect.height * scaleY;
+              if (filteredAnns.length > 0) {
+                const pageWidth = copiedPage.getWidth();
+                const pageHeight = copiedPage.getHeight();
+                const baseW = spec.baseWidth || pageWidth;
+                const baseH = spec.baseHeight || pageHeight;
+                const scaleX = pageWidth / baseW;
+                const scaleY = pageHeight / baseH;
 
-                  if (ann.type === 'image' || ann.type === 'signature') {
-                    const raw = dataUrlToUint8Array(ann.dataUrl);
-                    let img;
-                    if (
-                      ann.dataUrl.includes('image/jpeg') ||
-                      ann.dataUrl.includes('image/jpg')
-                    ) {
-                      img = await out.embedJpg(raw);
-                    } else {
-                      img = await out.embedPng(raw);
+                // Render vector overlay
+                const vectorAnns = filteredAnns.filter(
+                  (a) =>
+                    a.type === 'shape' ||
+                    a.type === 'drawing' ||
+                    a.type === 'text' ||
+                    a.type === 'highlight' ||
+                    a.type === 'underline' ||
+                    a.type === 'strikethrough',
+                );
+
+                if (vectorAnns.length > 0) {
+                  try {
+                    const svg = buildPageSvg(vectorAnns, baseW, baseH);
+                    const pngBytes = await renderSvgOverlayToPng(svg, baseW, baseH);
+                    if (pngBytes) {
+                      const overlayImg = await out.embedPng(pngBytes);
+                      copiedPage.drawImage(overlayImg, {
+                        x: 0,
+                        y: 0,
+                        width: pageWidth,
+                        height: pageHeight,
+                      });
                     }
-                    const blend = mapBlendMode((ann as any).blendMode);
-                    copiedPage.drawImage(img, {
-                      x: pdfX,
-                      y: pdfY,
-                      width: pdfW,
-                      height: pdfH,
-                      opacity: ann.opacity ?? 1,
-                      blendMode: blend,
-                    });
-                  } else if (ann.type === 'stamp') {
-                    const col = parseRgb(ann.color);
-                    copiedPage.drawRectangle({
-                      x: pdfX,
-                      y: pdfY,
-                      width: pdfW,
-                      height: pdfH,
-                      borderColor: col,
-                      borderWidth: 2 * scaleX,
-                      opacity: ann.opacity ?? 1,
-                    });
-                    copiedPage.drawRectangle({
-                      x: pdfX + 2 * scaleX,
-                      y: pdfY + 2 * scaleY,
-                      width: pdfW - 4 * scaleX,
-                      height: pdfH - 4 * scaleY,
-                      borderColor: col,
-                      borderWidth: 1 * scaleX,
-                      opacity: ann.opacity ?? 1,
-                    });
-                    if (!helveticaBoldFont) {
-                      helveticaBoldFont = await out.embedFont(
-                        StandardFonts.HelveticaBold,
+                  } catch (svgErr) {
+                    console.warn('[PdfExportService] Failed to render vector overlay:', svgErr);
+                  }
+                }
+
+                for (const ann of filteredAnns) {
+                  try {
+                    const pdfX = ann.rect.x * scaleX;
+                    const pdfY =
+                      pageHeight - (ann.rect.y + ann.rect.height) * scaleY;
+                    const pdfW = ann.rect.width * scaleX;
+                    const pdfH = ann.rect.height * scaleY;
+
+                    if (ann.type === 'image' || ann.type === 'signature') {
+                      const raw = dataUrlToUint8Array(ann.dataUrl);
+                      let img;
+                      if (
+                        ann.dataUrl.includes('image/jpeg') ||
+                        ann.dataUrl.includes('image/jpg')
+                      ) {
+                        img = await out.embedJpg(raw);
+                      } else {
+                        img = await out.embedPng(raw);
+                      }
+                      const blend = mapBlendMode((ann as any).blendMode);
+                      copiedPage.drawImage(img, {
+                        x: pdfX,
+                        y: pdfY,
+                        width: pdfW,
+                        height: pdfH,
+                        opacity: ann.opacity ?? 1,
+                        blendMode: blend,
+                      });
+                    } else if (ann.type === 'stamp') {
+                      const col = parseRgb(ann.color);
+                      copiedPage.drawRectangle({
+                        x: pdfX,
+                        y: pdfY,
+                        width: pdfW,
+                        height: pdfH,
+                        borderColor: col,
+                        borderWidth: 2 * scaleX,
+                        opacity: ann.opacity ?? 1,
+                      });
+                      copiedPage.drawRectangle({
+                        x: pdfX + 2 * scaleX,
+                        y: pdfY + 2 * scaleY,
+                        width: pdfW - 4 * scaleX,
+                        height: pdfH - 4 * scaleY,
+                        borderColor: col,
+                        borderWidth: 1 * scaleX,
+                        opacity: ann.opacity ?? 1,
+                      });
+                      if (!helveticaBoldFont) {
+                        helveticaBoldFont = await out.embedFont(
+                          StandardFonts.HelveticaBold,
+                        );
+                      }
+                      const fontSize = Math.max(8, Math.min(28, pdfH * 0.45));
+                      const textWidth = helveticaBoldFont.widthOfTextAtSize(
+                        ann.text,
+                        fontSize,
                       );
+                      copiedPage.drawText(ann.text, {
+                        x: pdfX + (pdfW - textWidth) / 2,
+                        y: pdfY + (pdfH - fontSize) / 2 + 1,
+                        size: fontSize,
+                        font: helveticaBoldFont,
+                        color: col,
+                        opacity: ann.opacity ?? 1,
+                      });
                     }
-                    const fontSize = Math.max(8, Math.min(28, pdfH * 0.45));
-                    const textWidth = helveticaBoldFont.widthOfTextAtSize(
-                      ann.text,
-                      fontSize,
+                  } catch (annErr) {
+                    console.warn(
+                      '[PdfExportService] Failed to draw annotation:',
+                      ann,
+                      annErr,
                     );
-                    copiedPage.drawText(ann.text, {
-                      x: pdfX + (pdfW - textWidth) / 2,
-                      y: pdfY + (pdfH - fontSize) / 2 + 1,
-                      size: fontSize,
-                      font: helveticaBoldFont,
-                      color: col,
-                      opacity: ann.opacity ?? 1,
-                    });
                   }
-                } catch (annErr) {
-                  console.warn(
-                    '[PdfExportService] Failed to draw annotation:',
-                    ann,
-                    annErr,
-                  );
                 }
               }
+
+              out.addPage(copiedPage);
             }
-
-            out.addPage(copiedPage);
+          } catch (copyErr) {
+            console.warn(
+              '[PdfExportService] Failed to copy page at index:',
+              spec.sourceIndex,
+              copyErr,
+            );
           }
-        } catch (copyErr) {
-          console.warn(
-            '[PdfExportService] Failed to copy page at index:',
-            spec.sourceIndex,
-            copyErr,
-          );
         }
       }
-    }
 
-    // Fallback: If no pages were copied, copy all original pages
-    if (out.getPageCount() === 0) {
-      const allIndices = Array.from({ length: totalPages }, (_, i) => i);
-      const copiedAll = await out.copyPages(src, allIndices);
-      for (const page of copiedAll) {
-        if (page) {
-          out.addPage(page);
+      // Fallback: If no pages were copied, copy all original pages
+      if (out.getPageCount() === 0) {
+        const allIndices = Array.from({ length: totalPages }, (_, i) => i);
+        const copiedAll = await out.copyPages(src, allIndices);
+        for (const page of copiedAll) {
+          if (page) {
+            out.addPage(page);
+          }
         }
       }
-    }
 
-    const data = await out.save();
-    return new Uint8Array(data);
+      onProgress?.({
+        currentStep: 9,
+        totalSteps: 10,
+        percentage: 90,
+        stage: 'Finalizing PDF output…',
+      });
+
+      const data = await out.save();
+
+      onProgress?.({
+        currentStep: 10,
+        totalSteps: 10,
+        percentage: 100,
+        stage: 'Export complete!',
+      });
+
+      return new Uint8Array(data);
+    } catch (exportErr) {
+      if (exportErr instanceof InvalidPdfError || exportErr instanceof PdfExportError) {
+        throw exportErr;
+      }
+      throw new PdfExportError(
+        exportErr instanceof Error ? exportErr.message : 'Could not generate export document.',
+        exportErr,
+      );
+    }
   }
 }

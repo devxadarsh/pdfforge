@@ -537,76 +537,112 @@
         </div>
       }
 
-      <!-- SHAPE CONTROLS -->
+      <!-- SHAPE & ICON CONTROLS -->
       @if (ann.type === 'shape') {
         <div class="props__group">
-          <div class="props__row props__row--between">
-            <label class="props__label">Shape: {{ shapeLabelOf(ann.kind) }}</label>
-          </div>
-
-          <!-- Shape / Icon Render Mode Toggle -->
-          <div class="props__row props__row--inline mb-2">
-            <span class="props__sublabel">Draw Mode:</span>
-            <div class="props__seg-group props__field--grow">
-              <button
-                type="button"
-                class="props__seg-btn"
-                [class.props__seg-btn--on]="(ann.renderMode || 'shape') === 'shape'"
-                [disabled]="ann.locked"
-                (click)="setRenderMode(ann, 'shape')"
-                title="Render as Geometric Vector Shape"
-              >
-                <i class="fa-solid fa-shapes"></i> Shape
-              </button>
-              <button
-                type="button"
-                class="props__seg-btn"
-                [class.props__seg-btn--on]="ann.renderMode === 'icon'"
-                [disabled]="ann.locked"
-                (click)="setRenderMode(ann, 'icon')"
-                title="Render as Vector Icon"
-              >
-                <i class="fa-solid fa-icons"></i> Icon
-              </button>
+          @if (ann.renderMode === 'icon') {
+            <div class="props__row props__row--between">
+              <label class="props__label">Icon: {{ iconLabelOf(ann.kind) }}</label>
             </div>
-          </div>
-
-          <div class="props__shape-tabs">
-            <button
-              type="button"
-              class="props__shape-tab"
-              [class.props__shape-tab--active]="propsShapeCategory() === 'all'"
-              (click)="propsShapeCategory.set('all')"
-              title="All Shapes"
-            >
-              All ({{ shapeDefinitions.length }})
-            </button>
-            @for (cat of shapeCategories; track cat.id) {
+            <div class="props__shape-tabs">
               <button
                 type="button"
                 class="props__shape-tab"
-                [class.props__shape-tab--active]="propsShapeCategory() === cat.id"
-                (click)="propsShapeCategory.set(cat.id)"
-                [title]="cat.label"
+                [class.props__shape-tab--active]="propsIconCategory() === 'all'"
+                (click)="propsIconCategory.set('all')"
+                title="All Icons"
               >
-                <i [class]="cat.icon"></i> {{ cat.label }}
+                All ({{ iconDefinitions.length }})
               </button>
-            }
-          </div>
-          <div class="props__shape-grid">
-            @for (s of propsFilteredShapes(); track s.id) {
+              @for (cat of iconCategories; track cat.id) {
+                <button
+                  type="button"
+                  class="props__shape-tab"
+                  [class.props__shape-tab--active]="propsIconCategory() === cat.id"
+                  (click)="propsIconCategory.set(cat.id)"
+                  [title]="cat.label"
+                >
+                  <i [class]="cat.icon"></i> {{ cat.label }}
+                </button>
+              }
+            </div>
+            <div class="props__shape-grid" (wheel)="onHorizontalWheel($event)">
+              @for (s of propsFilteredIcons(); track s.id) {
+                <button
+                  type="button"
+                  class="props__shape-btn"
+                  [class.props__shape-btn--active]="ann.kind === s.id"
+                  (click)="setIconKind(ann, s.id)"
+                  [title]="s.label"
+                >
+                  <i [class]="s.icon"></i>
+                  <span>{{ s.label }}</span>
+                </button>
+              }
+            </div>
+
+            <!-- ICON STYLE TYPE SELECTOR -->
+            <div class="props__divider"></div>
+            <div class="props__row props__row--between">
+              <label class="props__label">Icon Style</label>
+              <span class="props__hint-inline">{{ iconStyleOf(ann) }}</span>
+            </div>
+            <div class="props__seg-group props__seg-group--full props__icon-style-grid">
+              @for (opt of iconStyleOptions; track opt.id) {
+                <button
+                  type="button"
+                  class="props__seg-btn"
+                  [class.props__seg-btn--on]="iconStyleOf(ann) === opt.id"
+                  (click)="setAnnotationIconStyle(ann, opt.id)"
+                  [title]="opt.description"
+                  [attr.aria-label]="opt.label"
+                >
+                  <i [class]="opt.icon"></i>
+                  <span>{{ opt.label }}</span>
+                </button>
+              }
+            </div>
+          } @else {
+            <div class="props__row props__row--between">
+              <label class="props__label">Shape: {{ shapeLabelOf(ann.kind) }}</label>
+            </div>
+            <div class="props__shape-tabs">
               <button
                 type="button"
-                class="props__shape-btn"
-                [class.props__shape-btn--active]="ann.kind === s.id"
-                (click)="setShapeKind(ann, s.id)"
-                [title]="s.label"
+                class="props__shape-tab"
+                [class.props__shape-tab--active]="propsShapeCategory() === 'all'"
+                (click)="propsShapeCategory.set('all')"
+                title="All Shapes"
               >
-                <i [class]="s.icon"></i>
-                <span>{{ s.label }}</span>
+                All ({{ shapeDefinitions.length }})
               </button>
-            }
-          </div>
+              @for (cat of shapeCategories; track cat.id) {
+                <button
+                  type="button"
+                  class="props__shape-tab"
+                  [class.props__shape-tab--active]="propsShapeCategory() === cat.id"
+                  (click)="propsShapeCategory.set(cat.id)"
+                  [title]="cat.label"
+                >
+                  <i [class]="cat.icon"></i> {{ cat.label }}
+                </button>
+              }
+            </div>
+            <div class="props__shape-grid" (wheel)="onHorizontalWheel($event)">
+              @for (s of propsFilteredShapes(); track s.id) {
+                <button
+                  type="button"
+                  class="props__shape-btn"
+                  [class.props__shape-btn--active]="ann.kind === s.id"
+                  (click)="setShapeKind(ann, s.id)"
+                  [title]="s.label"
+                >
+                  <i [class]="s.icon"></i>
+                  <span>{{ s.label }}</span>
+                </button>
+              }
+            </div>
+          }
         </div>
 
         <div class="props__group">
@@ -1093,6 +1129,36 @@
         </div>
       </div>
 
+      <!-- COMMON: DRAG RESIZE RATIO -->
+      <div class="props__group">
+        <div class="props__row props__row--between">
+          <label class="props__label">Resize Ratio</label>
+          <span class="props__hint-inline">{{ resizeModeOf(ann) === 'fixed' ? 'Fixed 1:1' : 'Free Hand' }}</span>
+        </div>
+        <div class="props__seg-group props__seg-group--full">
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            [class.props__seg-btn--on]="resizeModeOf(ann) === 'fixed'"
+            (click)="setAnnotationResizeMode(ann, 'fixed')"
+            title="Fixed 1:1 Aspect Ratio when dragging border handles"
+            aria-label="Fixed 1:1 Ratio"
+          >
+            <i class="fa-solid fa-lock"></i> Fixed 1:1
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            [class.props__seg-btn--on]="resizeModeOf(ann) === 'free'"
+            (click)="setAnnotationResizeMode(ann, 'free')"
+            title="Free Hand resizing when dragging border handles"
+            aria-label="Free Hand"
+          >
+            <i class="fa-solid fa-arrows-up-down-left-right"></i> Free Hand
+          </button>
+        </div>
+      </div>
+
       <!-- COMMON: ARRANGE / ORDER -->
       <div class="props__group">
         <div class="props__row props__row--between">
@@ -1428,35 +1494,10 @@
   } @else if (activeTool() === 'shape' || activeTool() === 'rectangle' || activeTool() === 'circle' || activeTool() === 'arrow' || activeTool() === 'line') {
     <!-- Shape Tool Configuration Section -->
     <app-panel-section title="Shape Tool" icon="fa-solid fa-shapes">
-      <!-- Active Shape Summary & Draw Mode -->
+      <!-- Active Shape Summary -->
       <div class="props__group">
         <div class="props__row props__row--between">
           <label class="props__label">Shape: {{ shapeLabelOf(shapeKind()) }}</label>
-        </div>
-
-        <!-- Shape / Icon Render Mode Toggle -->
-        <div class="props__row props__row--inline mb-2">
-          <span class="props__sublabel">Draw Mode:</span>
-          <div class="props__seg-group props__field--grow">
-            <button
-              type="button"
-              class="props__seg-btn"
-              [class.props__seg-btn--on]="shapeRenderMode() === 'shape'"
-              (click)="setToolRenderMode('shape')"
-              title="Render as Geometric Vector Shape"
-            >
-              <i class="fa-solid fa-shapes"></i> Shape
-            </button>
-            <button
-              type="button"
-              class="props__seg-btn"
-              [class.props__seg-btn--on]="shapeRenderMode() === 'icon'"
-              (click)="setToolRenderMode('icon')"
-              title="Render as Vector Icon"
-            >
-              <i class="fa-solid fa-icons"></i> Icon
-            </button>
-          </div>
         </div>
 
         <!-- Shape Categories Tabs (All first) -->
@@ -1484,7 +1525,7 @@
         </div>
 
         <!-- Shape Grid -->
-        <div class="props__shape-grid">
+        <div class="props__shape-grid" (wheel)="onHorizontalWheel($event)">
           @for (s of propsFilteredShapes(); track s.id) {
             <button
               type="button"
@@ -1497,6 +1538,36 @@
               <span>{{ s.label }}</span>
             </button>
           }
+        </div>
+      </div>
+
+      <!-- RESIZE RATIO DEFAULT -->
+      <div class="props__group">
+        <div class="props__row props__row--between">
+          <label class="props__label">Resize Ratio</label>
+          <span class="props__hint-inline">{{ state.resizeMode() === 'fixed' ? 'Fixed 1:1' : 'Free Hand' }}</span>
+        </div>
+        <div class="props__seg-group props__seg-group--full">
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            [class.props__seg-btn--on]="state.resizeMode() === 'fixed'"
+            (click)="state.setResizeMode('fixed')"
+            title="Fixed 1:1 Aspect Ratio when dragging border handles"
+            aria-label="Fixed 1:1 Ratio"
+          >
+            <i class="fa-solid fa-lock"></i> Fixed 1:1
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            [class.props__seg-btn--on]="state.resizeMode() === 'free'"
+            (click)="state.setResizeMode('free')"
+            title="Free Hand resizing when dragging border handles"
+            aria-label="Free Hand"
+          >
+            <i class="fa-solid fa-arrows-up-down-left-right"></i> Free Hand
+          </button>
         </div>
       </div>
 
@@ -1598,6 +1669,177 @@
           [value]="shapeStrokeWidth()"
           (input)="setToolStrokeWidth(+$any($event.target).value)"
         />
+      </div>
+    </app-panel-section>
+  } @else if (activeTool() === 'icon') {
+    <!-- Icon Tool Configuration Section -->
+    <app-panel-section title="Icon Tool" icon="fa-solid fa-icons">
+      <div class="props__group">
+        <div class="props__row props__row--between">
+          <label class="props__label">Icon: {{ iconLabelOf(iconKind()) }}</label>
+        </div>
+
+        <!-- Icon Categories Tabs (All first) -->
+        <div class="props__shape-tabs">
+          <button
+            type="button"
+            class="props__shape-tab"
+            [class.props__shape-tab--active]="propsIconCategory() === 'all'"
+            (click)="propsIconCategory.set('all')"
+            title="All Icons"
+          >
+            All ({{ iconDefinitions.length }})
+          </button>
+          @for (cat of iconCategories; track cat.id) {
+            <button
+              type="button"
+              class="props__shape-tab"
+              [class.props__shape-tab--active]="propsIconCategory() === cat.id"
+              (click)="propsIconCategory.set(cat.id)"
+              [title]="cat.label"
+            >
+              <i [class]="cat.icon"></i> {{ cat.label }}
+            </button>
+          }
+        </div>
+
+        <!-- Icon Grid -->
+        <div class="props__shape-grid" (wheel)="onHorizontalWheel($event)">
+          @for (s of propsFilteredIcons(); track s.id) {
+            <button
+              type="button"
+              class="props__shape-btn"
+              [class.props__shape-btn--active]="iconKind() === s.id"
+              (click)="setToolIconKind(s.id)"
+              [title]="s.label"
+            >
+              <i [class]="s.icon"></i>
+              <span>{{ s.label }}</span>
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- RESIZE RATIO DEFAULT -->
+      <div class="props__group">
+        <div class="props__row props__row--between">
+          <label class="props__label">Resize Ratio</label>
+          <span class="props__hint-inline">{{ state.resizeMode() === 'fixed' ? 'Fixed 1:1' : 'Free Hand' }}</span>
+        </div>
+        <div class="props__seg-group props__seg-group--full">
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            [class.props__seg-btn--on]="state.resizeMode() === 'fixed'"
+            (click)="state.setResizeMode('fixed')"
+            title="Fixed 1:1 Aspect Ratio when dragging border handles"
+            aria-label="Fixed 1:1 Ratio"
+          >
+            <i class="fa-solid fa-lock"></i> Fixed 1:1
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            [class.props__seg-btn--on]="state.resizeMode() === 'free'"
+            (click)="state.setResizeMode('free')"
+            title="Free Hand resizing when dragging border handles"
+            aria-label="Free Hand"
+          >
+            <i class="fa-solid fa-arrows-up-down-left-right"></i> Free Hand
+          </button>
+        </div>
+      </div>
+
+      <!-- ICON STYLE DEFAULT -->
+      <div class="props__divider"></div>
+      <div class="props__group">
+        <div class="props__row props__row--between">
+          <label class="props__label">Icon Style</label>
+          <span class="props__hint-inline">{{ state.iconStyle() }}</span>
+        </div>
+        <div class="props__seg-group props__seg-group--full props__icon-style-grid">
+          @for (opt of iconStyleOptions; track opt.id) {
+            <button
+              type="button"
+              class="props__seg-btn"
+              [class.props__seg-btn--on]="state.iconStyle() === opt.id"
+              (click)="state.setIconStyle(opt.id)"
+              [title]="opt.description"
+              [attr.aria-label]="opt.label"
+            >
+              <i [class]="opt.icon"></i>
+              <span>{{ opt.label }}</span>
+            </button>
+          }
+        </div>
+      </div>
+
+      <div class="props__divider"></div>
+
+      <!-- ICON COLOR SETTINGS -->
+      <div class="props__group">
+        <label class="props__label">Icon Color</label>
+        <div class="props__swatches">
+          @for (sw of shapeSwatches; track sw.value) {
+            <button
+              type="button"
+              class="props__swatch"
+              [class.props__swatch--active]="shapeStrokeColor() === sw.value"
+              [style.background-color]="sw.value"
+              (click)="setToolStrokeColor(sw.value)"
+              [title]="sw.label"
+            ></button>
+          }
+          <label class="props__custom-color-btn" title="Custom icon color">
+            <input
+              type="color"
+              [value]="shapeStrokeColor()"
+              (input)="setToolStrokeColor($any($event.target).value)"
+            />
+            <i class="fa-solid fa-eye-dropper"></i>
+          </label>
+        </div>
+      </div>
+
+      <div class="props__divider"></div>
+
+      <!-- BACKGROUND FILL SETTINGS -->
+      <div class="props__group">
+        <div class="props__row props__row--between">
+          <label class="props__label">Background Fill</label>
+          <button
+            type="button"
+            class="props__seg-btn props__seg-btn--sm"
+            [class.props__seg-btn--on]="shapeFillEnabled()"
+            (click)="toggleToolShapeFill()"
+          >
+            <i class="fa-solid fa-fill-drip"></i>
+            {{ shapeFillEnabled() ? 'Enabled' : 'None' }}
+          </button>
+        </div>
+
+        @if (shapeFillEnabled()) {
+          <div class="props__swatches">
+            @for (sw of shapeSwatches; track sw.value) {
+              <button
+                type="button"
+                class="props__swatch"
+                [class.props__swatch--active]="shapeFillColor() === sw.value"
+                [style.background-color]="sw.value"
+                (click)="setToolFillColor(sw.value)"
+                [title]="sw.label"
+              ></button>
+            }
+            <label class="props__custom-color-btn" title="Custom fill color">
+              <input
+                type="color"
+                [value]="shapeFillColor()"
+                (input)="setToolFillColor($any($event.target).value)"
+              />
+              <i class="fa-solid fa-eye-dropper"></i>
+            </label>
+          </div>
+        }
       </div>
     </app-panel-section>
   } @else if (activeTool() === 'select') {

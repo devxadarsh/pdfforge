@@ -31,12 +31,22 @@ import {
   StampAnnotation,
   BlendMode,
   AspectRatioMode,
+  IconStyleType,
 } from '../../core/models/pdf.models';
-import { SHAPE_CATEGORIES, SHAPE_DEFINITIONS } from '../../core/constants/shapes';
+import {
+  SHAPE_CATEGORIES,
+  SHAPE_DEFINITIONS,
+  ICON_CATEGORIES,
+  ICON_DEFINITIONS,
+  ALL_SHAPE_DEFINITIONS,
+  ICON_STYLE_OPTIONS,
+} from '../../core/constants/shapes';
 import { LoadedFile } from '../../core/models/file.models';
 import { FileDropzoneComponent } from '../../shared/components/dropzone/file-dropzone.component';
 import { SignatureModalComponent, SignatureResult } from '../../shared/components/signature-modal/signature-modal.component';
 import { StampModalComponent, StampResult } from '../../shared/components/stamp-modal/stamp-modal.component';
+import { ExportModalComponent } from '../../shared/components/export-modal/export-modal.component';
+import { DetailedExportOptions, ExportProgressUpdate, sanitizePdfFilename } from '../../core/models/export.models';
 import { FileService } from '../../core/services/file/file.service';
 import { DownloadService } from '../../core/services/download/download.service';
 import { PdfViewerService, PageSize } from '../../core/services/pdf/pdf-viewer.service';
@@ -67,6 +77,7 @@ import { MobileTooltipDirective } from '../../shared/directives/mobile-tooltip.d
     FileDropzoneComponent,
     SignatureModalComponent,
     StampModalComponent,
+    ExportModalComponent,
     PdfPageComponent,
     EditorOverlayComponent,
     PropertiesPanelComponent,
@@ -439,16 +450,38 @@ export class EditorComponent implements OnDestroy {
   readonly selectedShapeCategory = signal<string>('all');
   readonly shapeSearchQuery = signal<string>('');
 
+  readonly iconCategories = ICON_CATEGORIES;
+  readonly iconDefinitions = ICON_DEFINITIONS;
+  readonly iconMenuOpen = signal<boolean>(false);
+  readonly selectedIconCategory = signal<string>('all');
+  readonly iconSearchQuery = signal<string>('');
+
   readonly activeShapeDefinition = computed(() => {
     const sel = this.selectedAnnotation();
     const k = (sel && sel.type === 'shape' ? sel.kind : this.state.shapeKind()) || 'rectangle';
-    return this.shapeDefinitions.find((s) => s.id === k) || this.shapeDefinitions[0];
+    return this.shapeDefinitions.find((s) => s.id === k) || ALL_SHAPE_DEFINITIONS.find((s) => s.id === k) || this.shapeDefinitions[0];
+  });
+
+  readonly activeIconDefinition = computed(() => {
+    const sel = this.selectedAnnotation();
+    const k = (sel && sel.type === 'shape' && sel.renderMode === 'icon' ? sel.kind : this.state.iconKind()) || 'ui-browser';
+    return this.iconDefinitions.find((s) => s.id === k) || ALL_SHAPE_DEFINITIONS.find((s) => s.id === k) || this.iconDefinitions[0];
   });
 
   readonly filteredShapes = computed(() => {
     const q = this.shapeSearchQuery().trim().toLowerCase();
     const cat = this.selectedShapeCategory();
     return this.shapeDefinitions.filter((s) => {
+      const matchCat = cat === 'all' || s.category === cat;
+      const matchQuery = !q || s.label.toLowerCase().includes(q) || s.id.toLowerCase().includes(q);
+      return matchCat && matchQuery;
+    });
+  });
+
+  readonly filteredIcons = computed(() => {
+    const q = this.iconSearchQuery().trim().toLowerCase();
+    const cat = this.selectedIconCategory();
+    return this.iconDefinitions.filter((s) => {
       const matchCat = cat === 'all' || s.category === cat;
       const matchQuery = !q || s.label.toLowerCase().includes(q) || s.id.toLowerCase().includes(q);
       return matchCat && matchQuery;
@@ -463,10 +496,25 @@ export class EditorComponent implements OnDestroy {
     return this.shapeDefinitions.filter((s) => s.category === cat);
   });
 
+  readonly mobileCategoryIcons = computed(() => {
+    const cat = this.selectedIconCategory();
+    if (cat === 'all') {
+      return this.iconDefinitions;
+    }
+    return this.iconDefinitions.filter((s) => s.category === cat);
+  });
+
   readonly mobileCategoryLabel = computed(() => {
     const catId = this.selectedShapeCategory();
     if (catId === 'all') return 'All';
     const c = this.shapeCategories.find((cat) => cat.id === catId);
+    return c ? c.label : catId;
+  });
+
+  readonly mobileIconCategoryLabel = computed(() => {
+    const catId = this.selectedIconCategory();
+    if (catId === 'all') return 'All';
+    const c = this.iconCategories.find((cat) => cat.id === catId);
     return c ? c.label : catId;
   });
 
@@ -477,7 +525,19 @@ export class EditorComponent implements OnDestroy {
       this.state.setShapeKind(catShapes[0].id);
       const sel = this.selectedAnnotation();
       if (sel && sel.type === 'shape') {
-        this.state.updateAnnotation(sel.id, { kind: catShapes[0].id });
+        this.state.updateAnnotation(sel.id, { kind: catShapes[0].id, renderMode: 'shape' });
+      }
+    }
+  }
+
+  setMobileIconCategory(catId: string): void {
+    this.selectedIconCategory.set(catId);
+    const catIcons = catId === 'all' ? this.iconDefinitions : this.iconDefinitions.filter((s) => s.category === catId);
+    if (catIcons.length > 0 && !catIcons.some((s) => s.id === this.state.iconKind())) {
+      this.state.setIconKind(catIcons[0].id);
+      const sel = this.selectedAnnotation();
+      if (sel && sel.type === 'shape') {
+        this.state.updateAnnotation(sel.id, { kind: catIcons[0].id, renderMode: 'icon' });
       }
     }
   }
@@ -488,12 +548,26 @@ export class EditorComponent implements OnDestroy {
     this.shapeMenuOpen.set(true);
   }
 
+  openCategoryIcons(catId: string): void {
+    this.selectedIconCategory.set(catId);
+    this.iconSearchQuery.set('');
+    this.iconMenuOpen.set(true);
+  }
+
   toggleShapeMenu(): void {
     this.shapeMenuOpen.update((v) => !v);
   }
 
   closeShapeMenu(): void {
     this.shapeMenuOpen.set(false);
+  }
+
+  toggleIconMenu(): void {
+    this.iconMenuOpen.update((v) => !v);
+  }
+
+  closeIconMenu(): void {
+    this.iconMenuOpen.set(false);
   }
 
   onShapeToolClick(event?: Event): void {
@@ -506,8 +580,21 @@ export class EditorComponent implements OnDestroy {
       this.propertiesPanelCollapsed.set(false);
       this.closeShapeMenu();
     } else {
-      // On mobile, keep the double-row category & shape bar active directly above toolbar
       this.closeShapeMenu();
+    }
+  }
+
+  onIconToolClick(event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+    this.selectTool('icon');
+    if (!isMobile) {
+      this.propertiesPanelCollapsed.set(false);
+      this.closeIconMenu();
+    } else {
+      this.closeIconMenu();
     }
   }
 
@@ -515,7 +602,7 @@ export class EditorComponent implements OnDestroy {
     this.state.setShapeKind(kind);
     const sel = this.selectedAnnotation();
     if (sel && sel.type === 'shape') {
-      this.state.updateAnnotation(sel.id, { kind });
+      this.state.updateAnnotation(sel.id, { kind, renderMode: 'shape' });
     }
     this.state.setTool('shape');
     this.closeShapeMenu();
@@ -525,14 +612,64 @@ export class EditorComponent implements OnDestroy {
     this.state.setShapeKind(kind);
     const sel = this.selectedAnnotation();
     if (sel && sel.type === 'shape') {
-      this.state.updateAnnotation(sel.id, { kind });
+      this.state.updateAnnotation(sel.id, { kind, renderMode: 'shape' });
     }
     this.state.setTool('shape');
+  }
+
+  selectIconKind(kind: ShapeKind): void {
+    this.state.setIconKind(kind);
+    const sel = this.selectedAnnotation();
+    if (sel && sel.type === 'shape') {
+      this.state.updateAnnotation(sel.id, { kind, renderMode: 'icon' });
+    }
+    this.state.setTool('icon');
+    this.closeIconMenu();
+  }
+
+  selectIconKindMobile(kind: ShapeKind): void {
+    this.state.setIconKind(kind);
+    const sel = this.selectedAnnotation();
+    if (sel && sel.type === 'shape') {
+      this.state.updateAnnotation(sel.id, { kind, renderMode: 'icon' });
+    }
+    this.state.setTool('icon');
   }
 
   toggleAnnotationRenderMode(ann: ShapeAnnotation): void {
     const next = (ann.renderMode || 'shape') === 'icon' ? 'shape' : 'icon';
     this.state.updateAnnotation(ann.id, { renderMode: next });
+  }
+
+  readonly iconStyleOptions = ICON_STYLE_OPTIONS;
+
+  setAnnotationIconStyle(ann: ShapeAnnotation, style: IconStyleType): void {
+    this.state.updateAnnotation(ann.id, { iconStyle: style });
+  }
+
+  getAnnotationIconStyle(ann: ShapeAnnotation): IconStyleType {
+    return ann.iconStyle || this.state.iconStyle() || 'outlined';
+  }
+
+  iconLabelOf(kind: ShapeKind): string {
+    const s = this.iconDefinitions.find((def) => def.id === kind) || ALL_SHAPE_DEFINITIONS.find((def) => def.id === kind);
+    return s ? s.label : kind;
+  }
+
+  shapeLabelOf(kind: ShapeKind): string {
+    const s = this.shapeDefinitions.find((def) => def.id === kind) || ALL_SHAPE_DEFINITIONS.find((def) => def.id === kind);
+    return s ? s.label : kind;
+  }
+
+  getShapeIconClass(ann: ShapeAnnotation): string {
+    const s = ALL_SHAPE_DEFINITIONS.find((def) => def.id === ann.kind);
+    return s ? s.icon : 'fa-solid fa-shapes';
+  }
+
+  toggleAnnotationResizeMode(ann: ShapeAnnotation): void {
+    const curr = ann.resizeMode || this.state.resizeMode();
+    const next = curr === 'fixed' ? 'free' : 'fixed';
+    this.state.updateAnnotation(ann.id, { resizeMode: next });
   }
 
   readonly docName = signal<string | null>(null);
@@ -548,6 +685,13 @@ export class EditorComponent implements OnDestroy {
   readonly imageInputRef = viewChild<ElementRef<HTMLInputElement>>('imageFileInput');
   readonly isSignatureModalOpen = signal<boolean>(false);
   readonly isStampModalOpen = signal<boolean>(false);
+  readonly isExportModalOpen = signal<boolean>(false);
+  readonly exportProgress = signal<ExportProgressUpdate | null>(null);
+  readonly defaultExportFilename = computed<string>(() => {
+    const name = this.docName();
+    if (!name) return 'document-edited.pdf';
+    return name.replace(/\.pdf$/i, '') + '-edited.pdf';
+  });
   readonly stageSize = signal<{ width: number; height: number }>({
     width: 0,
     height: 0,
@@ -699,7 +843,9 @@ export class EditorComponent implements OnDestroy {
       case 'drawing':
         return 'fa-solid fa-pen-nib';
       case 'shape':
-        return 'fa-regular fa-square';
+        return this.activeShapeDefinition().icon;
+      case 'icon':
+        return this.activeIconDefinition().icon;
       case 'highlight':
         return 'fa-solid fa-highlighter';
       case 'underline':
@@ -763,6 +909,10 @@ export class EditorComponent implements OnDestroy {
         return 'Cut segments or erase strokes';
       case 'text':
         return 'Tap page to add text';
+      case 'shape':
+        return 'Drag or tap to place shape';
+      case 'icon':
+        return 'Drag or tap to place icon';
       case 'highlight':
         return 'Highlight text area';
       case 'underline':
@@ -792,6 +942,7 @@ export class EditorComponent implements OnDestroy {
       t === 'freehand' ||
       t === 'eraser' ||
       t === 'shape' ||
+      t === 'icon' ||
       t === 'highlight' ||
       t === 'underline' ||
       t === 'strikethrough' ||
@@ -2026,7 +2177,21 @@ export class EditorComponent implements OnDestroy {
     }
   }
 
-  async exportPdf(): Promise<boolean> {
+  openExportModal(): void {
+    if (!this.docName()) {
+      this.toasts.warning('Please open a PDF document first.');
+      return;
+    }
+    this.isExportModalOpen.set(true);
+  }
+
+  closeExportModal(): void {
+    if (this.exporting()) return;
+    this.isExportModalOpen.set(false);
+    this.exportProgress.set(null);
+  }
+
+  async confirmExportModal(options: DetailedExportOptions): Promise<boolean> {
     const file = this.files.currentFiles()[0];
     if (!file) {
       this.toasts.error('No document is loaded.');
@@ -2035,7 +2200,21 @@ export class EditorComponent implements OnDestroy {
     this.exporting.set(true);
     this.state.setIsExporting(true);
     try {
-      const pageSpecs = this.pagesStore.pages().map((p) => {
+      const allPages = this.pagesStore.pages();
+      let targetPages = allPages;
+
+      if (options.pageRange === 'current') {
+        const curId = this.pagesStore.currentId();
+        const cur = allPages.find((p) => p.id === curId) || allPages[0];
+        targetPages = cur ? [cur] : allPages;
+      } else if (options.pageRange === 'selected') {
+        const selIds = this.pagesStore.selected();
+        if (selIds.size > 0) {
+          targetPages = allPages.filter((p) => selIds.has(p.id));
+        }
+      }
+
+      const pageSpecs = targetPages.map((p) => {
         const pageSize = this.baseSizes().get(p.sourceIndex) || { width: 595, height: 842 };
         const anns = this.state.annotationsFor(p.id);
         return {
@@ -2046,11 +2225,16 @@ export class EditorComponent implements OnDestroy {
           baseHeight: pageSize.height,
         };
       });
+
       const bytes = await this.exporter.exportDocument(
         new Uint8Array(file.data.slice(0)),
         pageSpecs,
-        { title: file.name.replace(/\.pdf$/i, '') },
+        options,
+        (progress) => {
+          this.exportProgress.set(progress);
+        },
       );
+
       const editorState = {
         pages: this.pagesStore.pages().map((p) => ({ ...p })),
         annotations: this.state.getSerializedAnnotations(),
@@ -2065,13 +2249,14 @@ export class EditorComponent implements OnDestroy {
       );
       await this.storage.saveDocument(file.name, bytes.buffer, editorState);
 
-      const base = file.name.replace(/\.pdf$/i, '');
+      const downloadFilename = sanitizePdfFilename(options.filename);
       this.downloads.download(
         new Blob([bytes], { type: 'application/pdf' }),
-        `${base}-edited.pdf`,
+        downloadFilename,
       );
-      this.toasts.success('Exported and downloaded the edited PDF.');
+      this.toasts.success(`Exported "${downloadFilename}" successfully!`);
       this.state.markSaved();
+      this.closeExportModal();
       return true;
     } catch (err) {
       const message =
@@ -2081,7 +2266,13 @@ export class EditorComponent implements OnDestroy {
     } finally {
       this.exporting.set(false);
       this.state.setIsExporting(false);
+      this.exportProgress.set(null);
     }
+  }
+
+  async exportPdf(): Promise<boolean> {
+    this.openExportModal();
+    return true;
   }
 
   /* Zoom */
@@ -2376,12 +2567,23 @@ export class EditorComponent implements OnDestroy {
       return;
     }
 
+    const hasModifier = event.ctrlKey || event.metaKey;
     const selectedIds = this.state.selectedIds();
+
+    if (!hasModifier && !isInput && selectedIds.length === 0) {
+      const k = event.key.toLowerCase();
+      if (k === 'v') { this.selectTool('select'); return; }
+      if (k === 'h') { this.selectTool('hand'); return; }
+      if (k === 't') { this.selectTool('text'); return; }
+      if (k === 'p') { this.selectTool('pen'); return; }
+      if (k === 'e') { this.selectTool('eraser'); return; }
+      if (k === 's') { this.onShapeToolClick(); return; }
+      if (k === 'i') { this.onIconToolClick(); return; }
+    }
+
     if (selectedIds.length === 0) {
       return;
     }
-
-    const hasModifier = event.ctrlKey || event.metaKey;
 
     if (hasModifier && event.key.toLowerCase() === 'g') {
       event.preventDefault();

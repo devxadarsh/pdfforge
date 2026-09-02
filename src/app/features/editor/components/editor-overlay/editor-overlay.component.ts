@@ -9,7 +9,9 @@ import {
   effect,
   OnDestroy,
   ChangeDetectionStrategy,
+  HostListener,
 } from '@angular/core';
+import { NgStyle } from '@angular/common';
 import {
   PdfToolId,
   PdfAnnotation,
@@ -29,7 +31,7 @@ import {
   TextTransform,
 } from '../../../../core/models/pdf.models';
 import { generateShapeSvgPath } from '../../../../core/utilities/shape-paths.util';
-import { SHAPE_DEFINITIONS } from '../../../../core/constants/shapes';
+import { ALL_SHAPE_DEFINITIONS, getIconBoxStyles, getIconGlyphStyles } from '../../../../core/constants/shapes';
 import { EditorStateService } from '../../state/editor-state.service';
 
 type MarkType =
@@ -103,6 +105,7 @@ function isAnnotationInPolygon(a: PdfAnnotation, polygon: Point[]): boolean {
 @Component({
   selector: 'app-editor-overlay',
   standalone: true,
+  imports: [NgStyle],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './editor-overlay.component.html',
   styleUrl: './editor-overlay.component.scss',
@@ -127,6 +130,31 @@ export class EditorOverlayComponent implements OnDestroy {
   });
 
   readonly pendingPos = signal<{ x: number; y: number } | null>(null);
+  readonly isMobile = signal<boolean>(
+    typeof window !== 'undefined' && window.innerWidth <= 768,
+  );
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    if (typeof window !== 'undefined') {
+      this.isMobile.set(window.innerWidth <= 768);
+    }
+  }
+
+  getHandles(r: Rect): { key: Handle; cx: number; cy: number }[] {
+    const hw = r.width / 2;
+    const hh = r.height / 2;
+    return [
+      { key: 'nw', cx: r.x, cy: r.y },
+      { key: 'n', cx: r.x + hw, cy: r.y },
+      { key: 'ne', cx: r.x + r.width, cy: r.y },
+      { key: 'e', cx: r.x + r.width, cy: r.y + hh },
+      { key: 'se', cx: r.x + r.width, cy: r.y + r.height },
+      { key: 's', cx: r.x + hw, cy: r.y + r.height },
+      { key: 'sw', cx: r.x, cy: r.y + r.height },
+      { key: 'w', cx: r.x, cy: r.y + hh },
+    ];
+  }
 
   readonly pageId = input.required<string>();
   readonly pageIndex = input.required<number>();
@@ -445,15 +473,47 @@ export class EditorOverlayComponent implements OnDestroy {
 
   private hitTest(x: number, y: number): PdfAnnotation | null {
     const list = this.annotations();
+    const isMob = this.isMobile();
+    const margin = isMob ? 18 : 2;
+
+    const testHit = (ann: PdfAnnotation, hitMargin: number): boolean => {
+      const r = ann.rect;
+      let testX = x;
+      let testY = y;
+      if (ann.rotation) {
+        const rad = (-ann.rotation * Math.PI) / 180;
+        const cx = r.x + r.width / 2;
+        const cy = r.y + r.height / 2;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+        const dx = x - cx;
+        const dy = y - cy;
+        testX = cx + (dx * cos - dy * sin);
+        testY = cy + (dx * sin + dy * cos);
+      }
+      return (
+        testX >= r.x - hitMargin &&
+        testX <= r.x + r.width + hitMargin &&
+        testY >= r.y - hitMargin &&
+        testY <= r.y + r.height + hitMargin
+      );
+    };
+
+    // On mobile devices, give already-selected annotations a generous border drag margin (24px)
+    // so touches on or near the selection border reliably grab the item rather than deselecting.
+    if (isMob) {
+      const selectedIds = this.state.selectedIds();
+      if (selectedIds.length > 0) {
+        const selectedAnn = list.find((a) => selectedIds.includes(a.id));
+        if (selectedAnn && testHit(selectedAnn, 24)) {
+          return selectedAnn;
+        }
+      }
+    }
+
     for (let i = list.length - 1; i >= 0; i--) {
       const a = list[i];
-      const r = a.rect;
-      if (
-        x >= r.x - 2 &&
-        x <= r.x + r.width + 2 &&
-        y >= r.y - 2 &&
-        y <= r.y + r.height + 2
-      ) {
+      if (testHit(a, margin)) {
         return a;
       }
     }
@@ -729,12 +789,18 @@ export class EditorOverlayComponent implements OnDestroy {
       t === 'arrow' ||
       t === 'line' ||
       (t as string) === 'shape' ||
+      (t as string) === 'icon' ||
       t === 'highlight' ||
       t === 'underline' ||
       t === 'strikethrough'
     ) {
       this.start = { x, y };
-      const shapeType = (t as string) === 'shape' ? this.state.shapeKind() : (t as MarkType);
+      const shapeType =
+        (t as string) === 'icon'
+          ? this.state.iconKind()
+          : (t as string) === 'shape'
+            ? this.state.shapeKind()
+            : (t as MarkType);
       this.draft.set({ type: shapeType, x, y, width: 0, height: 0 });
       this.svgRef()?.nativeElement.setPointerCapture?.(event.pointerId);
     } else if (t === 'comment') {
@@ -763,21 +829,44 @@ export class EditorOverlayComponent implements OnDestroy {
   }
 
   /** Maps a resize handle to the correct directional cursor (drag icon). */
-  handleCursor(h: Handle): string {
-    switch (h) {
-      case 'nw':
-      case 'se':
-        return 'nwse-resize';
-      case 'ne':
-      case 'sw':
-        return 'nesw-resize';
-      case 'n':
-      case 's':
-        return 'ns-resize';
-      case 'e':
-      case 'w':
-        return 'ew-resize';
+  handleCursor(h: Handle, rotation = 0): string {
+    if (!rotation) {
+      switch (h) {
+        case 'nw':
+        case 'se':
+          return 'nwse-resize';
+        case 'ne':
+        case 'sw':
+          return 'nesw-resize';
+        case 'n':
+        case 's':
+          return 'ns-resize';
+        case 'e':
+        case 'w':
+          return 'ew-resize';
+      }
     }
+    const handleAngles: Record<Handle, number> = {
+      n: 0,
+      ne: 45,
+      e: 90,
+      se: 135,
+      s: 180,
+      sw: 225,
+      w: 270,
+      nw: 315,
+    };
+    const angle = ((handleAngles[h] + rotation) % 360 + 360) % 360;
+    if (angle >= 337.5 || angle < 22.5 || (angle >= 157.5 && angle < 202.5)) {
+      return 'ns-resize';
+    }
+    if ((angle >= 22.5 && angle < 67.5) || (angle >= 202.5 && angle < 247.5)) {
+      return 'nesw-resize';
+    }
+    if ((angle >= 67.5 && angle < 112.5) || (angle >= 247.5 && angle < 292.5)) {
+      return 'ew-resize';
+    }
+    return 'nwse-resize';
   }
 
   onPointerLeave(): void {
@@ -831,17 +920,29 @@ export class EditorOverlayComponent implements OnDestroy {
         return;
       }
       const { x, y } = this.localPoint(event);
-      const dx = x - this.resizeStart.x;
-      const dy = y - this.resizeStart.y;
+      let dx = x - this.resizeStart.x;
+      let dy = y - this.resizeStart.y;
+      if (a.rotation) {
+        const rad = (-a.rotation * Math.PI) / 180;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+        const rdx = dx * cos - dy * sin;
+        const rdy = dx * sin + dy * cos;
+        dx = rdx;
+        dy = rdy;
+      }
       const h = this.resizeHandle;
       const orig = this.resizeStart.rect;
 
       let targetRatio: number | null = null;
+      const annResizeMode = (a as any).resizeMode || this.state.resizeMode();
+      const isFixed1to1 = annResizeMode === 'fixed' ? !event.shiftKey : event.shiftKey;
+
       if (a.type === 'image') {
         const imgAnn = a as ImageAnnotation;
-        const mode = imgAnn.aspectRatioMode || 'original';
+        const mode = imgAnn.aspectRatioMode;
         if (mode === 'free') {
-          targetRatio = event.shiftKey ? orig.width / Math.max(1, orig.height) : null;
+          targetRatio = isFixed1to1 ? 1 : null;
         } else if (mode === '1:1') {
           targetRatio = 1;
         } else if (mode === '4:3') {
@@ -850,22 +951,26 @@ export class EditorOverlayComponent implements OnDestroy {
           targetRatio = 16 / 9;
         } else if (mode === '3:2') {
           targetRatio = 3 / 2;
-        } else {
+        } else if (mode === 'original') {
           targetRatio =
             imgAnn.naturalWidth && imgAnn.naturalHeight
               ? imgAnn.naturalWidth / imgAnn.naturalHeight
               : orig.width / Math.max(1, orig.height);
+        } else {
+          targetRatio = isFixed1to1 ? 1 : null;
         }
       } else if (a.type === 'signature') {
         const sigAnn = a as SignatureAnnotation;
-        targetRatio =
-          sigAnn.naturalWidth && sigAnn.naturalHeight
-            ? sigAnn.naturalWidth / sigAnn.naturalHeight
-            : orig.width / Math.max(1, orig.height);
+        targetRatio = isFixed1to1
+          ? 1
+          : (sigAnn.naturalWidth && sigAnn.naturalHeight
+              ? sigAnn.naturalWidth / sigAnn.naturalHeight
+              : orig.width / Math.max(1, orig.height));
       } else if (a.type === 'comment') {
         targetRatio = 1;
-      } else if (event.shiftKey) {
-        targetRatio = orig.width / Math.max(1, orig.height);
+      } else {
+        // Shapes, icons, text, stamps, drawings
+        targetRatio = isFixed1to1 ? 1 : null;
       }
 
       let rx = orig.x;
@@ -1094,12 +1199,22 @@ export class EditorOverlayComponent implements OnDestroy {
     if (this.draft() && this.start) {
       const { x, y } = this.localPoint(event);
       const d = this.draft()!;
+      let w = Math.abs(x - this.start.x);
+      let h = Math.abs(y - this.start.y);
+      const isFixed1to1 = this.state.resizeMode() === 'fixed' ? !event.shiftKey : event.shiftKey;
+      if (isFixed1to1) {
+        const side = Math.max(w, h);
+        w = side;
+        h = side;
+      }
+      const newX = x < this.start.x ? this.start.x - w : this.start.x;
+      const newY = y < this.start.y ? this.start.y - h : this.start.y;
       this.draft.set({
         ...d,
-        x: Math.min(this.start.x, x),
-        y: Math.min(this.start.y, y),
-        width: Math.abs(x - this.start.x),
-        height: Math.abs(y - this.start.y),
+        x: newX,
+        y: newY,
+        width: w,
+        height: h,
       });
     }
   }
@@ -1457,7 +1572,7 @@ export class EditorOverlayComponent implements OnDestroy {
   }
 
   /** Build a rotation transform centered on the annotation's bounding box. */
-  rotateTransform(a: { rect: { x: number; y: number; width: number; height: number }; rotation: number }): string | null {
+  rotateTransform(a: { rect: { x: number; y: number; width: number; height: number }; rotation?: number }): string | null {
     if (!a.rotation) {
       return null;
     }
@@ -1680,7 +1795,7 @@ export class EditorOverlayComponent implements OnDestroy {
   }
 
   getShapeIconClass(a: ShapeAnnotation): string {
-    const def = SHAPE_DEFINITIONS.find((s) => s.id === a.kind);
+    const def = ALL_SHAPE_DEFINITIONS.find((s) => s.id === a.kind);
     return def ? def.icon : 'fa-solid fa-shapes';
   }
 
@@ -1688,9 +1803,36 @@ export class EditorOverlayComponent implements OnDestroy {
     return Math.max(10, Math.min(a.rect.width, a.rect.height) * 0.72);
   }
 
+  getIconBoxStyle(a: ShapeAnnotation): Record<string, string> {
+    return getIconBoxStyles(a.iconStyle || 'outlined', a.strokeColor, a.fillColor, a.strokeWidth);
+  }
+
+  getIconGlyphStyle(a: ShapeAnnotation): Record<string, string> {
+    return getIconGlyphStyles(a.iconStyle || 'outlined', a.strokeColor, this.getIconFontSize(a));
+  }
+
+  getDraftIconBoxStyle(): Record<string, string> {
+    return getIconBoxStyles(
+      this.state.iconStyle(),
+      this.state.shapeStrokeColor(),
+      this.state.shapeFillColor(),
+      this.state.shapeStrokeWidth()
+    );
+  }
+
+  getDraftIconGlyphStyle(): Record<string, string> {
+    return getIconGlyphStyles(
+      this.state.iconStyle(),
+      this.state.shapeStrokeColor(),
+      this.draftIconFontSize()
+    );
+  }
+
   activeShapeIconClass(): string {
-    const def = SHAPE_DEFINITIONS.find((s) => s.id === this.state.shapeKind());
-    return def ? def.icon : 'fa-solid fa-shapes';
+    const isIconTool = (this.tool() as string) === 'icon';
+    const kind = isIconTool ? this.state.iconKind() : this.state.shapeKind();
+    const def = ALL_SHAPE_DEFINITIONS.find((s) => s.id === kind);
+    return def ? def.icon : isIconTool ? 'fa-solid fa-icons' : 'fa-solid fa-shapes';
   }
 
   draftIconFontSize(): number {
@@ -1700,7 +1842,10 @@ export class EditorOverlayComponent implements OnDestroy {
   }
 
   private commitShape(d: DraftMark): void {
-    const kind: ShapeKind = ((d.type as any) === 'shape' ? this.state.shapeKind() : (d.type as ShapeKind)) || this.state.shapeKind() || 'rectangle';
+    const isIconTool = (this.tool() as string) === 'icon';
+    const kind: ShapeKind = isIconTool
+      ? this.state.iconKind()
+      : ((d.type as any) === 'shape' ? this.state.shapeKind() : (d.type as ShapeKind)) || this.state.shapeKind() || 'rectangle';
     const isLineOrArrow = kind === 'arrow' || kind === 'line';
     const strokeColor = this.state.shapeStrokeColor();
     const strokeWidth = this.state.shapeStrokeWidth();
@@ -1709,12 +1854,14 @@ export class EditorOverlayComponent implements OnDestroy {
       isLineOrArrow || !fillEnabled
         ? 'transparent'
         : this.state.shapeFillColor();
-    const renderMode = this.state.shapeRenderMode();
+    const renderMode: 'shape' | 'icon' = isIconTool ? 'icon' : (this.state.shapeRenderMode() || 'shape');
+    const iconStyle = isIconTool ? this.state.iconStyle() : undefined;
     const ann: ShapeAnnotation = {
       id: crypto.randomUUID(),
       type: 'shape',
       kind,
       renderMode,
+      iconStyle,
       pageIndex: this.pageIndex(),
       rect: { x: d.x, y: d.y, width: Math.max(12, d.width), height: Math.max(12, d.height) },
       rotation: 0,

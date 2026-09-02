@@ -34,8 +34,24 @@
   touch-action: none;
 }
 
+.sel-touch-border {
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
 .handles {
   touch-action: none;
+}
+
+.handle-target {
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.handle-hit {
+  touch-action: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .handle {

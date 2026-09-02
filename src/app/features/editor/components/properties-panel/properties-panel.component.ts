@@ -24,8 +24,16 @@ import {
   SelectMode,
   EraserMode,
   EraserTarget,
+  IconStyleType,
 } from '../../../../core/models/pdf.models';
-import { SHAPE_CATEGORIES, SHAPE_DEFINITIONS } from '../../../../core/constants/shapes';
+import {
+  SHAPE_CATEGORIES,
+  SHAPE_DEFINITIONS,
+  ICON_CATEGORIES,
+  ICON_DEFINITIONS,
+  ALL_SHAPE_DEFINITIONS,
+  ICON_STYLE_OPTIONS,
+} from '../../../../core/constants/shapes';
 import { PanelSectionComponent } from '../../../../shared/components/panel/panel-section.component';
 import { EditorStateService } from '../../state/editor-state.service';
 import { EditorPagesService } from '../../state/editor-pages.service';
@@ -87,7 +95,7 @@ import { MobileTooltipDirective } from '../../../../shared/directives/mobile-too
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PropertiesPanelComponent {
-  private readonly state = inject(EditorStateService);
+  readonly state = inject(EditorStateService);
   private readonly pages = inject(EditorPagesService);
 
   readonly collapse = output<void>();
@@ -199,7 +207,12 @@ export class PropertiesPanelComponent {
   readonly shapeDefinitions = SHAPE_DEFINITIONS;
   readonly propsShapeCategory = signal<string>('all');
 
+  readonly iconCategories = ICON_CATEGORIES;
+  readonly iconDefinitions = ICON_DEFINITIONS;
+  readonly propsIconCategory = signal<string>('all');
+
   readonly shapeKind = this.state.shapeKind;
+  readonly iconKind = this.state.iconKind;
   readonly shapeStrokeColor = this.state.shapeStrokeColor;
   readonly shapeFillColor = this.state.shapeFillColor;
   readonly shapeFillEnabled = this.state.shapeFillEnabled;
@@ -208,6 +221,10 @@ export class PropertiesPanelComponent {
 
   setToolShapeKind(kind: ShapeKind): void {
     this.state.setShapeKind(kind);
+  }
+
+  setToolIconKind(kind: ShapeKind): void {
+    this.state.setIconKind(kind);
   }
 
   setToolRenderMode(mode: 'shape' | 'icon'): void {
@@ -235,14 +252,63 @@ export class PropertiesPanelComponent {
     return this.shapeDefinitions.filter((s) => cat === 'all' || s.category === cat);
   });
 
+  readonly propsFilteredIcons = computed(() => {
+    const cat = this.propsIconCategory();
+    return this.iconDefinitions.filter((s) => cat === 'all' || s.category === cat);
+  });
+
+  onHorizontalWheel(event: WheelEvent): void {
+    if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+      return;
+    }
+    const el = event.currentTarget as HTMLElement | null;
+    if (el && Math.abs(event.deltaY) > Math.abs(event.deltaX)) {
+      el.scrollLeft += event.deltaY;
+      event.preventDefault();
+    }
+  }
+
   shapeLabelOf(kind: ShapeKind): string {
-    const s = this.shapeDefinitions.find((def) => def.id === kind);
+    const s = ALL_SHAPE_DEFINITIONS.find((def) => def.id === kind);
     return s ? s.label : kind;
+  }
+
+  iconLabelOf(kind: ShapeKind): string {
+    const s = this.iconDefinitions.find((def) => def.id === kind) || ALL_SHAPE_DEFINITIONS.find((def) => def.id === kind);
+    return s ? s.label : kind;
+  }
+
+  resizeModeOf(ann: PdfAnnotation): 'fixed' | 'free' {
+    return (ann as any).resizeMode || this.state.resizeMode();
+  }
+
+  setAnnotationResizeMode(ann: PdfAnnotation, mode: 'fixed' | 'free'): void {
+    this.state.updateAnnotation(ann.id, { resizeMode: mode } as any);
+  }
+
+  readonly iconStyleOptions = ICON_STYLE_OPTIONS;
+
+  iconStyleOf(ann: PdfAnnotation): IconStyleType {
+    return (ann as ShapeAnnotation).iconStyle || this.state.iconStyle() || 'outlined';
+  }
+
+  setAnnotationIconStyle(ann: PdfAnnotation, style: IconStyleType): void {
+    this.state.updateAnnotation(ann.id, { iconStyle: style } as any);
+  }
+
+  isIconAnnotation(ann: PdfAnnotation): boolean {
+    return ann.type === 'shape' && (ann as ShapeAnnotation).renderMode === 'icon';
   }
 
   setShapeKind(ann: PdfAnnotation, kind: ShapeKind): void {
     if (ann.type === 'shape') {
-      this.state.updateAnnotation(ann.id, { kind });
+      this.state.updateAnnotation(ann.id, { kind, renderMode: 'shape' });
+    }
+  }
+
+  setIconKind(ann: PdfAnnotation, kind: ShapeKind): void {
+    if (ann.type === 'shape') {
+      this.state.updateAnnotation(ann.id, { kind, renderMode: 'icon' });
     }
   }
 

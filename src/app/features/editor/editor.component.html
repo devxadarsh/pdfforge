@@ -438,45 +438,169 @@
             <i class="fa-solid fa-arrow-down"></i>
           </button>
           @if (selAnn.type === 'shape') {
+            @if (selAnn.renderMode === 'icon') {
+              <!-- Icon Selected: Row 1 Extra = Change Icon + Resize Mode -->
+              <div class="editor__dp-divider"></div>
+              <button
+                type="button"
+                class="editor__dp-pill editor__dp-pill--active"
+                [disabled]="selAnn.locked"
+                (click)="openCategoryIcons(selectedIconCategory())"
+                [title]="'Change Icon (' + iconLabelOf(selAnn.kind) + ')'"
+                aria-label="Change Icon"
+              >
+                <i [class]="getShapeIconClass(selAnn)"></i>
+                <span style="font-size: 11px; margin-left: 2px;">{{ iconLabelOf(selAnn.kind) }}</span>
+                <i class="fa-solid fa-chevron-up" style="font-size: 8px; margin-left: 2px; opacity: 0.75;"></i>
+              </button>
+              <div class="editor__dp-divider"></div>
+              <button
+                type="button"
+                class="editor__dp-pill"
+                [disabled]="selAnn.locked"
+                [class.editor__dp-pill--active]="(selAnn.resizeMode || state.resizeMode()) === 'fixed'"
+                (click)="toggleAnnotationResizeMode(selAnn)"
+                [title]="'Resize: ' + ((selAnn.resizeMode || state.resizeMode()) === 'fixed' ? 'Fixed 1:1' : 'Free Hand')"
+                aria-label="Toggle Resize Ratio"
+              >
+                <i [class]="(selAnn.resizeMode || state.resizeMode()) === 'fixed' ? 'fa-solid fa-lock' : 'fa-solid fa-arrows-up-down-left-right'"></i>
+                <span>{{ (selAnn.resizeMode || state.resizeMode()) === 'fixed' ? '1:1' : 'Free' }}</span>
+              </button>
+            } @else {
+              <!-- Shape Selected: Row 1 Extra = Change Shape + Resize Mode -->
+              <div class="editor__dp-divider"></div>
+              <button
+                type="button"
+                class="editor__dp-pill editor__dp-pill--active"
+                [disabled]="selAnn.locked"
+                (click)="openCategoryShapes(selectedShapeCategory())"
+                [title]="'Change Shape (' + shapeLabelOf(selAnn.kind) + ')'"
+                aria-label="Change Shape"
+              >
+                <i [class]="activeShapeDefinition().icon"></i>
+                <span style="font-size: 11px; margin-left: 2px;">{{ shapeLabelOf(selAnn.kind) }}</span>
+                <i class="fa-solid fa-chevron-up" style="font-size: 8px; margin-left: 2px; opacity: 0.75;"></i>
+              </button>
+              <div class="editor__dp-divider"></div>
+              <button
+                type="button"
+                class="editor__dp-pill"
+                [disabled]="selAnn.locked"
+                [class.editor__dp-pill--active]="(selAnn.resizeMode || state.resizeMode()) === 'fixed'"
+                (click)="toggleAnnotationResizeMode(selAnn)"
+                [title]="'Resize: ' + ((selAnn.resizeMode || state.resizeMode()) === 'fixed' ? 'Fixed 1:1' : 'Free Hand')"
+                aria-label="Toggle Resize Ratio"
+              >
+                <i [class]="(selAnn.resizeMode || state.resizeMode()) === 'fixed' ? 'fa-solid fa-lock' : 'fa-solid fa-arrows-up-down-left-right'"></i>
+                <span>{{ (selAnn.resizeMode || state.resizeMode()) === 'fixed' ? '1:1' : 'Free' }}</span>
+              </button>
+            }
+          }
+        </div>
+        <div class="editor__dp-row">
+          @if (selAnn.type === 'shape' && selAnn.renderMode === 'icon') {
+            <!-- Selected Icon Row 2: Types, Color, Fill -->
+            <span class="editor__dp-label">Type:</span>
+            @for (st of iconStyleOptions; track st.id) {
+              <button
+                type="button"
+                class="editor__dp-pill"
+                [class.editor__dp-pill--active]="getAnnotationIconStyle(selAnn) === st.id"
+                [disabled]="selAnn.locked"
+                (click)="setAnnotationIconStyle(selAnn, st.id)"
+                [title]="st.description"
+              >
+                <i [class]="st.icon"></i>
+                <span>{{ st.label }}</span>
+              </button>
+            }
+            <div class="editor__dp-divider"></div>
+            <span class="editor__dp-label">Color:</span>
+            @for (c of shapeColorSwatches; track c) {
+              <button
+                type="button"
+                class="editor__dp-swatch"
+                [style.background-color]="c"
+                [class.editor__dp-swatch--active]="getAnnotationColor(selAnn) === c"
+                [disabled]="selAnn.locked"
+                (click)="setSelectionColor(c)"
+                [title]="c"
+              ></button>
+            }
+            <label class="editor__dp-color-picker" title="Icon color">
+              <input type="color" [value]="getAnnotationColor(selAnn)" [disabled]="selAnn.locked" (input)="setSelectionColor($any($event.target).value)" />
+              <i class="fa-solid fa-eye-dropper"></i>
+            </label>
             <div class="editor__dp-divider"></div>
             <button
               type="button"
               class="editor__dp-pill"
-              [disabled]="selAnn.locked"
-              (click)="toggleShapeMenu()"
-              [title]="'Change Shape (' + activeShapeDefinition().label + ')'"
-              aria-label="Change Shape"
-            >
-              <i [class]="activeShapeDefinition().icon"></i>
-              <span style="font-size: 11px; margin-left: 2px;">{{ activeShapeDefinition().label }}</span>
-              <i class="fa-solid fa-chevron-down" style="font-size: 8px; margin-left: 3px; opacity: 0.7;"></i>
-            </button>
-            <button
-              type="button"
-              class="editor__dp-pill"
-              [class.editor__dp-pill--active]="selAnn.renderMode === 'icon'"
-              [disabled]="selAnn.locked"
-              (click)="toggleAnnotationRenderMode(selAnn)"
-              [title]="'Mode: ' + (selAnn.renderMode === 'icon' ? 'Vector Icon' : 'Geometric Shape')"
-              aria-label="Toggle Render Mode"
-            >
-              <i [class]="selAnn.renderMode === 'icon' ? 'fa-solid fa-icons' : 'fa-solid fa-shapes'"></i>
-              <span style="font-size: 11px; margin-left: 2px;">{{ selAnn.renderMode === 'icon' ? 'Icon' : 'Shape' }}</span>
-            </button>
-            <button
-              type="button"
-              class="editor__dp-pill"
+              [class.editor__dp-pill--active]="state.shapeFillEnabled()"
               [disabled]="selAnn.locked"
               (click)="toggleShapeFill()"
               title="Toggle Fill"
               aria-label="Toggle Fill"
             >
               <i class="fa-solid fa-fill-drip"></i>
+              <span>Fill</span>
             </button>
-          }
-        </div>
-        <div class="editor__dp-row">
-          @if (selAnn.type === 'drawing' || selAnn.type === 'shape' || selAnn.type === 'highlight' || selAnn.type === 'underline' || selAnn.type === 'strikethrough') {
+            @if (state.shapeFillEnabled()) {
+              <label class="editor__dp-color-picker" title="Fill color">
+                <input type="color" [value]="state.shapeFillColor()" [disabled]="selAnn.locked" (input)="setShapeFillColor($any($event.target).value)" />
+                <i class="fa-solid fa-palette"></i>
+              </label>
+            }
+          } @else if (selAnn.type === 'shape') {
+            <!-- Selected Shape Row 2: Fill, Stroke Color, Stroke Width -->
+            <button
+              type="button"
+              class="editor__dp-pill"
+              [class.editor__dp-pill--active]="state.shapeFillEnabled()"
+              [disabled]="selAnn.locked"
+              (click)="toggleShapeFill()"
+              title="Toggle Fill"
+              aria-label="Toggle Fill"
+            >
+              <i class="fa-solid fa-fill-drip"></i>
+              <span>Fill</span>
+            </button>
+            @if (state.shapeFillEnabled()) {
+              <label class="editor__dp-color-picker" title="Fill color">
+                <input type="color" [value]="state.shapeFillColor()" [disabled]="selAnn.locked" (input)="setShapeFillColor($any($event.target).value)" />
+                <i class="fa-solid fa-palette"></i>
+              </label>
+            }
+            <div class="editor__dp-divider"></div>
+            <span class="editor__dp-label">Stroke:</span>
+            @for (c of shapeColorSwatches; track c) {
+              <button
+                type="button"
+                class="editor__dp-swatch"
+                [style.background-color]="c"
+                [class.editor__dp-swatch--active]="getAnnotationColor(selAnn) === c"
+                [disabled]="selAnn.locked"
+                (click)="setSelectionColor(c)"
+                [title]="c"
+              ></button>
+            }
+            <label class="editor__dp-color-picker" title="Stroke color">
+              <input type="color" [value]="getAnnotationColor(selAnn)" [disabled]="selAnn.locked" (input)="setSelectionColor($any($event.target).value)" />
+              <i class="fa-solid fa-eye-dropper"></i>
+            </label>
+            <div class="editor__dp-divider"></div>
+            <span class="editor__dp-label">Width:</span>
+            @for (w of strokeWidthPresets; track w) {
+              <button
+                type="button"
+                class="editor__dp-pill"
+                [class.editor__dp-pill--active]="getAnnotationStrokeWidth(selAnn) === w"
+                [disabled]="selAnn.locked"
+                (click)="setSelectionWidth(w)"
+              >
+                {{ w }}px
+              </button>
+            }
+          } @else if (selAnn.type === 'drawing' || selAnn.type === 'highlight' || selAnn.type === 'underline' || selAnn.type === 'strikethrough') {
             <span class="editor__dp-label">Color:</span>
             @for (c of penColorSwatches; track c) {
               <button
@@ -492,19 +616,19 @@
               <input type="color" [value]="getAnnotationColor(selAnn)" (input)="setSelectionColor($any($event.target).value)" />
               <i class="fa-solid fa-eye-dropper"></i>
             </label>
-          }
-          @if (selAnn.type === 'drawing' || selAnn.type === 'shape') {
-            <div class="editor__dp-divider"></div>
-            <span class="editor__dp-label">Width:</span>
-            @for (w of strokeWidthPresets; track w) {
-              <button
-                type="button"
-                class="editor__dp-pill"
-                [class.editor__dp-pill--active]="getAnnotationStrokeWidth(selAnn) === w"
-                (click)="setSelectionWidth(w)"
-              >
-                {{ w }}px
-              </button>
+            @if (selAnn.type === 'drawing') {
+              <div class="editor__dp-divider"></div>
+              <span class="editor__dp-label">Width:</span>
+              @for (w of strokeWidthPresets; track w) {
+                <button
+                  type="button"
+                  class="editor__dp-pill"
+                  [class.editor__dp-pill--active]="getAnnotationStrokeWidth(selAnn) === w"
+                  (click)="setSelectionWidth(w)"
+                >
+                  {{ w }}px
+                </button>
+              }
             }
           }
         </div>
@@ -747,7 +871,7 @@
           }
         </div>
       } @else if (state.tool() === 'shape' || state.tool() === 'rectangle' || state.tool() === 'circle' || state.tool() === 'arrow' || state.tool() === 'line') {
-        <!-- Shapes Tool: Row 1 = Categories (All first); Row 2 = Properties (Icon only, Stroke before Width) -->
+        <!-- Shapes Tool: Row 1 = Categories (All first); Row 2 = Properties -->
         <div class="editor__dp-row">
           <span class="editor__dp-label">Category:</span>
           <!-- 1. All shapes first -->
@@ -756,7 +880,7 @@
             class="editor__dp-pill"
             [class.editor__dp-pill--active]="selectedShapeCategory() === 'all'"
             (click)="openCategoryShapes('all')"
-            title="All 150 Shapes"
+            title="All {{ shapeDefinitions.length }} Shapes"
           >
             <i class="fa-solid fa-shapes"></i>
             <span>All ({{ shapeDefinitions.length }})</span>
@@ -777,7 +901,6 @@
         </div>
         <div class="editor__dp-row">
           <span class="editor__dp-label">Shape:</span>
-          <!-- Shape icon only (no name) -->
           <button
             type="button"
             class="editor__dp-pill editor__dp-pill--active"
@@ -787,30 +910,6 @@
           >
             <i [class]="activeShapeDefinition().icon"></i>
             <i class="fa-solid fa-chevron-up" style="font-size: 8px; margin-left: 2px; opacity: 0.75;"></i>
-          </button>
-          <div class="editor__dp-divider"></div>
-          <span class="editor__dp-label">Mode:</span>
-          <button
-            type="button"
-            class="editor__dp-pill"
-            [class.editor__dp-pill--active]="state.shapeRenderMode() === 'shape'"
-            (click)="state.setShapeRenderMode('shape')"
-            title="Geometric Vector Shape"
-            aria-label="Geometric Shape Mode"
-          >
-            <i class="fa-solid fa-shapes"></i>
-            <span>Shape</span>
-          </button>
-          <button
-            type="button"
-            class="editor__dp-pill"
-            [class.editor__dp-pill--active]="state.shapeRenderMode() === 'icon'"
-            (click)="state.setShapeRenderMode('icon')"
-            [title]="'Vector Icon Glyph'"
-            aria-label="Vector Icon Mode"
-          >
-            <i class="fa-solid fa-icons"></i>
-            <span>Icon</span>
           </button>
           <div class="editor__dp-divider"></div>
           <button
@@ -831,7 +930,6 @@
             </label>
           }
           <div class="editor__dp-divider"></div>
-          <!-- Stroke before Width -->
           <span class="editor__dp-label">Stroke:</span>
           @for (c of shapeColorSwatches; track c) {
             <button
@@ -859,6 +957,119 @@
               {{ w }}px
             </button>
           }
+          <div class="editor__dp-divider"></div>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            [class.editor__dp-pill--active]="state.resizeMode() === 'fixed'"
+            (click)="state.toggleResizeMode()"
+            [title]="state.resizeMode() === 'fixed' ? 'Resize Ratio: Fixed 1:1 (Tap for Free Hand)' : 'Resize Ratio: Free Hand (Tap for Fixed 1:1)'"
+            aria-label="Toggle Resize Ratio"
+          >
+            <i [class]="state.resizeMode() === 'fixed' ? 'fa-solid fa-lock' : 'fa-solid fa-arrows-up-down-left-right'"></i>
+            <span>{{ state.resizeMode() === 'fixed' ? '1:1' : 'Free' }}</span>
+          </button>
+        </div>
+      } @else if (state.tool() === 'icon') {
+        <!-- Icons Tool: Row 1 = 5 Icon Types & Categories; Row 2 = Active Icon, Colors, Resize -->
+        <div class="editor__dp-row">
+          <span class="editor__dp-label">Type:</span>
+          @for (st of iconStyleOptions; track st.id) {
+            <button
+              type="button"
+              class="editor__dp-pill"
+              [class.editor__dp-pill--active]="state.iconStyle() === st.id"
+              (click)="state.setIconStyle(st.id)"
+              [title]="st.description"
+            >
+              <i [class]="st.icon"></i>
+              <span>{{ st.label }}</span>
+            </button>
+          }
+          <div class="editor__dp-divider"></div>
+          <span class="editor__dp-label">Category:</span>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            [class.editor__dp-pill--active]="selectedIconCategory() === 'all'"
+            (click)="openCategoryIcons('all')"
+            title="All {{ iconDefinitions.length }} Icons"
+          >
+            <i class="fa-solid fa-icons"></i>
+            <span>All ({{ iconDefinitions.length }})</span>
+          </button>
+          @for (cat of iconCategories; track cat.id) {
+            <button
+              type="button"
+              class="editor__dp-pill"
+              [class.editor__dp-pill--active]="selectedIconCategory() === cat.id"
+              (click)="openCategoryIcons(cat.id)"
+              [title]="cat.label"
+            >
+              <i [class]="cat.icon"></i>
+              <span>{{ cat.label }}</span>
+            </button>
+          }
+        </div>
+        <div class="editor__dp-row">
+          <span class="editor__dp-label">Icon:</span>
+          <button
+            type="button"
+            class="editor__dp-pill editor__dp-pill--active"
+            (click)="openCategoryIcons(selectedIconCategory())"
+            [title]="'Change Icon (' + activeIconDefinition().label + ')'"
+            aria-label="Change Icon"
+          >
+            <i [class]="activeIconDefinition().icon"></i>
+            <span style="font-size: 11px; margin-left: 2px;">{{ activeIconDefinition().label }}</span>
+            <i class="fa-solid fa-chevron-up" style="font-size: 8px; margin-left: 2px; opacity: 0.75;"></i>
+          </button>
+          <div class="editor__dp-divider"></div>
+          <span class="editor__dp-label">Color:</span>
+          @for (c of shapeColorSwatches; track c) {
+            <button
+              type="button"
+              class="editor__dp-swatch"
+              [style.background-color]="c"
+              [class.editor__dp-swatch--active]="state.shapeStrokeColor() === c"
+              (click)="setShapeStrokeColor(c)"
+              [title]="c"
+            ></button>
+          }
+          <label class="editor__dp-color-picker" title="Icon color">
+            <input type="color" [value]="state.shapeStrokeColor()" (input)="setShapeStrokeColor($any($event.target).value)" />
+            <i class="fa-solid fa-eye-dropper"></i>
+          </label>
+          <div class="editor__dp-divider"></div>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            [class.editor__dp-pill--active]="state.shapeFillEnabled()"
+            (click)="toggleShapeFill()"
+            title="Toggle Background Fill"
+            aria-label="Toggle Background Fill"
+          >
+            <i class="fa-solid fa-fill-drip"></i>
+            <span>Fill</span>
+          </button>
+          @if (state.shapeFillEnabled()) {
+            <label class="editor__dp-color-picker" title="Fill color">
+              <input type="color" [value]="state.shapeFillColor()" (input)="setShapeFillColor($any($event.target).value)" />
+              <i class="fa-solid fa-palette"></i>
+            </label>
+          }
+          <div class="editor__dp-divider"></div>
+          <button
+            type="button"
+            class="editor__dp-pill"
+            [class.editor__dp-pill--active]="state.resizeMode() === 'fixed'"
+            (click)="state.toggleResizeMode()"
+            [title]="state.resizeMode() === 'fixed' ? 'Resize Ratio: Fixed 1:1 (Tap for Free Hand)' : 'Resize Ratio: Free Hand (Tap for Fixed 1:1)'"
+            aria-label="Toggle Resize Ratio"
+          >
+            <i [class]="state.resizeMode() === 'fixed' ? 'fa-solid fa-lock' : 'fa-solid fa-arrows-up-down-left-right'"></i>
+            <span>{{ state.resizeMode() === 'fixed' ? '1:1' : 'Free' }}</span>
+          </button>
         </div>
       } @else if (state.tool() === 'text') {
         <!-- Text Tool (2 Rows) -->
@@ -977,13 +1188,23 @@
           @if (group.key === 'shapes') {
             <button
               type="button"
-              class="editor__tool"
+              class="editor__tool editor__tool--shape"
               [class.editor__tool--active]="state.tool() === 'shape'"
               (click)="onShapeToolClick($event)"
-              [title]="'Shapes: ' + activeShapeDefinition().label + ' (S)'"
+              [title]="'Shapes (S) - ' + activeShapeDefinition().label"
               aria-label="Shapes tool"
             >
-              <i [ngClass]="activeShapeDefinition().icon"></i>
+              <i class="fa-solid fa-shapes"></i>
+            </button>
+            <button
+              type="button"
+              class="editor__tool editor__tool--icon"
+              [class.editor__tool--active]="state.tool() === 'icon'"
+              (click)="onIconToolClick($event)"
+              [title]="'Icons (I) - ' + activeIconDefinition().label"
+              aria-label="Icons tool"
+            >
+              <i class="fa-solid fa-icons"></i>
             </button>
           } @else {
             @for (tool of group.value; track tool.id) {
@@ -1123,6 +1344,16 @@
         aria-label="Pages overview"
       >
         <i class="fa-solid fa-layer-group"></i>
+      </button>
+      <button
+        type="button"
+        class="icon-btn editor__mobile-btn editor__mobile-btn--primary"
+        (click)="openExportModal()"
+        [disabled]="exporting()"
+        title="Export PDF"
+        aria-label="Export PDF"
+      >
+        <i class="fa-solid" [class.fa-file-arrow-down]="!exporting()" [class.fa-spinner]="exporting()" [class.fa-spin]="exporting()"></i>
       </button>
     </div>
   </div>
@@ -1488,26 +1719,6 @@
           }
         </div>
 
-        <!-- Shape / Icon Draw Mode Switch -->
-        <div class="pf-shape-mode-switch pf-shape-mode-switch--mobile">
-          <button
-            type="button"
-            class="pf-shape-mode-btn"
-            [class.pf-shape-mode-btn--active]="state.shapeRenderMode() === 'shape'"
-            (click)="$event.stopPropagation(); state.setShapeRenderMode('shape')"
-          >
-            <i class="fa-solid fa-shapes"></i> Geometric Shape
-          </button>
-          <button
-            type="button"
-            class="pf-shape-mode-btn"
-            [class.pf-shape-mode-btn--active]="state.shapeRenderMode() === 'icon'"
-            (click)="$event.stopPropagation(); state.setShapeRenderMode('icon')"
-          >
-            <i class="fa-solid fa-icons"></i> Vector Icon
-          </button>
-        </div>
-
         <div class="pf-shape-sheet__tabs">
           <button
             type="button"
@@ -1552,6 +1763,81 @@
     </div>
   }
 
+  <!-- Mobile Icons Bottom Sheet -->
+  @if (iconMenuOpen()) {
+    <div class="editor__bottomsheet-backdrop d-md-none" (click)="closeIconMenu()"></div>
+    <div class="editor__bottomsheet editor__bottomsheet--shapes d-md-none" (click)="$event.stopPropagation()" role="dialog" aria-modal="true" aria-label="Icons Selection Sheet">
+      <div class="editor__bottomsheet-handle-bar" (click)="closeIconMenu()">
+        <div class="editor__bottomsheet-handle"></div>
+      </div>
+      <div class="editor__bottomsheet-header">
+        <span class="editor__bottomsheet-title">
+          <i class="fa-solid fa-icons"></i> Choose Icon ({{ iconDefinitions.length }} Icons)
+        </span>
+        <button type="button" class="icon-btn editor__bottomsheet-close" (click)="closeIconMenu()" aria-label="Close icons sheet">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+      <div class="editor__bottomsheet-content">
+        <div class="pf-shape-sheet__search">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input
+            type="text"
+            [placeholder]="'Search ' + iconDefinitions.length + ' icons...'"
+            [value]="iconSearchQuery()"
+            (input)="iconSearchQuery.set($any($event.target).value)"
+          />
+          @if (iconSearchQuery()) {
+            <button type="button" class="pf-shape-sheet__clear" (click)="iconSearchQuery.set('')">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          }
+        </div>
+
+        <div class="pf-shape-sheet__tabs">
+          <button
+            type="button"
+            class="pf-shape-sheet__tab"
+            [class.pf-shape-sheet__tab--active]="!iconSearchQuery() && selectedIconCategory() === 'all'"
+            (click)="$event.stopPropagation(); iconSearchQuery.set(''); selectedIconCategory.set('all')"
+          >
+            All ({{ iconDefinitions.length }})
+          </button>
+          @for (cat of iconCategories; track cat.id) {
+            <button
+              type="button"
+              class="pf-shape-sheet__tab"
+              [class.pf-shape-sheet__tab--active]="!iconSearchQuery() && selectedIconCategory() === cat.id"
+              (click)="$event.stopPropagation(); iconSearchQuery.set(''); selectedIconCategory.set(cat.id)"
+              [title]="cat.label"
+            >
+              <i [class]="cat.icon"></i> {{ cat.label }}
+            </button>
+          }
+        </div>
+
+        <div class="pf-shape-sheet__grid">
+          @for (icon of filteredIcons(); track icon.id) {
+            <button
+              type="button"
+              class="pf-shape-sheet__item"
+              [class.pf-shape-sheet__item--active]="state.iconKind() === icon.id"
+              (click)="selectIconKind(icon.id)"
+              [title]="icon.label"
+              [attr.aria-label]="icon.label"
+            >
+              <i [class]="icon.icon"></i>
+              <span class="pf-shape-sheet__item-label">{{ icon.label }}</span>
+            </button>
+          }
+          @if (filteredIcons().length === 0) {
+            <div class="pf-shape-sheet__empty">No icons matching "{{ iconSearchQuery() }}"</div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
   <!-- Hidden Image File Input for Image Tool -->
   <input
     #imageFileInput
@@ -1574,6 +1860,21 @@
     <app-stamp-modal
       (stampSelected)="onStampSelected($event)"
       (closed)="isStampModalOpen.set(false)"
+    />
+  }
+
+  <!-- Export Options Modal -->
+  @if (isExportModalOpen()) {
+    <app-export-modal
+      [defaultFilename]="defaultExportFilename()"
+      [totalPages]="totalPages()"
+      [currentPage]="pagesStore.currentIndex() + 1"
+      [hasSelectedPages]="pagesStore.selectedCount() > 0"
+      [selectedPagesCount]="pagesStore.selectedCount()"
+      [isExporting]="exporting()"
+      [exportProgress]="exportProgress()"
+      (confirmExport)="confirmExportModal($event)"
+      (cancel)="closeExportModal()"
     />
   }
 </div>
