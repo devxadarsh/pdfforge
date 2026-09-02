@@ -82,9 +82,9 @@ export class MobileTooltipDirective implements OnDestroy {
   // --- MOBILE TOUCH LISTENERS ---
 
   @HostListener('touchstart', ['$event'])
-  onTouchStart(event: TouchEvent): void {
+  onTouchStart(event: Event): void {
     if (!this.tooltipText) return;
-    const touch = event.touches[0];
+    const touch = (event as TouchEvent).touches[0];
     if (!touch) return;
 
     this.startX = touch.clientX;
@@ -100,9 +100,9 @@ export class MobileTooltipDirective implements OnDestroy {
   }
 
   @HostListener('touchmove', ['$event'])
-  onTouchMove(event: TouchEvent): void {
+  onTouchMove(event: Event): void {
     if (!this.holdTimer && !this.isHeld) return;
-    const touch = event.touches[0];
+    const touch = (event as TouchEvent).touches[0];
     if (!touch) return;
 
     const dx = Math.abs(touch.clientX - this.startX);
@@ -130,9 +130,9 @@ export class MobileTooltipDirective implements OnDestroy {
   }
 
   @HostListener('contextmenu', ['$event'])
-  onContextMenu(event: MouseEvent): void {
+  onContextMenu(event: Event): void {
     if (this.isHeld) {
-      event.preventDefault();
+      (event as MouseEvent).preventDefault();
     }
   }
 

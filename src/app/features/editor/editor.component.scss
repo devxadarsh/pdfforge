@@ -210,11 +210,11 @@
   }
 
   /* Light colors contrast adjustment */
-  &[style*="#fde047"]--active::after,
-  &[style*="#ffffff"]--active::after,
-  &[style*="#86efac"]--active::after,
-  &[style*="253, 224, 71"]--active::after,
-  &[style*="255, 255, 255"]--active::after {
+  &[style*="#fde047"] --active::after,
+  &[style*="#ffffff"] --active::after,
+  &[style*="#86efac"] --active::after,
+  &[style*="253, 224, 71"] --active::after,
+  &[style*="255, 255, 255"] --active::after {
     background-color: #111827;
     filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.6));
   }

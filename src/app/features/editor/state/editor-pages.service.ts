@@ -214,7 +214,7 @@ export class EditorPagesService {
       const bytes = await out.save();
       const base = file.name.replace(/\.pdf$/i, '');
       this.downloads.download(
-        new Blob([bytes], { type: 'application/pdf' }),
+        new Blob([bytes.slice()], { type: 'application/pdf' }),
         `${base}-extracted.pdf`,
       );
       this.toasts.success(`Extracted ${out.getPageCount()} page(s).`);

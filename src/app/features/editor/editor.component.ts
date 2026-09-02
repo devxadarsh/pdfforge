@@ -1421,23 +1421,24 @@ export class EditorComponent implements OnDestroy {
       };
 
       // Save into RecentFilesService and DocumentStorageService in IndexedDB
+      const buffer = bytes.slice().buffer;
       await this.recentFiles.addOrUpdate(
         file.name,
-        bytes.buffer,
+        buffer,
         bytes.byteLength,
         pages.length,
         editorState,
       );
-      await this.storage.saveDocument(file.name, bytes.buffer, editorState);
+      await this.storage.saveDocument(file.name, buffer, editorState);
 
       // Update current loaded file in memory so future edits build upon saved state
-      const updatedBlob = new Blob([bytes.buffer], { type: 'application/pdf' });
+      const updatedBlob = new Blob([bytes.slice()], { type: 'application/pdf' });
       const updatedFile = new File([updatedBlob], file.name, { type: 'application/pdf' });
       const updatedLoaded: LoadedFile = {
         file: updatedFile,
         name: file.name,
         sizeBytes: bytes.byteLength,
-        data: bytes.buffer,
+        data: buffer,
         loadedAt: Date.now(),
         editorState,
       };
@@ -2240,18 +2241,19 @@ export class EditorComponent implements OnDestroy {
         annotations: this.state.getSerializedAnnotations(),
         currentId: this.pagesStore.currentId(),
       };
+      const buffer = bytes.slice().buffer;
       await this.recentFiles.addOrUpdate(
         file.name,
-        bytes.buffer,
+        buffer,
         bytes.byteLength,
         pageSpecs.length,
         editorState,
       );
-      await this.storage.saveDocument(file.name, bytes.buffer, editorState);
+      await this.storage.saveDocument(file.name, buffer, editorState);
 
       const downloadFilename = sanitizePdfFilename(options.filename);
       this.downloads.download(
-        new Blob([bytes], { type: 'application/pdf' }),
+        new Blob([bytes.slice()], { type: 'application/pdf' }),
         downloadFilename,
       );
       this.toasts.success(`Exported "${downloadFilename}" successfully!`);
