@@ -3,6 +3,7 @@ import {
   inject,
   output,
   computed,
+  signal,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
@@ -13,11 +14,18 @@ import {
   HighlightAnnotation,
   CommentAnnotation,
   DrawingAnnotation,
+  ImageAnnotation,
+  SignatureAnnotation,
+  StampAnnotation,
+  ShapeKind,
+  BlendMode,
+  AspectRatioMode,
   DrawingMode,
   SelectMode,
   EraserMode,
   EraserTarget,
 } from '../../../../core/models/pdf.models';
+import { SHAPE_CATEGORIES, SHAPE_DEFINITIONS } from '../../../../core/constants/shapes';
 import { PanelSectionComponent } from '../../../../shared/components/panel/panel-section.component';
 import { EditorStateService } from '../../state/editor-state.service';
 import { EditorPagesService } from '../../state/editor-pages.service';
@@ -68,10 +76,12 @@ const SHAPE_SWATCHES: ReadonlyArray<ColorSwatch> = [
   { value: '#f59e0b', label: 'Amber' },
 ];
 
+import { MobileTooltipDirective } from '../../../../shared/directives/mobile-tooltip.directive';
+
 @Component({
   selector: 'app-properties-panel',
   standalone: true,
-  imports: [DecimalPipe, PanelSectionComponent],
+  imports: [DecimalPipe, PanelSectionComponent, MobileTooltipDirective],
   templateUrl: './properties-panel.component.html',
   styleUrl: './properties-panel.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -185,13 +195,70 @@ export class PropertiesPanelComponent {
     return ann.fillColor && ann.fillColor !== 'transparent';
   });
 
+  readonly shapeCategories = SHAPE_CATEGORIES;
+  readonly shapeDefinitions = SHAPE_DEFINITIONS;
+  readonly propsShapeCategory = signal<string>('all');
+
+  readonly shapeKind = this.state.shapeKind;
+  readonly shapeStrokeColor = this.state.shapeStrokeColor;
+  readonly shapeFillColor = this.state.shapeFillColor;
+  readonly shapeFillEnabled = this.state.shapeFillEnabled;
+  readonly shapeStrokeWidth = this.state.shapeStrokeWidth;
+  readonly shapeRenderMode = this.state.shapeRenderMode;
+
+  setToolShapeKind(kind: ShapeKind): void {
+    this.state.setShapeKind(kind);
+  }
+
+  setToolRenderMode(mode: 'shape' | 'icon'): void {
+    this.state.setShapeRenderMode(mode);
+  }
+
+  setToolStrokeColor(color: string): void {
+    this.state.setShapeStrokeColor(color);
+  }
+
+  setToolStrokeWidth(w: number): void {
+    this.state.setShapeStrokeWidth(w);
+  }
+
+  toggleToolShapeFill(): void {
+    this.state.toggleShapeFill();
+  }
+
+  setToolFillColor(color: string): void {
+    this.state.setShapeFillColor(color);
+  }
+
+  readonly propsFilteredShapes = computed(() => {
+    const cat = this.propsShapeCategory();
+    return this.shapeDefinitions.filter((s) => cat === 'all' || s.category === cat);
+  });
+
+  shapeLabelOf(kind: ShapeKind): string {
+    const s = this.shapeDefinitions.find((def) => def.id === kind);
+    return s ? s.label : kind;
+  }
+
+  setShapeKind(ann: PdfAnnotation, kind: ShapeKind): void {
+    if (ann.type === 'shape') {
+      this.state.updateAnnotation(ann.id, { kind });
+    }
+  }
+
+  setRenderMode(ann: PdfAnnotation, mode: 'shape' | 'icon'): void {
+    if (ann.type === 'shape') {
+      this.state.updateAnnotation(ann.id, { renderMode: mode });
+    }
+  }
+
   /** Whether the selected annotation is a shape that can carry a fill. */
   readonly canFill = computed(() => {
     const ann = this.selected();
     if (!ann || ann.type !== 'shape') {
       return false;
     }
-    return ann.kind !== 'arrow' && ann.kind !== 'line';
+    return ann.kind !== 'line';
   });
 
   /** Whether the selected annotation is a shape whose stroke style is editable. */
@@ -221,25 +288,13 @@ export class PropertiesPanelComponent {
   );
   readonly canSendBackward = computed(() => this.selectionIndex() > 0);
 
-
   iconOf(ann: PdfAnnotation): string {
     if (ann.type === 'text') {
       return 'fa-solid fa-font';
     }
     if (ann.type === 'shape') {
-      if (ann.kind === 'rectangle') {
-        return 'fa-solid fa-square';
-      }
-      if (ann.kind === 'circle') {
-        return 'fa-solid fa-circle';
-      }
-      if (ann.kind === 'line') {
-        return 'fa-solid fa-slash';
-      }
-      if (ann.kind === 'arrow') {
-        return 'fa-solid fa-arrow-right';
-      }
-      return 'fa-solid fa-shapes';
+      const match = this.shapeDefinitions.find((s) => s.id === ann.kind);
+      return match ? match.icon : 'fa-solid fa-shapes';
     }
     if (ann.type === 'highlight') {
       return 'fa-solid fa-highlighter';
@@ -249,6 +304,15 @@ export class PropertiesPanelComponent {
     }
     if (ann.type === 'strikethrough') {
       return 'fa-solid fa-strikethrough';
+    }
+    if (ann.type === 'image') {
+      return 'fa-solid fa-image';
+    }
+    if (ann.type === 'signature') {
+      return 'fa-solid fa-signature';
+    }
+    if (ann.type === 'stamp') {
+      return 'fa-solid fa-stamp';
     }
     if (ann.type === 'comment') {
       return 'fa-solid fa-comment';
@@ -264,6 +328,15 @@ export class PropertiesPanelComponent {
   titleOf(ann: PdfAnnotation): string {
     if (ann.type === 'text') {
       return 'Text';
+    }
+    if (ann.type === 'image') {
+      return 'Image';
+    }
+    if (ann.type === 'signature') {
+      return 'Signature';
+    }
+    if (ann.type === 'stamp') {
+      return 'Stamp';
     }
     if (ann.type === 'shape') {
       return ann.kind.charAt(0).toUpperCase() + ann.kind.slice(1);
@@ -286,6 +359,139 @@ export class PropertiesPanelComponent {
       return 'Comment';
     }
     return ann.type;
+  }
+
+  readonly stampColorPresets = [
+    '#dc2626',
+    '#16a34a',
+    '#2563eb',
+    '#ea580c',
+    '#9333ea',
+    '#0d9488',
+    '#4b5563',
+    '#111827',
+  ];
+
+  readonly stampTextPresets = [
+    'APPROVED',
+    'REJECTED',
+    'CONFIDENTIAL',
+    'DRAFT',
+    'FINAL',
+    'PAID',
+    'VOID',
+    'COMPLETED',
+    'FOR REVIEW',
+    'URGENT',
+  ];
+
+  setStampText(ann: PdfAnnotation, text: string): void {
+    if (ann.locked) return;
+    this.state.updateAnnotation(ann.id, { text: text.trim().toUpperCase() } as Partial<StampAnnotation>);
+  }
+
+  setStampColor(ann: PdfAnnotation, color: string): void {
+    if (ann.locked) return;
+    this.state.updateAnnotation(ann.id, { color } as Partial<StampAnnotation>);
+  }
+
+  applyStampPreset(ann: PdfAnnotation, presetText: string): void {
+    if (ann.locked) return;
+    const colors: Record<string, string> = {
+      APPROVED: '#16a34a',
+      PAID: '#16a34a',
+      COMPLETED: '#0d9488',
+      FINAL: '#2563eb',
+      DRAFT: '#ea580c',
+      CONFIDENTIAL: '#dc2626',
+      REJECTED: '#dc2626',
+      VOID: '#991b1b',
+      'FOR REVIEW': '#9333ea',
+      URGENT: '#e11d48',
+    };
+    const color = colors[presetText] || '#dc2626';
+    this.state.updateAnnotation(ann.id, { text: presetText, color } as Partial<StampAnnotation>);
+  }
+
+  readonly blendModes: ReadonlyArray<{ value: BlendMode; label: string; description: string }> = [
+    { value: 'normal', label: 'Normal', description: 'Standard layer rendering' },
+    { value: 'multiply', label: 'Multiply', description: 'Blends ink onto page, removes white backgrounds' },
+    { value: 'screen', label: 'Screen', description: 'Lightens and removes dark backgrounds' },
+    { value: 'overlay', label: 'Overlay', description: 'High-contrast composite blend' },
+    { value: 'darken', label: 'Darken', description: 'Retains darker pixels' },
+    { value: 'lighten', label: 'Lighten', description: 'Retains lighter pixels' },
+    { value: 'color-burn', label: 'Color Burn', description: 'Deepens colors' },
+    { value: 'hard-light', label: 'Hard Light', description: 'Vivid overlay effect' },
+    { value: 'difference', label: 'Difference', description: 'Inverts colors based on background' },
+  ];
+
+  readonly aspectRatioOptions: ReadonlyArray<{ value: AspectRatioMode; label: string; title: string }> = [
+    { value: 'free', label: 'Free', title: 'Freeform resize' },
+    { value: 'original', label: 'Orig', title: 'Original aspect ratio' },
+    { value: '1:1', label: '1:1', title: '1:1 Square' },
+    { value: '4:3', label: '4:3', title: '4:3 Standard' },
+    { value: '16:9', label: '16:9', title: '16:9 Widescreen' },
+    { value: '3:2', label: '3:2', title: '3:2 Photo' },
+  ];
+
+  setBlendMode(ann: ImageAnnotation | SignatureAnnotation, mode: BlendMode): void {
+    if (ann.locked) return;
+    this.state.updateAnnotation(ann.id, { blendMode: mode });
+  }
+
+  setAspectRatioMode(ann: ImageAnnotation, mode: AspectRatioMode): void {
+    if (ann.locked) return;
+    const updates: Partial<ImageAnnotation> = {
+      aspectRatioMode: mode,
+      lockAspectRatio: mode !== 'free',
+    };
+    let ratio: number | null = null;
+    if (mode === 'original') {
+      ratio = ann.naturalWidth && ann.naturalHeight ? ann.naturalWidth / ann.naturalHeight : null;
+    } else if (mode === '1:1') {
+      ratio = 1;
+    } else if (mode === '4:3') {
+      ratio = 4 / 3;
+    } else if (mode === '16:9') {
+      ratio = 16 / 9;
+    } else if (mode === '3:2') {
+      ratio = 3 / 2;
+    }
+
+    if (ratio && ratio > 0) {
+      const currentW = ann.rect.width;
+      const newH = Math.round(currentW / ratio);
+      updates.rect = { ...ann.rect, height: newH };
+    }
+
+    this.state.updateAnnotation(ann.id, updates);
+  }
+
+  toggleLockAspectRatio(ann: ImageAnnotation | SignatureAnnotation): void {
+    if (ann.locked) return;
+    const current = !!ann.lockAspectRatio;
+    this.state.updateAnnotation(ann.id, { lockAspectRatio: !current });
+  }
+
+  toggleFlipHorizontal(ann: ImageAnnotation): void {
+    if (ann.locked) return;
+    this.state.updateAnnotation(ann.id, { flipHorizontal: !ann.flipHorizontal });
+  }
+
+  toggleFlipVertical(ann: ImageAnnotation): void {
+    if (ann.locked) return;
+    this.state.updateAnnotation(ann.id, { flipVertical: !ann.flipVertical });
+  }
+
+  resetImageToOriginalSize(ann: ImageAnnotation): void {
+    if (ann.locked) return;
+    const nw = ann.naturalWidth || 200;
+    const nh = ann.naturalHeight || 150;
+    this.state.updateAnnotation(ann.id, {
+      rect: { ...ann.rect, width: nw, height: nh },
+      aspectRatioMode: 'original',
+      lockAspectRatio: true,
+    });
   }
 
   readonly Math = Math;
@@ -470,12 +676,6 @@ export class PropertiesPanelComponent {
     } as Partial<CommentAnnotation>);
   }
 
-  setAuthor(ann: PdfAnnotation, value: string): void {
-    this.state.updateAnnotation(ann.id, {
-      author: value,
-    } as Partial<CommentAnnotation>);
-  }
-
   setFill(ann: PdfAnnotation, value: string): void {
     this.state.updateAnnotation(ann.id, {
       fillColor: value,
@@ -503,11 +703,20 @@ export class PropertiesPanelComponent {
     }
   }
 
-  setOpacity(ann: PdfAnnotation, value: string): void {
+  getOpacityPercent(ann: PdfAnnotation): number {
+    return Math.round((ann.opacity ?? 1) * 100);
+  }
+
+  setOpacityPercent(ann: PdfAnnotation, value: number | string): void {
     const n = Number(value);
     if (!Number.isNaN(n)) {
-      this.state.updateAnnotation(ann.id, { opacity: n });
+      const clamped = Math.max(0, Math.min(100, n)) / 100;
+      this.state.updateAnnotation(ann.id, { opacity: clamped });
     }
+  }
+
+  setOpacity(ann: PdfAnnotation, value: string): void {
+    this.setOpacityPercent(ann, Number(value) * 100);
   }
 
 
@@ -650,11 +859,16 @@ export class PropertiesPanelComponent {
     this.state.alignSelected(this.pages.currentId(), alignment);
   }
 
-  setBatchOpacity(opacity: number | string): void {
+  setBatchOpacityPercent(opacity: number | string): void {
     const n = Number(opacity);
     if (!Number.isNaN(n)) {
-      this.state.setBatchOpacity(this.pages.currentId(), n);
+      const clamped = Math.max(0, Math.min(100, n)) / 100;
+      this.state.setBatchOpacity(this.pages.currentId(), clamped);
     }
+  }
+
+  setBatchOpacity(opacity: number | string): void {
+    this.setBatchOpacityPercent(opacity);
   }
 
   toggleBatchLock(): void {

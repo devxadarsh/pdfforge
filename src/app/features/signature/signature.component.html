@@ -2,15 +2,21 @@
   <div class="pf-container">
     <header class="tool-page__header">
       <a class="tool-page__back" routerLink="/tools"><i class="fa-solid fa-arrow-left"></i> Tools</a>
-      <h1><i class="fa-solid fa-signature tool-page__icon"></i> Signature</h1>
-      <p class="pf-text-muted">Create a signature to place on your PDFs — locally.</p>
+      <h1><i class="fa-solid fa-signature tool-page__icon"></i> Signature Creator</h1>
+      <p class="pf-text-muted">Draw, type, or upload your signature to place on documents — 100% locally in your browser.</p>
     </header>
 
     <div class="tool-page__body">
       <div class="sig-tabs">
-        <button type="button" class="sig-tab" [class.sig-tab--active]="tab() === 'draw'" (click)="setTab('draw')">Draw</button>
-        <button type="button" class="sig-tab" [class.sig-tab--active]="tab() === 'type'" (click)="setTab('type')">Type</button>
-        <button type="button" class="sig-tab" [class.sig-tab--active]="tab() === 'upload'" (click)="setTab('upload')">Upload</button>
+        <button type="button" class="sig-tab" [class.sig-tab--active]="tab() === 'draw'" (click)="setTab('draw')">
+          <i class="fa-solid fa-pen-nib"></i> Draw
+        </button>
+        <button type="button" class="sig-tab" [class.sig-tab--active]="tab() === 'type'" (click)="setTab('type')">
+          <i class="fa-solid fa-font"></i> Type
+        </button>
+        <button type="button" class="sig-tab" [class.sig-tab--active]="tab() === 'upload'" (click)="setTab('upload')">
+          <i class="fa-solid fa-upload"></i> Upload
+        </button>
       </div>
 
       @if (tab() === 'draw') {
@@ -24,15 +30,15 @@
             (pointerleave)="endDraw()"
           ></canvas>
           <div class="sig-pad__actions">
-            <button type="button" class="pf-btn pf-btn--ghost" (click)="clearDraw()">
+            <button type="button" class="pf-btn pf-btn--ghost pf-btn--sm" (click)="clearDraw()">
               <i class="fa-solid fa-eraser"></i> Clear
             </button>
           </div>
         </div>
       } @else if (tab() === 'type') {
         <div class="sig-type">
-          <input class="pf-input sig-type__input" type="text" [value]="typed()" (input)="typed.set($any($event.target).value)" />
-          <div class="sig-type__preview" [ngClass]="'sig-font--' + font()">{{ typed() }}</div>
+          <input class="pf-input sig-type__input" type="text" [value]="typed()" (input)="typed.set($any($event.target).value)" placeholder="Type your full name" />
+          <div class="sig-type__preview" [ngClass]="'sig-font--' + font()">{{ typed() || 'Signature Preview' }}</div>
           <div class="sig-type__fonts">
             <button type="button" class="sig-font-btn" [class.sig-font-btn--active]="font() === 'cursive'" (click)="font.set('cursive')">Cursive</button>
             <button type="button" class="sig-font-btn" [class.sig-font-btn--active]="font() === 'serif'" (click)="font.set('serif')">Serif</button>
@@ -40,18 +46,21 @@
           </div>
         </div>
       } @else {
-        <app-file-dropzone [multiple]="false" accept="image/*" label="Upload a signature image" />
+        <app-file-dropzone [multiple]="false" accept="image/*" label="Upload a signature image" (filesLoaded)="onUploadLoadedFiles($event)" />
       }
 
       <div class="tool-page__footer">
-        <button class="pf-btn pf-btn--primary" type="button" disabled title="Placing into a PDF arrives with the editor">
-          <i class="fa-solid fa-plus"></i> Add to PDF
+        <button class="pf-btn pf-btn--outline" type="button" (click)="downloadSignature()">
+          <i class="fa-solid fa-download"></i> Download PNG
+        </button>
+        <button class="pf-btn pf-btn--primary" type="button" (click)="openEditor()">
+          <i class="fa-solid fa-pen-to-square"></i> Open PDF Editor
         </button>
       </div>
     </div>
 
     <p class="tool-page__privacy">
-      <i class="fa-solid fa-lock"></i> Signatures never leave your device.
+      <i class="fa-solid fa-lock"></i> Privacy-first: Signatures never leave your device.
     </p>
   </div>
 </section>

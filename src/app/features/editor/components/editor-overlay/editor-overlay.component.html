@@ -35,62 +35,65 @@
   @for (a of annotations(); track a.id) {
     @switch (a.type) {
       @case ('shape') {
-        @switch (a.kind) {
-          @case ('rectangle') {
-            <rect
+        @if (a.renderMode === 'icon') {
+          <g [attr.transform]="rotateTransform(a)">
+            @if (a.fillColor && a.fillColor !== 'transparent') {
+              <rect
+                [attr.x]="a.rect.x"
+                [attr.y]="a.rect.y"
+                [attr.width]="a.rect.width"
+                [attr.height]="a.rect.height"
+                [attr.fill]="a.fillColor"
+                [attr.stroke]="a.strokeColor"
+                [attr.stroke-width]="a.strokeWidth"
+                [attr.stroke-dasharray]="strokeDashFor(a)"
+                rx="8"
+                [attr.opacity]="a.opacity"
+              />
+            }
+            <foreignObject
               [attr.x]="a.rect.x"
               [attr.y]="a.rect.y"
               [attr.width]="a.rect.width"
               [attr.height]="a.rect.height"
+              [attr.opacity]="a.opacity"
+              style="overflow: hidden; pointer-events: none;"
+            >
+              <div
+                xmlns="http://www.w3.org/1999/xhtml"
+                style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;"
+              >
+                <i
+                  [class]="getShapeIconClass(a)"
+                  [style.color]="a.strokeColor"
+                  [style.font-size.px]="getIconFontSize(a)"
+                ></i>
+              </div>
+            </foreignObject>
+          </g>
+        } @else if (a.kind === 'line') {
+          <line
+            [attr.x1]="a.rect.x"
+            [attr.y1]="a.rect.y"
+            [attr.x2]="a.rect.x + a.rect.width"
+            [attr.y2]="a.rect.y + a.rect.height"
+            [attr.stroke]="a.strokeColor"
+            [attr.stroke-width]="a.strokeWidth"
+            [attr.stroke-dasharray]="strokeDashFor(a)"
+            [attr.opacity]="a.opacity"
+            [attr.transform]="rotateTransform(a)"
+          />
+        } @else {
+          <g [attr.transform]="getShapeTransform(a)">
+            <path
+              [attr.d]="getShapePath(a)"
               [attr.fill]="a.fillColor"
               [attr.stroke]="a.strokeColor"
               [attr.stroke-width]="a.strokeWidth"
               [attr.stroke-dasharray]="strokeDashFor(a)"
               [attr.opacity]="a.opacity"
-              [attr.transform]="rotateTransform(a)"
             />
-          }
-          @case ('circle') {
-            <ellipse
-              [attr.cx]="a.rect.x + a.rect.width / 2"
-              [attr.cy]="a.rect.y + a.rect.height / 2"
-              [attr.rx]="a.rect.width / 2"
-              [attr.ry]="a.rect.height / 2"
-              [attr.fill]="a.fillColor"
-              [attr.stroke]="a.strokeColor"
-              [attr.stroke-width]="a.strokeWidth"
-              [attr.stroke-dasharray]="strokeDashFor(a)"
-              [attr.opacity]="a.opacity"
-              [attr.transform]="rotateTransform(a)"
-            />
-          }
-          @case ('line') {
-            <line
-              [attr.x1]="a.rect.x"
-              [attr.y1]="a.rect.y"
-              [attr.x2]="a.rect.x + a.rect.width"
-              [attr.y2]="a.rect.y + a.rect.height"
-              [attr.stroke]="a.strokeColor"
-              [attr.stroke-width]="a.strokeWidth"
-              [attr.stroke-dasharray]="strokeDashFor(a)"
-              [attr.opacity]="a.opacity"
-              [attr.transform]="rotateTransform(a)"
-            />
-          }
-          @case ('arrow') {
-            <line
-              [attr.x1]="a.rect.x"
-              [attr.y1]="a.rect.y"
-              [attr.x2]="a.rect.x + a.rect.width"
-              [attr.y2]="a.rect.y + a.rect.height"
-              [attr.stroke]="a.strokeColor"
-              [attr.stroke-width]="a.strokeWidth"
-              [attr.stroke-dasharray]="strokeDashFor(a)"
-              [attr.opacity]="a.opacity"
-              [attr.marker-end]="'url(#ah-' + a.id + ')'"
-              [attr.transform]="rotateTransform(a)"
-            />
-          }
+          </g>
         }
       }
       @case ('drawing') {
@@ -179,44 +182,118 @@
         />
       }
       @case ('comment') {
-        <g class="comment">
+        <g class="comment" (dblclick)="startEditingComment(a, $event)">
           <circle
             [attr.cx]="a.rect.x + a.rect.width / 2"
             [attr.cy]="a.rect.y + a.rect.height / 2"
             [attr.r]="a.rect.width / 2"
             fill="#f59e0b"
+            stroke="#d97706"
+            stroke-width="1.5"
             [attr.opacity]="a.opacity"
           />
           <text
             [attr.x]="a.rect.x + a.rect.width / 2"
-            [attr.y]="a.rect.y + a.rect.height / 2 + 4"
+            [attr.y]="a.rect.y + a.rect.height / 2 + Math.round(a.rect.height * 0.18)"
             text-anchor="middle"
             fill="#ffffff"
-            font-size="12"
+            [attr.font-size]="Math.max(10, Math.round(a.rect.width * 0.52))"
             font-weight="700"
-            >!</text
-          >
-          @if (a.id === selectedId()) {
+            style="user-select: none; pointer-events: none;"
+          >!</text>
+
+          @if (a.id === selectedId() && editingCommentId() !== a.id) {
             <g
               class="comment__bubble"
               [attr.transform]="
                 'translate(' + (a.rect.x + a.rect.width + 6) + ',' + a.rect.y + ')'
               "
+              (dblclick)="startEditingComment(a, $event)"
+              (pointerdown)="$event.stopPropagation()"
+              style="cursor: pointer;"
             >
               <rect
-                width="170"
-                height="48"
-                rx="6"
+                width="180"
+                height="50"
+                rx="8"
                 fill="#fffbeb"
                 stroke="#f59e0b"
-                stroke-width="1"
+                stroke-width="1.5"
               />
-              <text x="8" y="18" font-size="11" fill="#1f2937">{{ a.text }}</text>
-              <text x="8" y="36" font-size="10" fill="#92400e">
-                {{ a.author }}
+              <text x="10" y="22" font-size="12" font-weight="500" fill="#1f2937">
+                {{ a.text.length > 24 ? a.text.slice(0, 22) + '…' : a.text }}
+              </text>
+              <text x="10" y="38" font-size="10" fill="#b45309" font-style="italic">
+                Double-click to edit
               </text>
             </g>
           }
+        </g>
+      }
+      @case ('image') {
+        <image
+          [attr.href]="a.dataUrl"
+          [attr.x]="a.rect.x"
+          [attr.y]="a.rect.y"
+          [attr.width]="a.rect.width"
+          [attr.height]="a.rect.height"
+          preserveAspectRatio="none"
+          [attr.opacity]="a.opacity"
+          [style.mix-blend-mode]="a.blendMode || 'normal'"
+          [attr.transform]="imageTransform(a)"
+        />
+      }
+      @case ('signature') {
+        <image
+          [attr.href]="a.dataUrl"
+          [attr.x]="a.rect.x"
+          [attr.y]="a.rect.y"
+          [attr.width]="a.rect.width"
+          [attr.height]="a.rect.height"
+          preserveAspectRatio="none"
+          [attr.opacity]="a.opacity"
+          [style.mix-blend-mode]="a.blendMode || 'normal'"
+          [attr.transform]="rotateTransform(a)"
+        />
+      }
+      @case ('stamp') {
+        <g [attr.transform]="rotateTransform(a)">
+          <rect
+            [attr.x]="a.rect.x"
+            [attr.y]="a.rect.y"
+            [attr.width]="a.rect.width"
+            [attr.height]="a.rect.height"
+            rx="6"
+            [attr.fill]="stampFill(a)"
+            [attr.stroke]="a.color"
+            stroke-width="3"
+            [attr.opacity]="a.opacity"
+          />
+          <rect
+            [attr.x]="a.rect.x + 3"
+            [attr.y]="a.rect.y + 3"
+            [attr.width]="a.rect.width - 6"
+            [attr.height]="a.rect.height - 6"
+            rx="4"
+            fill="none"
+            [attr.stroke]="a.color"
+            stroke-width="1"
+            [attr.opacity]="a.opacity"
+          />
+          <text
+            [attr.x]="a.rect.x + a.rect.width / 2"
+            [attr.y]="a.rect.y + a.rect.height / 2"
+            dominant-baseline="central"
+            text-anchor="middle"
+            [attr.fill]="a.color"
+            [attr.font-size]="stampFontSize(a)"
+            font-family="'Impact', 'Arial Black', sans-serif"
+            font-weight="900"
+            letter-spacing="2px"
+            [attr.opacity]="a.opacity"
+          >
+            {{ a.text }}
+          </text>
         </g>
       }
     }
@@ -330,51 +407,59 @@
   }
 
   @if (draft(); as d) {
-    @switch (d.type) {
-      @case ('rectangle') {
-        <rect
-          class="draft"
-          [attr.x]="d.x"
-          [attr.y]="d.y"
-          [attr.width]="d.width"
-          [attr.height]="d.height"
-        />
-      }
-      @case ('circle') {
-        <ellipse
-          class="draft"
-          [attr.cx]="d.x + d.width / 2"
-          [attr.cy]="d.y + d.height / 2"
-          [attr.rx]="d.width / 2"
-          [attr.ry]="d.height / 2"
-        />
-      }
-      @case ('arrow') {
-        <line
-          class="draft"
-          [attr.x1]="d.x"
-          [attr.y1]="d.y"
-          [attr.x2]="d.x + d.width"
-          [attr.y2]="d.y + d.height"
-        />
-      }
-      @case ('line') {
-        <line
-          class="draft"
-          [attr.x1]="d.x"
-          [attr.y1]="d.y"
-          [attr.x2]="d.x + d.width"
-          [attr.y2]="d.y + d.height"
-        />
-      }
-      @default {
-        <rect
-          class="draft"
-          [attr.x]="d.x"
-          [attr.y]="d.y"
-          [attr.width]="d.width"
-          [attr.height]="d.height"
-        />
+    @if (d.type === 'line') {
+      <line
+        class="draft"
+        [attr.x1]="d.x"
+        [attr.y1]="d.y"
+        [attr.x2]="d.x + d.width"
+        [attr.y2]="d.y + d.height"
+      />
+    } @else if (d.type === 'highlight' || d.type === 'underline' || d.type === 'strikethrough') {
+      <rect
+        class="draft"
+        [attr.x]="d.x"
+        [attr.y]="d.y"
+        [attr.width]="d.width"
+        [attr.height]="d.height"
+      />
+    } @else {
+      @if (state.shapeRenderMode() === 'icon') {
+        <g [attr.transform]="'translate(' + d.x + ',' + d.y + ')'">
+          <rect
+            class="draft"
+            [attr.x]="0"
+            [attr.y]="0"
+            [attr.width]="d.width"
+            [attr.height]="d.height"
+            rx="6"
+          />
+          <foreignObject
+            [attr.x]="0"
+            [attr.y]="0"
+            [attr.width]="d.width"
+            [attr.height]="d.height"
+            style="overflow: hidden; pointer-events: none;"
+          >
+            <div
+              xmlns="http://www.w3.org/1999/xhtml"
+              style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;"
+            >
+              <i
+                [class]="activeShapeIconClass()"
+                [style.color]="state.shapeStrokeColor()"
+                [style.font-size.px]="draftIconFontSize()"
+              ></i>
+            </div>
+          </foreignObject>
+        </g>
+      } @else {
+        <g [attr.transform]="'translate(' + d.x + ',' + d.y + ')'">
+          <path
+            class="draft"
+            [attr.d]="getDraftShapePath(d)"
+          />
+        </g>
       }
     }
   }
@@ -493,6 +578,65 @@
       pointer-events="none"
     />
   }
+
+  <!-- Pending Placement Ghost Preview (Image / Stamp) -->
+  @if (state.pendingPlacement(); as pending) {
+    @if (pendingPos(); as pos) {
+      <g
+        class="placement-preview"
+        [attr.transform]="
+          'translate(' +
+          Math.max(0, Math.min(width() - pending.width, Math.round(pos.x - pending.width / 2))) +
+          ',' +
+          Math.max(0, Math.min(height() - pending.height, Math.round(pos.y - pending.height / 2))) +
+          ')'
+        "
+        style="pointer-events: none;"
+      >
+        @if (pending.type === 'image') {
+          <rect
+            [attr.width]="pending.width"
+            [attr.height]="pending.height"
+            rx="4"
+            fill="rgba(37, 99, 235, 0.1)"
+            stroke="#2563eb"
+            stroke-width="1.5"
+            stroke-dasharray="4 3"
+          />
+          <image
+            [attr.href]="pending.dataUrl"
+            [attr.width]="pending.width"
+            [attr.height]="pending.height"
+            opacity="0.65"
+            preserveAspectRatio="none"
+          />
+        } @else if (pending.type === 'stamp') {
+          <rect
+            [attr.width]="pending.width"
+            [attr.height]="pending.height"
+            rx="6"
+            fill="rgba(255, 255, 255, 0.85)"
+            [attr.stroke]="pending.color"
+            stroke-width="2"
+            stroke-dasharray="4 3"
+            opacity="0.8"
+          />
+          <text
+            [attr.x]="pending.width / 2"
+            [attr.y]="pending.height / 2 + 5"
+            text-anchor="middle"
+            [attr.fill]="pending.color"
+            font-size="16"
+            font-weight="700"
+            letter-spacing="2"
+            opacity="0.8"
+          >
+            {{ pending.text }}
+          </text>
+        }
+      </g>
+    }
+  }
 </svg>
 
 @if (editingText(); as t) {
@@ -523,4 +667,32 @@
     (pointerdown)="$event.stopPropagation()"
     (touchstart)="$event.stopPropagation()"
   ></textarea>
+}
+
+@if (editingComment(); as c) {
+  <div
+    class="comment-editor-box"
+    [style.left.px]="c.rect.x + c.rect.width + 6"
+    [style.top.px]="c.rect.y"
+    (pointerdown)="$event.stopPropagation()"
+    (touchstart)="$event.stopPropagation()"
+    (click)="$event.stopPropagation()"
+  >
+    <textarea
+      #commentEditor
+      class="comment-editor-textarea"
+      [value]="c.text"
+      (input)="onCommentInput($event, c)"
+      (blur)="stopEditingComment(c)"
+      (keydown)="onCommentKeydown($event, c)"
+      placeholder="Type comment..."
+      rows="2"
+    ></textarea>
+    <div class="comment-editor-actions">
+      <span class="comment-editor-tip">Enter to save</span>
+      <button type="button" class="comment-editor-btn" (click)="stopEditingComment(c)">
+        <i class="fa-solid fa-check"></i> Done
+      </button>
+    </div>
+  </div>
 }

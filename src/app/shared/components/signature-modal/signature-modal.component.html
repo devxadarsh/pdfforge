@@ -1,0 +1,266 @@
+<div class="sig-modal-backdrop" (click)="close()" role="dialog" aria-modal="true" aria-labelledby="sig-modal-title">
+  <div class="sig-modal pf-card" (click)="$event.stopPropagation()">
+    <!-- Header -->
+    <header class="sig-modal__header">
+      <div class="sig-modal__title-wrap">
+        <i class="fa-solid fa-signature sig-modal__icon"></i>
+        <h2 id="sig-modal-title" class="sig-modal__title">Insert Signature</h2>
+      </div>
+      <button type="button" class="pf-icon-btn pf-icon-btn--sm" (click)="close()" title="Close signature dialog" aria-label="Close">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </header>
+
+    <!-- Mode Tabs -->
+    <div class="sig-modal__tabs" role="tablist">
+      <button
+        type="button"
+        class="sig-modal__tab"
+        [class.sig-modal__tab--active]="activeTab() === 'draw'"
+        (click)="setTab('draw')"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'draw'"
+      >
+        <i class="fa-solid fa-pen-nib"></i> Draw
+      </button>
+      <button
+        type="button"
+        class="sig-modal__tab"
+        [class.sig-modal__tab--active]="activeTab() === 'type'"
+        (click)="setTab('type')"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'type'"
+      >
+        <i class="fa-solid fa-font"></i> Type
+      </button>
+      <button
+        type="button"
+        class="sig-modal__tab"
+        [class.sig-modal__tab--active]="activeTab() === 'upload'"
+        (click)="setTab('upload')"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'upload'"
+      >
+        <i class="fa-solid fa-upload"></i> Upload
+      </button>
+    </div>
+
+    <!-- Tab Content -->
+    <div class="sig-modal__body">
+      <!-- 1. DRAW TAB -->
+      @if (activeTab() === 'draw') {
+        <div class="sig-draw">
+          <div class="sig-draw__canvas-wrap">
+            <canvas
+              #drawCanvas
+              class="sig-draw__canvas"
+              (pointerdown)="onPointerDown($event)"
+              (pointermove)="onPointerMove($event)"
+              (pointerup)="onPointerUp($event)"
+              (pointercancel)="onPointerUp($event)"
+            ></canvas>
+            @if (!hasDrawn()) {
+              <div class="sig-draw__hint">
+                <i class="fa-solid fa-pencil"></i> Sign here with your mouse, finger, or stylus
+              </div>
+            }
+          </div>
+
+          <div class="sig-draw__controls">
+            <!-- Colors -->
+            <div class="sig-control-group">
+              <span class="sig-control-label">Ink:</span>
+              <div class="sig-swatches">
+                @for (c of colorPresets; track c) {
+                  <button
+                    type="button"
+                    class="sig-swatch"
+                    [style.background-color]="c"
+                    [class.sig-swatch--active]="drawColor() === c"
+                    (click)="drawColor.set(c)"
+                    [title]="c"
+                  ></button>
+                }
+              </div>
+            </div>
+
+            <!-- Stroke Widths -->
+            <div class="sig-control-group">
+              <span class="sig-control-label">Thickness:</span>
+              <div class="sig-pills">
+                @for (w of widthPresets; track w.value) {
+                  <button
+                    type="button"
+                    class="sig-pill"
+                    [class.sig-pill--active]="drawWidth() === w.value"
+                    (click)="drawWidth.set(w.value)"
+                  >
+                    {{ w.label }}
+                  </button>
+                }
+              </div>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="sig-draw__actions">
+              <button
+                type="button"
+                class="pf-btn pf-btn--ghost pf-btn--sm"
+                (click)="undoStroke()"
+                [disabled]="!canUndo()"
+                title="Undo last stroke"
+              >
+                <i class="fa-solid fa-rotate-left"></i> Undo
+              </button>
+              <button
+                type="button"
+                class="pf-btn pf-btn--ghost pf-btn--sm"
+                (click)="clearCanvas()"
+                [disabled]="!hasDrawn()"
+                title="Clear canvas"
+              >
+                <i class="fa-solid fa-eraser"></i> Clear
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- 2. TYPE TAB -->
+      @if (activeTab() === 'type') {
+        <div class="sig-type">
+          <div class="sig-type__input-wrap">
+            <label class="sig-control-label" for="sig-type-name">Your Full Name:</label>
+            <input
+              id="sig-type-name"
+              type="text"
+              class="pf-input sig-type__input"
+              placeholder="e.g. Jane Doe"
+              [value]="typedName()"
+              (input)="typedName.set($any($event.target).value)"
+              maxlength="40"
+            />
+          </div>
+
+          <!-- Color selection -->
+          <div class="sig-control-group sig-type__colors">
+            <span class="sig-control-label">Color:</span>
+            <div class="sig-swatches">
+              @for (c of colorPresets; track c) {
+                <button
+                  type="button"
+                  class="sig-swatch"
+                  [style.background-color]="c"
+                  [class.sig-swatch--active]="typeColor() === c"
+                  (click)="typeColor.set(c)"
+                  [title]="c"
+                ></button>
+              }
+            </div>
+          </div>
+
+          <!-- Font Choices Grid -->
+          <div class="sig-type__fonts-grid">
+            @for (f of fontChoices; track f.family) {
+              <div
+                class="sig-font-card"
+                [class.sig-font-card--active]="typeFont() === f.family"
+                (click)="typeFont.set(f.family)"
+                role="button"
+                tabindex="0"
+              >
+                <span class="sig-font-card__label">{{ f.label }}</span>
+                <span
+                  class="sig-font-card__preview"
+                  [style.font-family]="f.family"
+                  [style.color]="typeColor()"
+                >
+                  {{ typedName() || 'Signature Preview' }}
+                </span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- 3. UPLOAD TAB -->
+      @if (activeTab() === 'upload') {
+        <div class="sig-upload">
+          @if (!uploadedDataUrl()) {
+            <div
+              class="sig-upload__dropzone"
+              [class.sig-upload__dropzone--dragging]="isDragging()"
+              (dragover)="onDragOver($event)"
+              (dragleave)="onDragLeave()"
+              (drop)="onDrop($event)"
+              (click)="fileInput.click()"
+            >
+              <i class="fa-solid fa-cloud-arrow-up sig-upload__icon"></i>
+              <h3 class="sig-upload__title">Drag & drop your signature image here</h3>
+              <p class="sig-upload__hint">PNG, JPG, or WebP up to 10MB</p>
+              <button type="button" class="pf-btn pf-btn--outline pf-btn--sm">
+                <i class="fa-solid fa-folder-open"></i> Browse from device
+              </button>
+              <input
+                #fileInput
+                type="file"
+                accept="image/png, image/jpeg, image/webp"
+                style="display: none"
+                (change)="onFileInput($event)"
+              />
+            </div>
+          } @else {
+            <div class="sig-upload__preview-wrap">
+              <div class="sig-upload__preview-card">
+                <img
+                  [src]="uploadedDataUrl()"
+                  class="sig-upload__preview-img"
+                  alt="Signature preview"
+                />
+              </div>
+
+              <div class="sig-upload__preview-actions">
+                <label class="sig-checkbox">
+                  <input
+                    type="checkbox"
+                    [checked]="removeWhiteBg()"
+                    (change)="toggleRemoveWhiteBg()"
+                  />
+                  <span>Remove white background (make transparent)</span>
+                </label>
+
+                <button
+                  type="button"
+                  class="pf-btn pf-btn--ghost pf-btn--sm"
+                  (click)="uploadedDataUrl.set(null)"
+                >
+                  <i class="fa-solid fa-arrow-rotate-left"></i> Choose another file
+                </button>
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Footer -->
+    <footer class="sig-modal__footer">
+      <span class="sig-modal__privacy-notice">
+        <i class="fa-solid fa-shield-halved"></i> 100% Private — processed locally in browser
+      </span>
+      <div class="sig-modal__btn-group">
+        <button type="button" class="pf-btn pf-btn--ghost" (click)="close()">
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="pf-btn pf-btn--primary"
+          [disabled]="(activeTab() === 'draw' && !hasDrawn()) || (activeTab() === 'type' && !typedName().trim()) || (activeTab() === 'upload' && !uploadedDataUrl())"
+          (click)="insertSignature()"
+        >
+          <i class="fa-solid fa-plus"></i> Place Signature
+        </button>
+      </div>
+    </footer>
+  </div>
+</div>

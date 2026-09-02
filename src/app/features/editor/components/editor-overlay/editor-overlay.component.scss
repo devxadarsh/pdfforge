@@ -93,3 +93,79 @@
     opacity: 1;
   }
 }
+
+.comment-editor-box {
+  position: absolute;
+  z-index: 25;
+  width: 220px;
+  background: #ffffff;
+  border: 1.5px solid #f59e0b;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15), 0 1px 4px rgba(245, 158, 11, 0.2);
+  padding: 8px;
+  box-sizing: border-box;
+  animation: commentFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.comment-editor-textarea {
+  width: 100%;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: #1f2937;
+  resize: vertical;
+  min-height: 48px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  line-height: 1.4;
+
+  &::placeholder {
+    color: #9ca3af;
+  }
+}
+
+.comment-editor-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+  padding-top: 4px;
+  border-top: 1px solid #fef3c7;
+}
+
+.comment-editor-tip {
+  font-size: 10px;
+  color: #d97706;
+}
+
+.comment-editor-btn {
+  border: none;
+  background: #f59e0b;
+  color: #ffffff;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: #d97706;
+  }
+}
+
+@keyframes commentFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

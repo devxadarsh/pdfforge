@@ -1,0 +1,254 @@
+.stamp-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background-color: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  animation: stampFadeIn 0.15s ease-out;
+}
+
+.stamp-modal {
+  width: 100%;
+  max-width: 600px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--pf-surface);
+  border: 1px solid var(--pf-border);
+  border-radius: var(--pf-radius-lg, 12px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  animation: stampScaleUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.stamp-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--pf-border);
+}
+
+.stamp-modal__title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stamp-modal__icon {
+  font-size: 1.25rem;
+  color: var(--pf-primary);
+}
+
+.stamp-modal__title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--pf-on-surface);
+}
+
+.stamp-modal__tabs {
+  display: flex;
+  background-color: var(--pf-background);
+  border-bottom: 1px solid var(--pf-border);
+  padding: 4px 8px;
+  gap: 4px;
+}
+
+.stamp-modal__tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--pf-on-background-muted, #64748b);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    color: var(--pf-on-surface);
+    background-color: rgba(0, 0, 0, 0.04);
+  }
+
+  &--active {
+    background-color: var(--pf-surface);
+    color: var(--pf-primary);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+}
+
+.stamp-modal__body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* PRESET GRID */
+.stamp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.stamp-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 12px;
+  background: var(--pf-background);
+  border: 2px solid var(--pf-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    border-color: var(--pf-primary);
+    transform: translateY(-1px);
+  }
+
+  &--active {
+    border-color: var(--pf-primary);
+    background: rgba(37, 99, 235, 0.04);
+    box-shadow: 0 0 0 1px var(--pf-primary);
+  }
+}
+
+/* AUTHENTIC RUBBER STAMP BADGE */
+.stamp-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: 3px solid currentColor;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.85);
+  transform: rotate(-3deg);
+  user-select: none;
+}
+
+.stamp-badge__inner {
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  padding: 4px 10px;
+  font-family: 'Impact', 'Arial Black', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.stamp-badge--large {
+  transform: rotate(-2deg);
+  .stamp-badge__inner {
+    font-size: 1.35rem;
+    padding: 8px 18px;
+  }
+}
+
+/* CUSTOM STAMP */
+.stamp-custom {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.stamp-custom__preview-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 120px;
+  background: var(--pf-background);
+  border: 1px dashed var(--pf-border);
+  border-radius: 8px;
+}
+
+.stamp-custom__controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stamp-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stamp-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--pf-on-surface-muted, #64748b);
+}
+
+.stamp-custom__input {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.stamp-swatches {
+  display: flex;
+  gap: 8px;
+}
+
+.stamp-swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+
+  &:hover {
+    transform: scale(1.15);
+  }
+
+  &--active {
+    box-shadow: 0 0 0 2px var(--pf-surface), 0 0 0 4px var(--pf-primary);
+  }
+}
+
+.stamp-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+/* FOOTER */
+.stamp-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 14px 20px;
+  border-top: 1px solid var(--pf-border);
+  background: var(--pf-background);
+}
+
+.stamp-modal__btn-group {
+  display: flex;
+  gap: 8px;
+}
+
+@keyframes stampFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes stampScaleUp {
+  from { transform: scale(0.96); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}

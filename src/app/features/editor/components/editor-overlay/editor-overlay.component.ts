@@ -14,22 +14,27 @@ import {
   PdfToolId,
   PdfAnnotation,
   ShapeAnnotation,
+  ShapeKind,
   TextAnnotation,
   HighlightAnnotation,
   CommentAnnotation,
   DrawingAnnotation,
+  ImageAnnotation,
+  SignatureAnnotation,
+  StampAnnotation,
+  PendingPlacement,
   Point,
   Rect,
   EraserTarget,
   TextTransform,
 } from '../../../../core/models/pdf.models';
+import { generateShapeSvgPath } from '../../../../core/utilities/shape-paths.util';
+import { SHAPE_DEFINITIONS } from '../../../../core/constants/shapes';
 import { EditorStateService } from '../../state/editor-state.service';
 
 type MarkType =
-  | 'rectangle'
-  | 'circle'
-  | 'arrow'
-  | 'line'
+  | ShapeKind
+  | 'shape'
   | 'highlight'
   | 'underline'
   | 'strikethrough';
@@ -111,6 +116,17 @@ export class EditorOverlayComponent implements OnDestroy {
   private readonly svgRef = viewChild<ElementRef<SVGSVGElement>>('svg');
   private readonly textEditorRef =
     viewChild<ElementRef<HTMLTextAreaElement>>('textEditor');
+  private readonly commentEditorRef =
+    viewChild<ElementRef<HTMLTextAreaElement>>('commentEditor');
+  readonly editingCommentId = signal<string | null>(null);
+  readonly editingComment = computed(() => {
+    const id = this.editingCommentId();
+    if (!id) return null;
+    const a = this.annotations().find((it) => it.id === id);
+    return a && a.type === 'comment' ? (a as CommentAnnotation) : null;
+  });
+
+  readonly pendingPos = signal<{ x: number; y: number } | null>(null);
 
   readonly pageId = input.required<string>();
   readonly pageIndex = input.required<number>();
@@ -375,6 +391,9 @@ export class EditorOverlayComponent implements OnDestroy {
   );
 
   readonly interactive = computed(() => {
+    if (this.state.pendingPlacement()) {
+      return true;
+    }
     const t = this.tool();
     if (t === 'hand') {
       return false;
@@ -402,6 +421,9 @@ export class EditorOverlayComponent implements OnDestroy {
   });
 
   readonly cursor = computed<'crosshair' | 'default' | 'none'>(() => {
+    if (this.state.pendingPlacement()) {
+      return 'crosshair';
+    }
     const t = this.tool();
     if (t === 'eraser') {
       return 'none'; // custom circular SVG eraser cursor is drawn
@@ -599,6 +621,21 @@ export class EditorOverlayComponent implements OnDestroy {
     if (this.editingId()) {
       this.stopEditing();
     }
+    if (this.editingCommentId()) {
+      this.editingCommentId.set(null);
+    }
+
+    const pending = this.state.pendingPlacement();
+    if (pending) {
+      event.preventDefault();
+      event.stopPropagation();
+      if (pending.type === 'image') {
+        this.placePendingImage(x, y, pending);
+      } else if (pending.type === 'stamp') {
+        this.placePendingStamp(x, y, pending);
+      }
+      return;
+    }
 
     if (t === 'eraser') {
       this.state.selectAnnotation(null);
@@ -691,12 +728,14 @@ export class EditorOverlayComponent implements OnDestroy {
       t === 'circle' ||
       t === 'arrow' ||
       t === 'line' ||
+      (t as string) === 'shape' ||
       t === 'highlight' ||
       t === 'underline' ||
       t === 'strikethrough'
     ) {
       this.start = { x, y };
-      this.draft.set({ type: t, x, y, width: 0, height: 0 });
+      const shapeType = (t as string) === 'shape' ? this.state.shapeKind() : (t as MarkType);
+      this.draft.set({ type: shapeType, x, y, width: 0, height: 0 });
       this.svgRef()?.nativeElement.setPointerCapture?.(event.pointerId);
     } else if (t === 'comment') {
       this.createComment(x, y);
@@ -744,9 +783,18 @@ export class EditorOverlayComponent implements OnDestroy {
   onPointerLeave(): void {
     this.stopAutoScroll();
     this.eraserPos.set(null);
+    this.pendingPos.set(null);
   }
 
   onPointerMove(event: PointerEvent): void {
+    if (this.state.pendingPlacement()) {
+      const { x, y } = this.localPoint(event);
+      this.pendingPos.set({ x, y });
+      return;
+    } else if (this.pendingPos()) {
+      this.pendingPos.set(null);
+    }
+
     if (this.tool() === 'eraser') {
       const { x, y } = this.localPoint(event);
       this.eraserPos.set({ x, y });
@@ -786,27 +834,133 @@ export class EditorOverlayComponent implements OnDestroy {
       const dx = x - this.resizeStart.x;
       const dy = y - this.resizeStart.y;
       const h = this.resizeHandle;
-      let { x: rx, y: ry, width: rw, height: rh } = this.resizeStart.rect;
-      if (h.includes('w')) {
-        rx += dx;
-        rw -= dx;
+      const orig = this.resizeStart.rect;
+
+      let targetRatio: number | null = null;
+      if (a.type === 'image') {
+        const imgAnn = a as ImageAnnotation;
+        const mode = imgAnn.aspectRatioMode || 'original';
+        if (mode === 'free') {
+          targetRatio = event.shiftKey ? orig.width / Math.max(1, orig.height) : null;
+        } else if (mode === '1:1') {
+          targetRatio = 1;
+        } else if (mode === '4:3') {
+          targetRatio = 4 / 3;
+        } else if (mode === '16:9') {
+          targetRatio = 16 / 9;
+        } else if (mode === '3:2') {
+          targetRatio = 3 / 2;
+        } else {
+          targetRatio =
+            imgAnn.naturalWidth && imgAnn.naturalHeight
+              ? imgAnn.naturalWidth / imgAnn.naturalHeight
+              : orig.width / Math.max(1, orig.height);
+        }
+      } else if (a.type === 'signature') {
+        const sigAnn = a as SignatureAnnotation;
+        targetRatio =
+          sigAnn.naturalWidth && sigAnn.naturalHeight
+            ? sigAnn.naturalWidth / sigAnn.naturalHeight
+            : orig.width / Math.max(1, orig.height);
+      } else if (a.type === 'comment') {
+        targetRatio = 1;
+      } else if (event.shiftKey) {
+        targetRatio = orig.width / Math.max(1, orig.height);
       }
-      if (h.includes('e')) {
-        rw += dx;
+
+      let rx = orig.x;
+      let ry = orig.y;
+      let rw = orig.width;
+      let rh = orig.height;
+      const isAlt = event.altKey;
+
+      if (targetRatio !== null && targetRatio > 0) {
+        const R = targetRatio;
+        if (h === 'se') {
+          const wCandidate = orig.width + dx;
+          const hCandidate = orig.height + dy;
+          if (Math.abs(dx) > Math.abs(dy * R)) {
+            rw = Math.max(12, wCandidate);
+            rh = Math.max(12, rw / R);
+          } else {
+            rh = Math.max(12, hCandidate);
+            rw = Math.max(12, rh * R);
+          }
+          if (isAlt) {
+            rx = orig.x - (rw - orig.width) / 2;
+            ry = orig.y - (rh - orig.height) / 2;
+          }
+        } else if (h === 'nw') {
+          const wCandidate = orig.width - dx;
+          const hCandidate = orig.height - dy;
+          if (Math.abs(dx) > Math.abs(dy * R)) {
+            rw = Math.max(12, wCandidate);
+            rh = Math.max(12, rw / R);
+          } else {
+            rh = Math.max(12, hCandidate);
+            rw = Math.max(12, rh * R);
+          }
+          rx = isAlt ? orig.x - (rw - orig.width) / 2 : orig.x + orig.width - rw;
+          ry = isAlt ? orig.y - (rh - orig.height) / 2 : orig.y + orig.height - rh;
+        } else if (h === 'ne') {
+          const wCandidate = orig.width + dx;
+          const hCandidate = orig.height - dy;
+          if (Math.abs(dx) > Math.abs(dy * R)) {
+            rw = Math.max(12, wCandidate);
+            rh = Math.max(12, rw / R);
+          } else {
+            rh = Math.max(12, hCandidate);
+            rw = Math.max(12, rh * R);
+          }
+          rx = isAlt ? orig.x - (rw - orig.width) / 2 : orig.x;
+          ry = isAlt ? orig.y - (rh - orig.height) / 2 : orig.y + orig.height - rh;
+        } else if (h === 'sw') {
+          const wCandidate = orig.width - dx;
+          const hCandidate = orig.height + dy;
+          if (Math.abs(dx) > Math.abs(dy * R)) {
+            rw = Math.max(12, wCandidate);
+            rh = Math.max(12, rw / R);
+          } else {
+            rh = Math.max(12, hCandidate);
+            rw = Math.max(12, rh * R);
+          }
+          rx = isAlt ? orig.x - (rw - orig.width) / 2 : orig.x + orig.width - rw;
+          ry = isAlt ? orig.y - (rh - orig.height) / 2 : orig.y;
+        } else if (h === 'e' || h === 'w') {
+          rw = Math.max(12, h === 'e' ? orig.width + dx : orig.width - dx);
+          rh = Math.max(12, rw / R);
+          rx = h === 'w' ? (isAlt ? orig.x - (rw - orig.width) / 2 : orig.x + orig.width - rw) : (isAlt ? orig.x - (rw - orig.width) / 2 : orig.x);
+          ry = orig.y - (rh - orig.height) / 2;
+        } else if (h === 'n' || h === 's') {
+          rh = Math.max(12, h === 's' ? orig.height + dy : orig.height - dy);
+          rw = Math.max(12, rh * R);
+          ry = h === 'n' ? (isAlt ? orig.y - (rh - orig.height) / 2 : orig.y + orig.height - rh) : (isAlt ? orig.y - (rh - orig.height) / 2 : orig.y);
+          rx = orig.x - (rw - orig.width) / 2;
+        }
+      } else {
+        if (h.includes('w')) {
+          rw = Math.max(8, orig.width - dx);
+          rx = isAlt ? orig.x - (rw - orig.width) / 2 : orig.x + orig.width - rw;
+        }
+        if (h.includes('e')) {
+          rw = Math.max(8, orig.width + dx);
+          rx = isAlt ? orig.x - (rw - orig.width) / 2 : orig.x;
+        }
+        if (h.includes('n')) {
+          rh = Math.max(8, orig.height - dy);
+          ry = isAlt ? orig.y - (rh - orig.height) / 2 : orig.y + orig.height - rh;
+        }
+        if (h.includes('s')) {
+          rh = Math.max(8, orig.height + dy);
+          ry = isAlt ? orig.y - (rh - orig.height) / 2 : orig.y;
+        }
       }
-      if (h.includes('n')) {
-        ry += dy;
-        rh -= dy;
-      }
-      if (h.includes('s')) {
-        rh += dy;
-      }
-      if (rw < 8) {
-        rw = 8;
-      }
-      if (rh < 8) {
-        rh = 8;
-      }
+
+      rx = Math.round(rx);
+      ry = Math.round(ry);
+      rw = Math.round(rw);
+      rh = Math.round(rh);
+
       if (a.type === 'drawing') {
         const origRect = this.resizeStart.rect;
         const sx = rw / Math.max(1, origRect.width);
@@ -826,7 +980,6 @@ export class EditorOverlayComponent implements OnDestroy {
       } else if (a.type === 'text') {
         const origRect = this.resizeStart.rect;
         const origFontSize = this.resizeStart.fontSize ?? a.fontSize;
-        // Scale font size strictly on the basis of horizontal width
         const scale = rw / Math.max(1, origRect.width);
         const newFontSize = Math.max(6, Math.min(200, Math.round(origFontSize * scale)));
         const m = this.measureText(
@@ -849,6 +1002,15 @@ export class EditorOverlayComponent implements OnDestroy {
               width: Math.max(rw, m.width),
               height: m.height,
             },
+          },
+          false,
+        );
+      } else if (a.type === 'comment') {
+        const side = Math.max(14, rw);
+        this.state.updateAnnotation(
+          a.id,
+          {
+            rect: { x: rx, y: ry, width: side, height: side },
           },
           false,
         );
@@ -1055,13 +1217,15 @@ export class EditorOverlayComponent implements OnDestroy {
     }
   }
 
-  /** Double-click a text annotation to edit it inline at the cursor. */
+  /** Double-click a text or comment annotation to edit it inline at the cursor. */
   onDblClick(event: MouseEvent): void {
     const { x, y } = this.localPoint(event as unknown as PointerEvent);
     const hit = this.hitTest(x, y);
     if (hit && hit.type === 'text' && !hit.locked) {
       const caret = this.caretIndexFromX(hit.text, x, hit);
       this.startEditing(hit, caret);
+    } else if (hit && hit.type === 'comment' && !hit.locked) {
+      this.startEditingComment(hit, event);
     }
   }
 
@@ -1131,6 +1295,50 @@ export class EditorOverlayComponent implements OnDestroy {
     if (event.key === 'Escape') {
       event.preventDefault();
       this.stopEditing();
+    }
+  }
+
+  startEditingComment(
+    a: CommentAnnotation,
+    event?: MouseEvent | PointerEvent,
+  ): void {
+    if (event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+    if (a.locked) {
+      return;
+    }
+    this.state.pushHistorySnapshot('Edit Comment');
+    this.editingCommentId.set(a.id);
+    this.state.selectAnnotation(a.id);
+    setTimeout(() => {
+      const el = this.commentEditorRef()?.nativeElement;
+      if (el) {
+        el.focus();
+        el.select();
+      }
+    }, 20);
+  }
+
+  stopEditingComment(a: CommentAnnotation): void {
+    if (this.editingCommentId() === a.id) {
+      this.editingCommentId.set(null);
+    }
+  }
+
+  onCommentInput(event: Event, a: CommentAnnotation): void {
+    const val = (event.target as HTMLTextAreaElement).value;
+    this.state.updateAnnotation(a.id, { text: val }, false);
+  }
+
+  onCommentKeydown(event: KeyboardEvent, a: CommentAnnotation): void {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      this.stopEditingComment(a);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      this.stopEditingComment(a);
     }
   }
 
@@ -1258,6 +1466,32 @@ export class EditorOverlayComponent implements OnDestroy {
     return `rotate(${a.rotation} ${cx} ${cy})`;
   }
 
+  /** Build transform combining rotation and horizontal/vertical flip for images. */
+  imageTransform(a: ImageAnnotation): string | null {
+    const rot = a.rotation || 0;
+    const flipH = !!a.flipHorizontal;
+    const flipV = !!a.flipVertical;
+
+    if (!rot && !flipH && !flipV) {
+      return null;
+    }
+
+    const cx = a.rect.x + a.rect.width / 2;
+    const cy = a.rect.y + a.rect.height / 2;
+    const parts: string[] = [];
+
+    if (rot) {
+      parts.push(`rotate(${rot} ${cx} ${cy})`);
+    }
+    if (flipH || flipV) {
+      const sx = flipH ? -1 : 1;
+      const sy = flipV ? -1 : 1;
+      parts.push(`translate(${cx} ${cy}) scale(${sx} ${sy}) translate(${-cx} ${-cy})`);
+    }
+
+    return parts.join(' ');
+  }
+
   /** Baseline Y for the line at `lineIndex` (0-based) within the box. */
   lineBaselineY(a: TextAnnotation, lineIndex: number): number {
     const lh = a.lineHeight ?? TEXT_LINE_HEIGHT;
@@ -1268,8 +1502,12 @@ export class EditorOverlayComponent implements OnDestroy {
 
   private createText(x: number, y: number): void {
     const text = 'Text';
-    const fontSize = 16;
-    const m = this.measureText(text, fontSize, false, 'sans-serif');
+    const fontSize = this.state.textFontSize();
+    const fontFamily = this.state.textFontFamily();
+    const isBold = this.state.textBold();
+    const isItalic = this.state.textItalic();
+    const color = this.state.textColor();
+    const m = this.measureText(text, fontSize, isBold, fontFamily, isItalic);
     const ann: TextAnnotation = {
       id: crypto.randomUUID(),
       type: 'text',
@@ -1279,13 +1517,13 @@ export class EditorOverlayComponent implements OnDestroy {
       opacity: 1,
       createdAt: Date.now(),
       text,
-      fontFamily: 'sans-serif',
+      fontFamily,
       fontSize,
-      fontWeight: 400,
-      italic: false,
+      fontWeight: isBold ? 700 : 400,
+      italic: isItalic,
       underline: false,
       align: 'left',
-      color: '#111111',
+      color,
     };
     this.state.addAnnotation(this.pageId(), ann);
     // Drop straight into inline editing at the drop point, and revert to the
@@ -1295,7 +1533,7 @@ export class EditorOverlayComponent implements OnDestroy {
   }
 
   private createComment(x: number, y: number): void {
-    const size = 22;
+    const size = 28;
     const ann: CommentAnnotation = {
       id: crypto.randomUUID(),
       type: 'comment',
@@ -1305,11 +1543,90 @@ export class EditorOverlayComponent implements OnDestroy {
       opacity: 1,
       createdAt: Date.now(),
       text: 'New comment',
-      author: 'You',
     };
     this.state.addAnnotation(this.pageId(), ann);
     this.state.setTool('select');
     this.state.selectAnnotation(ann.id);
+    this.startEditingComment(ann);
+  }
+
+  private placePendingImage(
+    x: number,
+    y: number,
+    pending: Extract<PendingPlacement, { type: 'image' }>,
+  ): void {
+    const targetW = pending.width;
+    const targetH = pending.height;
+    let posX = Math.round(x - targetW / 2);
+    let posY = Math.round(y - targetH / 2);
+    posX = Math.max(0, Math.min(this.width() - targetW, posX));
+    posY = Math.max(0, Math.min(this.height() - targetH, posY));
+
+    this.state.pushHistorySnapshot('Add Image');
+
+    const ann: ImageAnnotation = {
+      id: crypto.randomUUID(),
+      type: 'image',
+      pageIndex: this.pageIndex(),
+      rect: {
+        x: posX,
+        y: posY,
+        width: targetW,
+        height: targetH,
+      },
+      rotation: 0,
+      opacity: 1,
+      createdAt: Date.now(),
+      dataUrl: pending.dataUrl,
+      naturalWidth: pending.naturalWidth,
+      naturalHeight: pending.naturalHeight,
+      aspectRatioMode: 'original',
+      lockAspectRatio: true,
+    };
+
+    this.state.addAnnotation(this.pageId(), ann);
+    this.state.setPendingPlacement(null);
+    this.state.setTool('select');
+    this.state.selectAnnotation(ann.id);
+    this.pendingPos.set(null);
+  }
+
+  private placePendingStamp(
+    x: number,
+    y: number,
+    pending: Extract<PendingPlacement, { type: 'stamp' }>,
+  ): void {
+    const stampW = pending.width;
+    const stampH = pending.height;
+    let posX = Math.round(x - stampW / 2);
+    let posY = Math.round(y - stampH / 2);
+    posX = Math.max(0, Math.min(this.width() - stampW, posX));
+    posY = Math.max(0, Math.min(this.height() - stampH, posY));
+
+    this.state.pushHistorySnapshot('Add Stamp');
+
+    const ann: StampAnnotation = {
+      id: crypto.randomUUID(),
+      type: 'stamp',
+      pageIndex: this.pageIndex(),
+      rect: {
+        x: posX,
+        y: posY,
+        width: stampW,
+        height: stampH,
+      },
+      rotation: -3,
+      opacity: 0.9,
+      createdAt: Date.now(),
+      text: pending.text,
+      color: pending.color,
+    };
+
+    this.state.addAnnotation(this.pageId(), ann);
+    this.state.setPendingPlacement(null);
+    this.state.setTool('select');
+    this.state.selectAnnotation(ann.id);
+    this.pendingPos.set(null);
   }
 
   pointsToSvgPath(points: readonly Point[]): string {
@@ -1344,20 +1661,68 @@ export class EditorOverlayComponent implements OnDestroy {
     return d;
   }
 
+  getShapePath(a: ShapeAnnotation): string {
+    return generateShapeSvgPath(a.kind, Math.max(1, a.rect.width), Math.max(1, a.rect.height));
+  }
+
+  getShapeTransform(a: ShapeAnnotation): string {
+    if (a.rotation) {
+      const cx = a.rect.x + a.rect.width / 2;
+      const cy = a.rect.y + a.rect.height / 2;
+      return `rotate(${a.rotation}, ${cx}, ${cy}) translate(${a.rect.x}, ${a.rect.y})`;
+    }
+    return `translate(${a.rect.x}, ${a.rect.y})`;
+  }
+
+  getDraftShapePath(d: DraftMark): string {
+    const kind: ShapeKind = ((d.type as any) === 'shape' ? this.state.shapeKind() : (d.type as ShapeKind)) || this.state.shapeKind() || 'rectangle';
+    return generateShapeSvgPath(kind, Math.max(1, d.width), Math.max(1, d.height));
+  }
+
+  getShapeIconClass(a: ShapeAnnotation): string {
+    const def = SHAPE_DEFINITIONS.find((s) => s.id === a.kind);
+    return def ? def.icon : 'fa-solid fa-shapes';
+  }
+
+  getIconFontSize(a: ShapeAnnotation): number {
+    return Math.max(10, Math.min(a.rect.width, a.rect.height) * 0.72);
+  }
+
+  activeShapeIconClass(): string {
+    const def = SHAPE_DEFINITIONS.find((s) => s.id === this.state.shapeKind());
+    return def ? def.icon : 'fa-solid fa-shapes';
+  }
+
+  draftIconFontSize(): number {
+    const d = this.draft();
+    if (!d) return 24;
+    return Math.max(10, Math.min(d.width, d.height) * 0.72);
+  }
+
   private commitShape(d: DraftMark): void {
-    const isLineOrArrow = d.type === 'arrow' || d.type === 'line';
+    const kind: ShapeKind = ((d.type as any) === 'shape' ? this.state.shapeKind() : (d.type as ShapeKind)) || this.state.shapeKind() || 'rectangle';
+    const isLineOrArrow = kind === 'arrow' || kind === 'line';
+    const strokeColor = this.state.shapeStrokeColor();
+    const strokeWidth = this.state.shapeStrokeWidth();
+    const fillEnabled = this.state.shapeFillEnabled();
+    const fillColor =
+      isLineOrArrow || !fillEnabled
+        ? 'transparent'
+        : this.state.shapeFillColor();
+    const renderMode = this.state.shapeRenderMode();
     const ann: ShapeAnnotation = {
       id: crypto.randomUUID(),
       type: 'shape',
-      kind: d.type as ShapeAnnotation['kind'],
+      kind,
+      renderMode,
       pageIndex: this.pageIndex(),
-      rect: { x: d.x, y: d.y, width: d.width, height: d.height },
+      rect: { x: d.x, y: d.y, width: Math.max(12, d.width), height: Math.max(12, d.height) },
       rotation: 0,
       opacity: 1,
       createdAt: Date.now(),
-      strokeColor: '#2563eb',
-      fillColor: isLineOrArrow ? 'transparent' : 'rgba(37,99,235,0.12)',
-      strokeWidth: 2,
+      strokeColor,
+      fillColor,
+      strokeWidth,
       strokeStyle: 'solid',
     };
     this.state.addAnnotation(this.pageId(), ann);
@@ -1368,10 +1733,10 @@ export class EditorOverlayComponent implements OnDestroy {
   private commitHighlight(d: DraftMark): void {
     const color =
       d.type === 'highlight'
-        ? '#fde047'
+        ? this.state.highlightColor()
         : d.type === 'underline'
-          ? '#2563eb'
-          : '#ef4444';
+          ? this.state.underlineColor()
+          : this.state.strikethroughColor();
     const ann: HighlightAnnotation = {
       id: crypto.randomUUID(),
       type: d.type as HighlightAnnotation['type'],
@@ -1386,5 +1751,16 @@ export class EditorOverlayComponent implements OnDestroy {
     this.state.addAnnotation(this.pageId(), ann);
     this.state.setTool('select');
     this.state.selectAnnotation(ann.id);
+  }
+
+  stampFill(a: StampAnnotation): string {
+    return 'rgba(255, 255, 255, 0.9)';
+  }
+
+  stampFontSize(a: StampAnnotation): number {
+    const textLen = Math.max(1, a.text.length);
+    const maxByWidth = (a.rect.width - 20) / (textLen * 0.65);
+    const maxByHeight = (a.rect.height - 14) * 0.65;
+    return Math.max(10, Math.min(36, Math.floor(Math.min(maxByWidth, maxByHeight))));
   }
 }

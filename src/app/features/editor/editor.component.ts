@@ -23,11 +23,20 @@ import {
   PdfAnnotation,
   DrawingAnnotation,
   ShapeAnnotation,
+  ShapeKind,
   TextAnnotation,
   HighlightAnnotation,
+  ImageAnnotation,
+  SignatureAnnotation,
+  StampAnnotation,
+  BlendMode,
+  AspectRatioMode,
 } from '../../core/models/pdf.models';
+import { SHAPE_CATEGORIES, SHAPE_DEFINITIONS } from '../../core/constants/shapes';
 import { LoadedFile } from '../../core/models/file.models';
 import { FileDropzoneComponent } from '../../shared/components/dropzone/file-dropzone.component';
+import { SignatureModalComponent, SignatureResult } from '../../shared/components/signature-modal/signature-modal.component';
+import { StampModalComponent, StampResult } from '../../shared/components/stamp-modal/stamp-modal.component';
 import { FileService } from '../../core/services/file/file.service';
 import { DownloadService } from '../../core/services/download/download.service';
 import { PdfViewerService, PageSize } from '../../core/services/pdf/pdf-viewer.service';
@@ -45,8 +54,10 @@ import { EditorPage } from './models/editor-page.model';
 import { EditorPagesService } from './state/editor-pages.service';
 import { EditorStateService } from './state/editor-state.service';
 
+import { MobileTooltipDirective } from '../../shared/directives/mobile-tooltip.directive';
+
 @Component({
-    selector: 'app-editor',
+  selector: 'app-editor',
   standalone: true,
   imports: [
     RouterLink,
@@ -54,10 +65,13 @@ import { EditorStateService } from './state/editor-state.service';
     KeyValuePipe,
     NgxExtendedPdfViewerModule,
     FileDropzoneComponent,
+    SignatureModalComponent,
+    StampModalComponent,
     PdfPageComponent,
     EditorOverlayComponent,
     PropertiesPanelComponent,
     PagesPanelComponent,
+    MobileTooltipDirective,
   ],
   templateUrl: './editor.component.html',
   styleUrl: './editor.component.scss',
@@ -142,11 +156,111 @@ export class EditorComponent implements OnDestroy {
     return list.length === 1 ? list[0] : null;
   });
 
+  readonly selectedImageAnnotation = computed<ImageAnnotation | null>(() => {
+    const ann = this.selectedAnnotation();
+    return ann && ann.type === 'image' ? (ann as ImageAnnotation) : null;
+  });
+
+  readonly selectedSignatureAnnotation = computed<SignatureAnnotation | null>(() => {
+    const ann = this.selectedAnnotation();
+    return ann && ann.type === 'signature' ? (ann as SignatureAnnotation) : null;
+  });
+
+  readonly mobileBlendModes: ReadonlyArray<{ value: BlendMode; label: string }> = [
+    { value: 'normal', label: 'Normal' },
+    { value: 'multiply', label: 'Multiply' },
+    { value: 'screen', label: 'Screen' },
+    { value: 'overlay', label: 'Overlay' },
+    { value: 'darken', label: 'Darken' },
+    { value: 'lighten', label: 'Lighten' },
+    { value: 'difference', label: 'Diff' },
+  ];
+
+  readonly mobileRatioModes: ReadonlyArray<{ value: AspectRatioMode; label: string }> = [
+    { value: 'free', label: 'Free' },
+    { value: 'original', label: 'Orig' },
+    { value: '1:1', label: '1:1' },
+    { value: '4:3', label: '4:3' },
+    { value: '16:9', label: '16:9' },
+    { value: '3:2', label: '3:2' },
+  ];
+
+  setImageBlendMode(mode: BlendMode): void {
+    const img = this.selectedImageAnnotation() || this.selectedSignatureAnnotation();
+    if (img && !img.locked) {
+      this.state.updateAnnotation(img.id, { blendMode: mode });
+    }
+  }
+
+  setImageAspectRatioMode(mode: AspectRatioMode): void {
+    const img = this.selectedImageAnnotation();
+    if (!img || img.locked) return;
+    const updates: Partial<ImageAnnotation> = {
+      aspectRatioMode: mode,
+      lockAspectRatio: mode !== 'free',
+    };
+    let ratio: number | null = null;
+    if (mode === 'original') {
+      ratio = img.naturalWidth && img.naturalHeight ? img.naturalWidth / img.naturalHeight : null;
+    } else if (mode === '1:1') {
+      ratio = 1;
+    } else if (mode === '4:3') {
+      ratio = 4 / 3;
+    } else if (mode === '16:9') {
+      ratio = 16 / 9;
+    } else if (mode === '3:2') {
+      ratio = 3 / 2;
+    }
+
+    if (ratio && ratio > 0) {
+      const currentW = img.rect.width;
+      const newH = Math.round(currentW / ratio);
+      updates.rect = { ...img.rect, height: newH };
+    }
+
+    this.state.updateAnnotation(img.id, updates);
+  }
+
+  toggleImageLockRatio(): void {
+    const img = this.selectedImageAnnotation() || this.selectedSignatureAnnotation();
+    if (img && !img.locked) {
+      this.state.updateAnnotation(img.id, { lockAspectRatio: !img.lockAspectRatio });
+    }
+  }
+
+  toggleImageFlipH(): void {
+    const img = this.selectedImageAnnotation();
+    if (img && !img.locked) {
+      this.state.updateAnnotation(img.id, { flipHorizontal: !img.flipHorizontal });
+    }
+  }
+
+  toggleImageFlipV(): void {
+    const img = this.selectedImageAnnotation();
+    if (img && !img.locked) {
+      this.state.updateAnnotation(img.id, { flipVertical: !img.flipVertical });
+    }
+  }
+
+  resetImageSize(): void {
+    const img = this.selectedImageAnnotation();
+    if (img && !img.locked) {
+      const nw = img.naturalWidth || 200;
+      const nh = img.naturalHeight || 150;
+      this.state.updateAnnotation(img.id, {
+        rect: { ...img.rect, width: nw, height: nh },
+        aspectRatioMode: 'original',
+        lockAspectRatio: true,
+      });
+    }
+  }
+
   setTextFontSize(size: number): void {
     const textAnn = this.selectedTextAnnotation();
     if (textAnn && !textAnn.locked) {
       this.state.updateAnnotation(textAnn.id, { fontSize: size } as Partial<TextAnnotation>);
     }
+    this.state.setTextFontSize(size);
   }
 
   setTextFontFamily(family: string): void {
@@ -154,20 +268,107 @@ export class EditorComponent implements OnDestroy {
     if (textAnn && !textAnn.locked) {
       this.state.updateAnnotation(textAnn.id, { fontFamily: family } as Partial<TextAnnotation>);
     }
+    this.state.setTextFontFamily(family);
   }
 
   toggleTextBold(): void {
     const textAnn = this.selectedTextAnnotation();
     if (textAnn && !textAnn.locked) {
-      const nextWeight = (textAnn.fontWeight >= 700) ? 400 : 700;
+      const nextWeight = textAnn.fontWeight >= 700 ? 400 : 700;
       this.state.updateAnnotation(textAnn.id, { fontWeight: nextWeight } as Partial<TextAnnotation>);
     }
+    this.state.toggleTextBold();
   }
 
   toggleTextItalic(): void {
     const textAnn = this.selectedTextAnnotation();
     if (textAnn && !textAnn.locked) {
       this.state.updateAnnotation(textAnn.id, { italic: !textAnn.italic } as Partial<TextAnnotation>);
+    }
+    this.state.toggleTextItalic();
+  }
+
+  toggleTextUnderline(): void {
+    const textAnn = this.selectedTextAnnotation();
+    if (textAnn && !textAnn.locked) {
+      this.state.updateAnnotation(textAnn.id, { underline: !textAnn.underline } as Partial<TextAnnotation>);
+    }
+  }
+
+  setTextAlign(align: 'left' | 'center' | 'right'): void {
+    const textAnn = this.selectedTextAnnotation();
+    if (textAnn && !textAnn.locked) {
+      this.state.updateAnnotation(textAnn.id, { align } as Partial<TextAnnotation>);
+    }
+  }
+
+  rotateSelectedAnnotation(deg = 90): void {
+    const sel = this.selectedAnnotation();
+    if (sel && !sel.locked) {
+      const nextRot = ((sel.rotation || 0) + deg) % 360;
+      this.state.updateAnnotation(sel.id, { rotation: nextRot });
+    }
+  }
+
+  setTextColor(color: string): void {
+    const textAnn = this.selectedTextAnnotation();
+    if (textAnn && !textAnn.locked) {
+      this.state.updateAnnotation(textAnn.id, { color } as Partial<TextAnnotation>);
+    }
+    this.state.setTextColor(color);
+  }
+
+  setShapeStrokeColor(color: string): void {
+    const sel = this.selectedAnnotation();
+    if (sel && sel.type === 'shape' && !sel.locked) {
+      this.state.updateAnnotation(sel.id, { strokeColor: color } as Partial<ShapeAnnotation>);
+    }
+    this.state.setShapeStrokeColor(color);
+  }
+
+  setShapeStrokeWidth(w: number): void {
+    const sel = this.selectedAnnotation();
+    if (sel && sel.type === 'shape' && !sel.locked) {
+      this.state.updateAnnotation(sel.id, { strokeWidth: w } as Partial<ShapeAnnotation>);
+    }
+    this.state.setShapeStrokeWidth(w);
+  }
+
+  toggleShapeFill(): void {
+    const sel = this.selectedAnnotation();
+    if (sel && sel.type === 'shape' && !sel.locked) {
+      const current = (sel as ShapeAnnotation).fillColor;
+      const isTransparent = !current || current === 'transparent';
+      const nextFill = isTransparent ? 'rgba(37,99,235,0.12)' : 'transparent';
+      this.state.updateAnnotation(sel.id, { fillColor: nextFill } as Partial<ShapeAnnotation>);
+    }
+    this.state.toggleShapeFill();
+  }
+
+  setShapeFillColor(color: string): void {
+    const sel = this.selectedAnnotation();
+    if (sel && sel.type === 'shape' && !sel.locked) {
+      this.state.updateAnnotation(sel.id, { fillColor: color } as Partial<ShapeAnnotation>);
+    }
+    this.state.setShapeFillColor(color);
+  }
+
+  setHighlightColor(color: string): void {
+    const sel = this.selectedAnnotation();
+    if (
+      sel &&
+      (sel.type === 'highlight' || sel.type === 'underline' || sel.type === 'strikethrough') &&
+      !sel.locked
+    ) {
+      this.state.updateAnnotation(sel.id, { color } as Partial<HighlightAnnotation>);
+    }
+    const t = this.state.tool();
+    if (t === 'underline') {
+      this.state.setUnderlineColor(color);
+    } else if (t === 'strikethrough') {
+      this.state.setStrikethroughColor(color);
+    } else {
+      this.state.setHighlightColor(color);
     }
   }
 
@@ -232,6 +433,108 @@ export class EditorComponent implements OnDestroy {
     }
     return groups;
   });
+  readonly shapeCategories = SHAPE_CATEGORIES;
+  readonly shapeDefinitions = SHAPE_DEFINITIONS;
+  readonly shapeMenuOpen = signal<boolean>(false);
+  readonly selectedShapeCategory = signal<string>('all');
+  readonly shapeSearchQuery = signal<string>('');
+
+  readonly activeShapeDefinition = computed(() => {
+    const sel = this.selectedAnnotation();
+    const k = (sel && sel.type === 'shape' ? sel.kind : this.state.shapeKind()) || 'rectangle';
+    return this.shapeDefinitions.find((s) => s.id === k) || this.shapeDefinitions[0];
+  });
+
+  readonly filteredShapes = computed(() => {
+    const q = this.shapeSearchQuery().trim().toLowerCase();
+    const cat = this.selectedShapeCategory();
+    return this.shapeDefinitions.filter((s) => {
+      const matchCat = cat === 'all' || s.category === cat;
+      const matchQuery = !q || s.label.toLowerCase().includes(q) || s.id.toLowerCase().includes(q);
+      return matchCat && matchQuery;
+    });
+  });
+
+  readonly mobileCategoryShapes = computed(() => {
+    const cat = this.selectedShapeCategory();
+    if (cat === 'all') {
+      return this.shapeDefinitions;
+    }
+    return this.shapeDefinitions.filter((s) => s.category === cat);
+  });
+
+  readonly mobileCategoryLabel = computed(() => {
+    const catId = this.selectedShapeCategory();
+    if (catId === 'all') return 'All';
+    const c = this.shapeCategories.find((cat) => cat.id === catId);
+    return c ? c.label : catId;
+  });
+
+  setMobileShapeCategory(catId: string): void {
+    this.selectedShapeCategory.set(catId);
+    const catShapes = catId === 'all' ? this.shapeDefinitions : this.shapeDefinitions.filter((s) => s.category === catId);
+    if (catShapes.length > 0 && !catShapes.some((s) => s.id === this.state.shapeKind())) {
+      this.state.setShapeKind(catShapes[0].id);
+      const sel = this.selectedAnnotation();
+      if (sel && sel.type === 'shape') {
+        this.state.updateAnnotation(sel.id, { kind: catShapes[0].id });
+      }
+    }
+  }
+
+  openCategoryShapes(catId: string): void {
+    this.selectedShapeCategory.set(catId);
+    this.shapeSearchQuery.set('');
+    this.shapeMenuOpen.set(true);
+  }
+
+  toggleShapeMenu(): void {
+    this.shapeMenuOpen.update((v) => !v);
+  }
+
+  closeShapeMenu(): void {
+    this.shapeMenuOpen.set(false);
+  }
+
+  onShapeToolClick(event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+    this.selectTool('shape');
+    if (!isMobile) {
+      this.propertiesPanelCollapsed.set(false);
+      this.closeShapeMenu();
+    } else {
+      // On mobile, keep the double-row category & shape bar active directly above toolbar
+      this.closeShapeMenu();
+    }
+  }
+
+  selectShapeKind(kind: ShapeKind): void {
+    this.state.setShapeKind(kind);
+    const sel = this.selectedAnnotation();
+    if (sel && sel.type === 'shape') {
+      this.state.updateAnnotation(sel.id, { kind });
+    }
+    this.state.setTool('shape');
+    this.closeShapeMenu();
+  }
+
+  selectShapeKindMobile(kind: ShapeKind): void {
+    this.state.setShapeKind(kind);
+    const sel = this.selectedAnnotation();
+    if (sel && sel.type === 'shape') {
+      this.state.updateAnnotation(sel.id, { kind });
+    }
+    this.state.setTool('shape');
+  }
+
+  toggleAnnotationRenderMode(ann: ShapeAnnotation): void {
+    const next = (ann.renderMode || 'shape') === 'icon' ? 'shape' : 'icon';
+    this.state.updateAnnotation(ann.id, { renderMode: next });
+  }
+
   readonly docName = signal<string | null>(null);
   readonly loading = signal(false);
   readonly searchQuery = signal('');
@@ -242,6 +545,9 @@ export class EditorComponent implements OnDestroy {
   private readonly editorRef = viewChild<ElementRef<HTMLDivElement>>('editor');
   private readonly stageRef = viewChild<ElementRef<HTMLDivElement>>('stage');
   private readonly pagesStackRef = viewChild<ElementRef<HTMLElement>>('pagesStack');
+  readonly imageInputRef = viewChild<ElementRef<HTMLInputElement>>('imageFileInput');
+  readonly isSignatureModalOpen = signal<boolean>(false);
+  readonly isStampModalOpen = signal<boolean>(false);
   readonly stageSize = signal<{ width: number; height: number }>({
     width: 0,
     height: 0,
@@ -409,22 +715,36 @@ export class EditorComponent implements OnDestroy {
       case 'stamp':
         return 'fa-solid fa-stamp';
       default:
-        return 'fa-solid fa-vector-square';
+        return 'fa-solid fa-crop-simple';
     }
   }
 
   readonly currentToolName = computed(() => {
+    const pending = this.state.pendingPlacement();
+    if (pending) {
+      return pending.type === 'image' ? 'Place Image' : 'Place Stamp';
+    }
     const t = this.state.tool();
     const match = EDITOR_TOOLS.find((tool) => tool.id === t);
     return match ? `${match.label} Tool` : 'Tool';
   });
 
   readonly currentToolIcon = computed(() => {
+    const pending = this.state.pendingPlacement();
+    if (pending) {
+      return pending.type === 'image' ? 'fa-solid fa-image' : 'fa-solid fa-stamp';
+    }
     const t = this.state.tool();
     return this.getAnnotationIcon(t);
   });
 
   readonly currentToolHint = computed(() => {
+    const pending = this.state.pendingPlacement();
+    if (pending) {
+      return pending.type === 'image'
+        ? 'Tap page to place image'
+        : 'Tap page to place stamp';
+    }
     const t = this.state.tool();
     const selCount = this.state.selectedIds().length;
     if (selCount > 0) {
@@ -471,6 +791,7 @@ export class EditorComponent implements OnDestroy {
       t === 'pen' ||
       t === 'freehand' ||
       t === 'eraser' ||
+      t === 'shape' ||
       t === 'highlight' ||
       t === 'underline' ||
       t === 'strikethrough' ||
@@ -894,11 +1215,18 @@ export class EditorComponent implements OnDestroy {
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
-    if (this.showRecentDropdown()) {
-      const target = event.target as HTMLElement | null;
-      if (!target?.closest('.editor__open-file-group')) {
-        this.showRecentDropdown.set(false);
-      }
+    const target = event.target as HTMLElement | null;
+    if (this.showRecentDropdown() && !target?.closest('.editor__open-file-group')) {
+      this.showRecentDropdown.set(false);
+    }
+    if (
+      this.shapeMenuOpen() &&
+      !target?.closest('.editor__tool-dropdown-wrap') &&
+      !target?.closest('.editor__bottomsheet--shapes') &&
+      !target?.closest('.editor__dp-pill') &&
+      !target?.closest('.pf-shape-popover')
+    ) {
+      this.shapeMenuOpen.set(false);
     }
   }
 
@@ -918,10 +1246,17 @@ export class EditorComponent implements OnDestroy {
     }
     try {
       const pages = this.pagesStore.pages().map((p) => ({ ...p }));
-      const pageSpecs = pages.map((p) => ({
-        sourceIndex: p.sourceIndex,
-        rotation: p.rotation,
-      }));
+      const pageSpecs = pages.map((p) => {
+        const pageSize = this.baseSizes().get(p.sourceIndex) || { width: 595, height: 842 };
+        const anns = this.state.annotationsFor(p.id);
+        return {
+          sourceIndex: p.sourceIndex,
+          rotation: p.rotation,
+          annotations: anns,
+          baseWidth: pageSize.width,
+          baseHeight: pageSize.height,
+        };
+      });
       const bytes = await this.exporter.exportDocument(
         new Uint8Array(file.data.slice(0)),
         pageSpecs,
@@ -1410,7 +1745,126 @@ export class EditorComponent implements OnDestroy {
   }
 
   selectTool(id: PdfToolId): void {
+    if (id === 'image') {
+      const input = this.imageInputRef()?.nativeElement;
+      if (input) {
+        input.value = '';
+        input.click();
+      }
+      return;
+    }
+    if (id === 'signature') {
+      this.isSignatureModalOpen.set(true);
+      return;
+    }
+    if (id === 'stamp') {
+      this.isStampModalOpen.set(true);
+      return;
+    }
+    if (id === 'shape') {
+      const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+      if (!isMobile) {
+        this.propertiesPanelCollapsed.set(false);
+      }
+    }
     this.state.setTool(id);
+  }
+
+  async onImageFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    if (!file.type.startsWith('image/')) {
+      this.toasts.error('Please select a valid image file (PNG, JPEG, WebP, SVG).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const img = new Image();
+      img.onload = () => {
+        const pageId = this.pagesStore.currentId() ?? 'p0';
+        const pageIndex = this.pagesStore.currentIndex();
+        const pageSize = this.baseSizes().get(pageIndex) || { width: 595, height: 842 };
+
+        const naturalW = img.naturalWidth || 200;
+        const naturalH = img.naturalHeight || 150;
+        const aspect = naturalW / Math.max(1, naturalH);
+
+        let targetW = Math.min(260, naturalW);
+        let targetH = targetW / aspect;
+        if (targetH > 220) {
+          targetH = 220;
+          targetW = targetH * aspect;
+        }
+
+        this.state.setPendingPlacement({
+          type: 'image',
+          dataUrl,
+          naturalWidth: naturalW,
+          naturalHeight: naturalH,
+          width: Math.round(targetW),
+          height: Math.round(targetH),
+        });
+        this.state.setTool('image');
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  onSignatureSelected(result: SignatureResult): void {
+    this.isSignatureModalOpen.set(false);
+    const pageId = this.pagesStore.currentId() ?? 'p0';
+    const pageIndex = this.pagesStore.currentIndex();
+    const pageSize = this.baseSizes().get(pageIndex) || { width: 595, height: 842 };
+
+    const posX = Math.max(20, Math.round((pageSize.width - result.width) / 2));
+    const posY = Math.max(40, Math.round((pageSize.height - result.height) / 2));
+
+    const ann: SignatureAnnotation = {
+      id: crypto.randomUUID(),
+      type: 'signature',
+      pageIndex,
+      rect: {
+        x: posX,
+        y: posY,
+        width: result.width,
+        height: result.height,
+      },
+      rotation: 0,
+      opacity: 1,
+      createdAt: Date.now(),
+      dataUrl: result.dataUrl,
+      naturalWidth: result.width,
+      naturalHeight: result.height,
+    };
+
+    this.state.addAnnotation(pageId, ann);
+    this.state.setTool('select');
+    this.state.selectAnnotation(ann.id);
+    this.toasts.success('Signature placed on page.');
+  }
+
+  onStampSelected(result: StampResult): void {
+    this.isStampModalOpen.set(false);
+    const stampW = Math.max(160, Math.min(260, result.text.length * 14 + 40));
+    const stampH = 54;
+
+    this.state.setPendingPlacement({
+      type: 'stamp',
+      text: result.text,
+      color: result.color,
+      width: stampW,
+      height: stampH,
+    });
+    this.state.setTool('stamp');
+  }
+
+  cancelPendingPlacement(): void {
+    this.state.setPendingPlacement(null);
+    this.state.setTool('select');
   }
 
   async toggleFullscreen(): Promise<void> {
@@ -1581,12 +2035,20 @@ export class EditorComponent implements OnDestroy {
     this.exporting.set(true);
     this.state.setIsExporting(true);
     try {
-      const pages = this.pagesStore
-        .pages()
-        .map((p) => ({ sourceIndex: p.sourceIndex, rotation: p.rotation }));
+      const pageSpecs = this.pagesStore.pages().map((p) => {
+        const pageSize = this.baseSizes().get(p.sourceIndex) || { width: 595, height: 842 };
+        const anns = this.state.annotationsFor(p.id);
+        return {
+          sourceIndex: p.sourceIndex,
+          rotation: p.rotation,
+          annotations: anns,
+          baseWidth: pageSize.width,
+          baseHeight: pageSize.height,
+        };
+      });
       const bytes = await this.exporter.exportDocument(
         new Uint8Array(file.data.slice(0)),
-        pages,
+        pageSpecs,
         { title: file.name.replace(/\.pdf$/i, '') },
       );
       const editorState = {
@@ -1598,7 +2060,7 @@ export class EditorComponent implements OnDestroy {
         file.name,
         bytes.buffer,
         bytes.byteLength,
-        pages.length,
+        pageSpecs.length,
         editorState,
       );
       await this.storage.saveDocument(file.name, bytes.buffer, editorState);
@@ -1840,9 +2302,15 @@ export class EditorComponent implements OnDestroy {
 
   @HostListener('window:keydown', ['$event'])
   onKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape' && this.isFullscreen()) {
-      void document.exitFullscreen();
-      return;
+    if (event.key === 'Escape') {
+      if (this.state.pendingPlacement()) {
+        this.cancelPendingPlacement();
+        return;
+      }
+      if (this.isFullscreen()) {
+        void document.exitFullscreen();
+        return;
+      }
     }
 
     const target = event.target as HTMLElement | null;

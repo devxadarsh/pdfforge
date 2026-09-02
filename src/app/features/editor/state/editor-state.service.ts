@@ -3,10 +3,12 @@ import {
   PdfToolId,
   PdfAnnotation,
   DrawingAnnotation,
+  ShapeKind,
   DrawingMode,
   SelectMode,
   EraserMode,
   EraserTarget,
+  PendingPlacement,
 } from '../../../core/models/pdf.models';
 import { EditorPage } from '../models/editor-page.model';
 import { EditorPagesService } from './editor-pages.service';
@@ -49,6 +51,26 @@ export class EditorStateService {
   private readonly _freehandStrokeWidth = signal<number>(4);
   private readonly _penSmoothing = signal<'none' | 'medium' | 'high'>('medium');
 
+  // Text tool options
+  private readonly _textColor = signal<string>('#111111');
+  private readonly _textFontSize = signal<number>(16);
+  private readonly _textFontFamily = signal<string>('sans-serif');
+  private readonly _textBold = signal<boolean>(false);
+  private readonly _textItalic = signal<boolean>(false);
+
+  // Shape tool options
+  private readonly _shapeKind = signal<ShapeKind>('rectangle');
+  private readonly _shapeRenderMode = signal<'shape' | 'icon'>('shape');
+  private readonly _shapeStrokeColor = signal<string>('#2563eb');
+  private readonly _shapeFillColor = signal<string>('rgba(37,99,235,0.12)');
+  private readonly _shapeStrokeWidth = signal<number>(2);
+  private readonly _shapeFillEnabled = signal<boolean>(true);
+
+  // Markup options
+  private readonly _highlightColor = signal<string>('#fde047');
+  private readonly _underlineColor = signal<string>('#2563eb');
+  private readonly _strikethroughColor = signal<string>('#ef4444');
+
   // Eraser options
   private readonly _eraserMode = signal<EraserMode>('segment');
   private readonly _eraserSize = signal<number>(16);
@@ -63,6 +85,10 @@ export class EditorStateService {
   // Mobile sheet states
   private readonly _mobilePropertiesOpen = signal<boolean>(false);
   private readonly _mobilePagesOpen = signal<boolean>(false);
+
+  // Pending item placement (Image / Stamp)
+  private readonly _pendingPlacement = signal<PendingPlacement | null>(null);
+  readonly pendingPlacement = this._pendingPlacement.asReadonly();
 
   // Undo / Redo history stacks
   private undoStack: HistorySnapshot[] = [];
@@ -99,11 +125,96 @@ export class EditorStateService {
   readonly freehandStrokeWidth = this._freehandStrokeWidth.asReadonly();
   readonly penSmoothing = this._penSmoothing.asReadonly();
 
+  readonly textColor = this._textColor.asReadonly();
+  readonly textFontSize = this._textFontSize.asReadonly();
+  readonly textFontFamily = this._textFontFamily.asReadonly();
+  readonly textBold = this._textBold.asReadonly();
+  readonly textItalic = this._textItalic.asReadonly();
+
+  readonly shapeKind = this._shapeKind.asReadonly();
+  readonly shapeRenderMode = this._shapeRenderMode.asReadonly();
+  readonly shapeStrokeColor = this._shapeStrokeColor.asReadonly();
+  readonly shapeFillColor = this._shapeFillColor.asReadonly();
+  readonly shapeStrokeWidth = this._shapeStrokeWidth.asReadonly();
+  readonly shapeFillEnabled = this._shapeFillEnabled.asReadonly();
+
+  readonly highlightColor = this._highlightColor.asReadonly();
+  readonly underlineColor = this._underlineColor.asReadonly();
+  readonly strikethroughColor = this._strikethroughColor.asReadonly();
+
   readonly eraserMode = this._eraserMode.asReadonly();
   readonly eraserSize = this._eraserSize.asReadonly();
   readonly eraserTolerance = this._eraserTolerance.asReadonly();
   readonly eraserTarget = this._eraserTarget.asReadonly();
   readonly eraserSizePreviewActive = this._eraserSizePreviewActive.asReadonly();
+
+  setTextColor(color: string): void {
+    this._textColor.set(color);
+  }
+
+  setTextFontSize(size: number): void {
+    this._textFontSize.set(Math.max(6, Math.min(120, size)));
+  }
+
+  setTextFontFamily(family: string): void {
+    this._textFontFamily.set(family);
+  }
+
+  setTextBold(bold: boolean): void {
+    this._textBold.set(bold);
+  }
+
+  toggleTextBold(): void {
+    this._textBold.update((b) => !b);
+  }
+
+  setTextItalic(italic: boolean): void {
+    this._textItalic.set(italic);
+  }
+
+  toggleTextItalic(): void {
+    this._textItalic.update((i) => !i);
+  }
+
+  setShapeKind(kind: ShapeKind): void {
+    this._shapeKind.set(kind);
+  }
+
+  setShapeStrokeColor(color: string): void {
+    this._shapeStrokeColor.set(color);
+  }
+
+  setShapeFillColor(color: string): void {
+    this._shapeFillColor.set(color);
+  }
+
+  setShapeRenderMode(mode: 'shape' | 'icon'): void {
+    this._shapeRenderMode.set(mode);
+  }
+
+  toggleShapeRenderMode(): void {
+    this._shapeRenderMode.update((m) => (m === 'shape' ? 'icon' : 'shape'));
+  }
+
+  setShapeStrokeWidth(w: number): void {
+    this._shapeStrokeWidth.set(Math.max(1, Math.min(32, w)));
+  }
+
+  toggleShapeFill(): void {
+    this._shapeFillEnabled.update((f) => !f);
+  }
+
+  setHighlightColor(color: string): void {
+    this._highlightColor.set(color);
+  }
+
+  setUnderlineColor(color: string): void {
+    this._underlineColor.set(color);
+  }
+
+  setStrikethroughColor(color: string): void {
+    this._strikethroughColor.set(color);
+  }
 
   private _saveLocallyHandler: (() => Promise<boolean>) | null = null;
 
@@ -226,7 +337,15 @@ export class EditorStateService {
     }
   }
 
+  setPendingPlacement(placement: PendingPlacement | null): void {
+    this._pendingPlacement.set(placement);
+  }
+
   setTool(tool: PdfToolId): void {
+    const currentPending = this._pendingPlacement();
+    if (currentPending && tool !== currentPending.type) {
+      this._pendingPlacement.set(null);
+    }
     this._tool.set(tool);
     if (tool !== 'select' && tool !== 'hand') {
       this._selectedIds.set([]);

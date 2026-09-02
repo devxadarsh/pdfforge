@@ -1,0 +1,144 @@
+<div class="stamp-modal-backdrop" (click)="close()" role="dialog" aria-modal="true" aria-labelledby="stamp-modal-title">
+  <div class="stamp-modal pf-card" (click)="$event.stopPropagation()">
+    <!-- Header -->
+    <header class="stamp-modal__header">
+      <div class="stamp-modal__title-wrap">
+        <i class="fa-solid fa-stamp stamp-modal__icon"></i>
+        <h2 id="stamp-modal-title" class="stamp-modal__title">Insert Document Stamp</h2>
+      </div>
+      <button type="button" class="pf-icon-btn pf-icon-btn--sm" (click)="close()" title="Close stamp dialog" aria-label="Close">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </header>
+
+    <!-- Tabs -->
+    <div class="stamp-modal__tabs" role="tablist">
+      <button
+        type="button"
+        class="stamp-modal__tab"
+        [class.stamp-modal__tab--active]="activeTab() === 'preset'"
+        (click)="activeTab.set('preset')"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'preset'"
+      >
+        <i class="fa-solid fa-layer-group"></i> Standard Stamps
+      </button>
+      <button
+        type="button"
+        class="stamp-modal__tab"
+        [class.stamp-modal__tab--active]="activeTab() === 'custom'"
+        (click)="activeTab.set('custom')"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'custom'"
+      >
+        <i class="fa-solid fa-pen-to-square"></i> Custom Stamp
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="stamp-modal__body">
+      <!-- 1. PRESET STAMPS -->
+      @if (activeTab() === 'preset') {
+        <div class="stamp-grid">
+          @for (preset of presets; track preset.text) {
+            <div
+              class="stamp-card"
+              [class.stamp-card--active]="selectedPreset().text === preset.text"
+              (click)="selectPreset(preset)"
+              role="button"
+              tabindex="0"
+            >
+              <div
+                class="stamp-badge"
+                [style.color]="preset.color"
+                [style.border-color]="preset.color"
+              >
+                <div class="stamp-badge__inner" [style.border-color]="preset.color">
+                  {{ preset.text }}
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- 2. CUSTOM STAMP -->
+      @if (activeTab() === 'custom') {
+        <div class="stamp-custom">
+          <!-- Live Preview -->
+          <div class="stamp-custom__preview-wrap">
+            <div
+              class="stamp-badge stamp-badge--large"
+              [style.color]="customColor()"
+              [style.border-color]="customColor()"
+            >
+              <div class="stamp-badge__inner" [style.border-color]="customColor()">
+                {{ getFormattedCustomText() }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Controls -->
+          <div class="stamp-custom__controls">
+            <div class="stamp-control-group">
+              <label class="stamp-label" for="custom-stamp-text">Stamp Text:</label>
+              <input
+                id="custom-stamp-text"
+                type="text"
+                class="pf-input stamp-custom__input"
+                [value]="customText()"
+                (input)="customText.set($any($event.target).value)"
+                placeholder="e.g. RECEIVED, CONFIDENTIAL"
+                maxlength="30"
+              />
+            </div>
+
+            <div class="stamp-control-group">
+              <span class="stamp-label">Ink Color:</span>
+              <div class="stamp-swatches">
+                @for (c of stampColorPalette; track c) {
+                  <button
+                    type="button"
+                    class="stamp-swatch"
+                    [style.background-color]="c"
+                    [class.stamp-swatch--active]="customColor() === c"
+                    (click)="customColor.set(c)"
+                    [title]="c"
+                  ></button>
+                }
+              </div>
+            </div>
+
+            <div class="stamp-control-group">
+              <label class="stamp-checkbox">
+                <input
+                  type="checkbox"
+                  [checked]="includeDate()"
+                  (change)="includeDate.set($any($event.target).checked)"
+                />
+                <span>Include current date stamp (YYYY-MM-DD)</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+    <!-- Footer -->
+    <footer class="stamp-modal__footer">
+      <div class="stamp-modal__btn-group">
+        <button type="button" class="pf-btn pf-btn--ghost" (click)="close()">
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="pf-btn pf-btn--primary"
+          [disabled]="activeTab() === 'custom' && !customText().trim()"
+          (click)="applyAndClose()"
+        >
+          <i class="fa-solid fa-plus"></i> Place Stamp
+        </button>
+      </div>
+    </footer>
+  </div>
+</div>
