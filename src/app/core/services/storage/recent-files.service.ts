@@ -6,7 +6,7 @@ import { StoredEditorState } from '../../models/file.models';
 const EXPIRATION_MS = 30 * 24 * 60 * 60 * 1000;
 
 /** IndexedDB database name (shared with DocumentStorageService). */
-const DB_NAME = 'pdfforge-docs';
+const DB_NAME = 'ipdfeditor-docs';
 const DB_VERSION = 2;
 const RECENT_STORE = 'recent-files';
 const LAST_DOC_STORE = 'last-document';

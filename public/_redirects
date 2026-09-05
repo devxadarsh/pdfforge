@@ -1,0 +1,21 @@
+# iPDFEditor Cloudflare Pages Redirects & Rewrites
+
+# High-Intent SEO 301 Permanent Redirects (Preserves 100% PageRank link equity)
+/pdf-editor       /editor            301
+/edit-pdf         /editor            301
+/merge-pdf        /merge             301
+/split-pdf        /split             301
+/compress-pdf     /compress          301
+/convert-pdf      /convert           301
+/sign-pdf         /signature         301
+/protect-pdf      /security/protect  301
+/unlock-pdf       /security/unlock   301
+/rotate-pdf       /editor            301
+/rotate           /editor            301
+/delete-pages     /split             301
+/extract-pages    /split             301
+/word             /pdf-to-word       301
+/convert/word     /pdf-to-word       301
+
+# SPA fallback rewrite rule for client-side routing
+/*                /index.html        200

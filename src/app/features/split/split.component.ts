@@ -14,6 +14,11 @@ import { parsePageRange } from '../../core/models/export.models';
 import { formatBytes } from '../../core/utilities/file.util';
 import { createZipBlob, ZipEntry } from '../../core/utilities/zip.util';
 
+import { BreadcrumbsComponent } from '../../shared/components/breadcrumbs/breadcrumbs.component';
+import { ToolSeoContentComponent } from '../../shared/components/tool-seo-content/tool-seo-content.component';
+import { SeoService } from '../../core/services/seo/seo.service';
+import { SEO_CONFIGS } from '../../core/constants/seo-data';
+
 export interface SplitResult {
   readonly mode: 'every' | 'extract';
   readonly count: number;
@@ -28,7 +33,15 @@ export interface SplitResult {
 @Component({
   selector: 'app-split',
   standalone: true,
-  imports: [RouterLink, FormsModule, FileDropzoneComponent, NgxExtendedPdfViewerModule, PdfCardGridComponent],
+  imports: [
+    RouterLink,
+    FormsModule,
+    FileDropzoneComponent,
+    NgxExtendedPdfViewerModule,
+    PdfCardGridComponent,
+    BreadcrumbsComponent,
+    ToolSeoContentComponent,
+  ],
   templateUrl: './split.component.html',
   styleUrl: './split.component.scss',
 })
@@ -39,6 +52,9 @@ export class SplitComponent implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly toasts = inject(ToastService);
+  private readonly seo = inject(SeoService);
+
+  readonly seoConfig = SEO_CONFIGS['split'];
 
   readonly cardGrid = viewChild<PdfCardGridComponent>('cardGrid');
 
@@ -72,6 +88,7 @@ export class SplitComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.seo.updatePage(this.seoConfig);
     this.route.queryParams.subscribe((params) => {
       if (params['mode'] === 'every') {
         this.mode.set('every');

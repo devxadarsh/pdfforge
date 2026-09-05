@@ -11,5 +11,5 @@ import { DialogHostComponent } from './shared/components/dialog/dialog-host.comp
   styleUrl: './app.component.scss'
 })
 export class AppComponent {
-  title = 'PDFForge';
+  title = 'iPDFEditor';
 }

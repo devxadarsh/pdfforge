@@ -6,7 +6,7 @@ import { StoredEditorState } from '../../models/file.models';
 const DOC_KEY = 'last';
 
 /** IndexedDB database name. */
-export const DB_NAME = 'pdfforge-docs';
+export const DB_NAME = 'ipdfeditor-docs';
 
 /** Object store that holds the persisted document. */
 export const STORE_NAME = 'last-document';
@@ -23,7 +23,7 @@ export interface StoredDocument {
   readonly editorState?: StoredEditorState;
 }
 
-export interface PdfForgeDBSchema extends DBSchema {
+export interface IPdfEditorDBSchema extends DBSchema {
   [STORE_NAME]: {
     key: string;
     value: StoredDocument;
@@ -42,14 +42,14 @@ export interface PdfForgeDBSchema extends DBSchema {
  */
 @Injectable({ providedIn: 'root' })
 export class DocumentStorageService {
-  private dbPromise: Promise<IDBPDatabase<PdfForgeDBSchema>> | null = null;
+  private dbPromise: Promise<IDBPDatabase<IPdfEditorDBSchema>> | null = null;
 
-  private getDb(): Promise<IDBPDatabase<PdfForgeDBSchema>> {
+  private getDb(): Promise<IDBPDatabase<IPdfEditorDBSchema>> {
     if (this.dbPromise) {
       return this.dbPromise;
     }
 
-    this.dbPromise = openDB<PdfForgeDBSchema>(DB_NAME, DB_VERSION, {
+    this.dbPromise = openDB<IPdfEditorDBSchema>(DB_NAME, DB_VERSION, {
       upgrade(db) {
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           db.createObjectStore(STORE_NAME);

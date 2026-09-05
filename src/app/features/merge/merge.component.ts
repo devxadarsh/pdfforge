@@ -13,6 +13,11 @@ import { DownloadService } from '../../core/services/download/download.service';
 import { FileService } from '../../core/services/file/file.service';
 import { ToastService } from '../../core/services/toast.service';
 
+import { BreadcrumbsComponent } from '../../shared/components/breadcrumbs/breadcrumbs.component';
+import { ToolSeoContentComponent } from '../../shared/components/tool-seo-content/tool-seo-content.component';
+import { SeoService } from '../../core/services/seo/seo.service';
+import { SEO_CONFIGS } from '../../core/constants/seo-data';
+
 export interface MergeItem {
   id: string;
   name: string;
@@ -32,7 +37,16 @@ export interface MergedResult {
 @Component({
   selector: 'app-merge',
   standalone: true,
-  imports: [RouterLink, FormsModule, DragDropModule, FileDropzoneComponent, NgxExtendedPdfViewerModule, PdfCardGridComponent],
+  imports: [
+    RouterLink,
+    FormsModule,
+    DragDropModule,
+    FileDropzoneComponent,
+    NgxExtendedPdfViewerModule,
+    PdfCardGridComponent,
+    BreadcrumbsComponent,
+    ToolSeoContentComponent,
+  ],
   templateUrl: './merge.component.html',
   styleUrl: './merge.component.scss',
 })
@@ -42,6 +56,13 @@ export class MergeComponent implements OnDestroy {
   private readonly fileService = inject(FileService);
   private readonly router = inject(Router);
   private readonly toasts = inject(ToastService);
+  private readonly seo = inject(SeoService);
+
+  readonly seoConfig = SEO_CONFIGS['merge'];
+
+  constructor() {
+    this.seo.updatePage(this.seoConfig);
+  }
 
   readonly items = signal<MergeItem[]>([]);
   readonly merging = signal<boolean>(false);

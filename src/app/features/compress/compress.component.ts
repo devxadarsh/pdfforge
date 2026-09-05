@@ -8,10 +8,21 @@ import { PdfWorkerService } from '../../core/services/worker/pdf-worker.service'
 import { DownloadService } from '../../core/services/download/download.service';
 import { ToastService } from '../../core/services/toast.service';
 
+import { BreadcrumbsComponent } from '../../shared/components/breadcrumbs/breadcrumbs.component';
+import { ToolSeoContentComponent } from '../../shared/components/tool-seo-content/tool-seo-content.component';
+import { SeoService } from '../../core/services/seo/seo.service';
+import { SEO_CONFIGS } from '../../core/constants/seo-data';
+
 @Component({
   selector: 'app-compress',
   standalone: true,
-  imports: [RouterLink, FormsModule, FileDropzoneComponent],
+  imports: [
+    RouterLink,
+    FormsModule,
+    FileDropzoneComponent,
+    BreadcrumbsComponent,
+    ToolSeoContentComponent,
+  ],
   templateUrl: './compress.component.html',
   styleUrl: './compress.component.scss',
 })
@@ -19,6 +30,13 @@ export class CompressComponent {
   private readonly worker = inject(PdfWorkerService);
   private readonly downloads = inject(DownloadService);
   private readonly toasts = inject(ToastService);
+  private readonly seo = inject(SeoService);
+
+  readonly seoConfig = SEO_CONFIGS['compress'];
+
+  constructor() {
+    this.seo.updatePage(this.seoConfig);
+  }
 
   readonly level = signal<'recommended' | 'strong' | 'extreme'>('recommended');
   readonly levels = [

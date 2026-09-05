@@ -1,8 +1,11 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, signal, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NgClass } from '@angular/common';
 import { TOOL_CATEGORIES, ToolCard, ToolCategory } from '../../core/constants/tools';
+import { SeoService } from '../../core/services/seo/seo.service';
+import { SEO_CONFIGS } from '../../core/constants/seo-data';
+import { BreadcrumbsComponent } from '../../shared/components/breadcrumbs/breadcrumbs.component';
 
 export interface CategoryFilterItem {
   id: string;
@@ -14,12 +17,18 @@ export interface CategoryFilterItem {
 @Component({
   selector: 'app-tools',
   standalone: true,
-  imports: [RouterLink, FormsModule, NgClass],
+  imports: [RouterLink, FormsModule, NgClass, BreadcrumbsComponent],
   templateUrl: './tools.component.html',
   styleUrl: './tools.component.scss'
 })
 export class ToolsComponent {
+  private readonly seo = inject(SeoService);
+  readonly seoConfig = SEO_CONFIGS['tools'];
   readonly categories = TOOL_CATEGORIES;
+
+  constructor() {
+    this.seo.updatePage(this.seoConfig);
+  }
   readonly query = signal('');
   readonly selectedCategory = signal<string>('all');
 

@@ -1,5 +1,7 @@
 <section class="tool-page">
   <div class="pf-container">
+    <app-breadcrumbs [items]="seoConfig.breadcrumbs"></app-breadcrumbs>
+
     <header class="tool-page__header">
       <a class="tool-page__back" routerLink="/tools"><i class="fa-solid fa-arrow-left"></i> Tools</a>
       <h1><i class="fa-solid fa-signature tool-page__icon"></i> Signature Creator</h1>
@@ -62,5 +64,8 @@
     <p class="tool-page__privacy">
       <i class="fa-solid fa-lock"></i> Privacy-first: Signatures never leave your device.
     </p>
+
+    <!-- Comprehensive On-Page SEO Section -->
+    <app-tool-seo-content [config]="seoConfig"></app-tool-seo-content>
   </div>
 </section>

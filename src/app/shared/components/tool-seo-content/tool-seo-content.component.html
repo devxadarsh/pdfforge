@@ -1,0 +1,156 @@
+<article class="pf-seo-article">
+  <!-- Step-by-Step Educational How-To Section -->
+  @if (config().steps && config().steps!.length > 0) {
+    <section class="pf-seo-section pf-seo-how-to" aria-labelledby="seo-howto-heading">
+      <div class="pf-seo-section__header">
+        <span class="pf-label-caps"><i class="fa-solid fa-list-ol"></i> Step-by-Step Guide</span>
+        <h2 id="seo-howto-heading" class="pf-seo-section__title">
+          {{ config().howToTitle || 'How to Use This Tool' }}
+        </h2>
+        <p class="pf-seo-section__subtitle pf-text-muted">
+          Follow these quick instructions to process your documents directly in your browser.
+        </p>
+      </div>
+
+      <div class="pf-steps-grid">
+        @for (step of config().steps; track step.stepNumber) {
+          <div class="pf-step-card pf-card">
+            <div class="pf-step-card__top">
+              <span class="pf-step-card__num">{{ step.stepNumber }}</span>
+              <div class="pf-step-card__icon-wrap">
+                <i [class]="step.icon"></i>
+              </div>
+            </div>
+            <h3 class="pf-step-card__title">{{ step.title }}</h3>
+            <p class="pf-step-card__desc">{{ step.description }}</p>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- Technical Benefits & Privacy Advantage -->
+  @if (config().benefits && config().benefits!.length > 0) {
+    <section class="pf-seo-section pf-seo-benefits" aria-labelledby="seo-benefits-heading">
+      <div class="pf-seo-section__header">
+        <span class="pf-label-caps"><i class="fa-solid fa-shield-halved"></i> Technical Advantages</span>
+        <h2 id="seo-benefits-heading" class="pf-seo-section__title">
+          {{ config().benefitsTitle || 'Why Choose iPDFEditor?' }}
+        </h2>
+      </div>
+
+      <div class="pf-benefits-grid">
+        @for (benefit of config().benefits; track benefit.title) {
+          <div class="pf-benefit-card pf-card">
+            <div class="pf-benefit-card__icon">
+              <i [class]="benefit.icon"></i>
+            </div>
+            <div class="pf-benefit-card__content">
+              <h3 class="pf-benefit-card__title">{{ benefit.title }}</h3>
+              <p class="pf-benefit-card__desc">{{ benefit.description }}</p>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- Frequently Asked Questions Section -->
+  @if (config().faqs && config().faqs!.length > 0) {
+    <section class="pf-seo-section pf-seo-faq" aria-labelledby="seo-faq-heading">
+      <div class="pf-seo-section__header">
+        <span class="pf-label-caps"><i class="fa-solid fa-circle-question"></i> Knowledge Base</span>
+        <h2 id="seo-faq-heading" class="pf-seo-section__title">
+          {{ config().faqsTitle || 'Frequently Asked Questions' }}
+        </h2>
+        <p class="pf-seo-section__subtitle pf-text-muted">
+          Real answers to common questions about client-side document processing and privacy.
+        </p>
+      </div>
+
+      <div class="pf-faq-list" itemscope itemtype="https://schema.org/FAQPage">
+        @for (faq of config().faqs; track faq.question) {
+          <details
+            class="pf-faq-item pf-card"
+            itemscope
+            itemprop="mainEntity"
+            itemtype="https://schema.org/Question"
+          >
+            <summary class="pf-faq-item__summary">
+              <div class="pf-faq-item__question-wrap">
+                <i class="fa-solid fa-circle-question pf-faq-item__icon"></i>
+                <h3 class="pf-faq-item__question" itemprop="name">{{ faq.question }}</h3>
+              </div>
+              <i class="fa-solid fa-chevron-down pf-faq-item__chevron"></i>
+            </summary>
+            <div
+              class="pf-faq-item__content"
+              itemscope
+              itemprop="acceptedAnswer"
+              itemtype="https://schema.org/Answer"
+            >
+              <p itemprop="text">{{ faq.answer }}</p>
+            </div>
+          </details>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- Related Tools Cross-Linking Section -->
+  @if (config().relatedTools && config().relatedTools!.length > 0) {
+    <section class="pf-seo-section pf-seo-related" aria-labelledby="seo-related-heading">
+      <div class="pf-seo-section__header">
+        <span class="pf-label-caps"><i class="fa-solid fa-toolbox"></i> Complementary Workflows</span>
+        <h2 id="seo-related-heading" class="pf-seo-section__title">
+          Related PDF Tools
+        </h2>
+        <p class="pf-seo-section__subtitle pf-text-muted">
+          Explore more free browser utilities to organize, convert, and protect your files.
+        </p>
+      </div>
+
+      <div class="pf-related-grid">
+        @for (tool of config().relatedTools; track tool.path) {
+          <a class="pf-related-card pf-card" [routerLink]="tool.path">
+            <div class="pf-related-card__top">
+              <div class="pf-related-card__icon">
+                <i [class]="tool.icon"></i>
+              </div>
+              @if (tool.badge) {
+                <span class="pf-badge">{{ tool.badge }}</span>
+              }
+            </div>
+            <h3 class="pf-related-card__title">{{ tool.title }}</h3>
+            <p class="pf-related-card__desc">{{ tool.description }}</p>
+            <div class="pf-related-card__link">
+              <span>Open tool</span>
+              <i class="fa-solid fa-arrow-right"></i>
+            </div>
+          </a>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- Bottom Privacy Assurance Banner -->
+  <section class="pf-seo-trust-banner">
+    <div class="pf-seo-trust-banner__inner pf-card">
+      <div class="pf-seo-trust-banner__icon">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+      <div class="pf-seo-trust-banner__text">
+        <h3 class="pf-seo-trust-banner__title">Your Documents Never Leave Your Device</h3>
+        <p class="pf-seo-trust-banner__desc">
+          Unlike traditional web PDF tools that upload sensitive contracts and financial reports to cloud servers, iPDFEditor processes all operations locally using your computer's RAM and WebAssembly. No files are uploaded, saved, or inspected by anyone.
+        </p>
+      </div>
+      <div class="pf-seo-trust-banner__action">
+        <a routerLink="/help" class="pf-btn pf-btn--ghost">
+          <i class="fa-solid fa-circle-info"></i>
+          <span>Learn More About Our Privacy</span>
+        </a>
+      </div>
+    </div>
+  </section>
+</article>

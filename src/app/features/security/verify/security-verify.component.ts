@@ -15,10 +15,22 @@ import { DownloadService } from '../../../core/services/download/download.servic
 import { ToastService } from '../../../core/services/toast.service';
 import { formatBytes } from '../../../core/utilities/file.util';
 
+import { BreadcrumbsComponent } from '../../../shared/components/breadcrumbs/breadcrumbs.component';
+import { ToolSeoContentComponent } from '../../../shared/components/tool-seo-content/tool-seo-content.component';
+import { SeoService } from '../../../core/services/seo/seo.service';
+import { SEO_CONFIGS } from '../../../core/constants/seo-data';
+
 @Component({
   selector: 'app-security-verify',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, DatePipe, FileDropzoneComponent],
+  imports: [
+    RouterLink,
+    RouterLinkActive,
+    DatePipe,
+    FileDropzoneComponent,
+    BreadcrumbsComponent,
+    ToolSeoContentComponent,
+  ],
   templateUrl: './security-verify.component.html',
   styleUrl: './security-verify.component.scss',
 })
@@ -27,6 +39,13 @@ export class SecurityVerifyComponent {
   private readonly forensics = inject(PdfForensicsService);
   private readonly downloads = inject(DownloadService);
   private readonly toasts = inject(ToastService);
+  private readonly seo = inject(SeoService);
+
+  readonly seoConfig = SEO_CONFIGS['verify'];
+
+  constructor() {
+    this.seo.updatePage(this.seoConfig);
+  }
 
   readonly loadedFile = signal<LoadedFile | null>(null);
   readonly analyzing = signal<boolean>(false);

@@ -262,8 +262,8 @@ export class PdfExportService {
       if (options?.subject) {
         out.setSubject(options.subject);
       }
-      out.setProducer('PDFForge (Client-Side)');
-      out.setCreator('PDFForge');
+      out.setProducer('iPDFEditor (Client-Side)');
+      out.setCreator('iPDFEditor');
 
       const totalPages = src.getPageCount();
       if (totalPages === 0) {

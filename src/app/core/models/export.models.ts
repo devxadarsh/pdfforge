@@ -1,5 +1,5 @@
 /**
- * Models and utility functions for PDF Export in PDFForge.
+ * Models and utility functions for PDF Export in iPDFEditor.
  */
 
 export type ExportPageRangeType = 'all' | 'current' | 'custom' | 'selected';

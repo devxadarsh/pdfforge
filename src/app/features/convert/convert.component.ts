@@ -11,6 +11,11 @@ import { ToastService } from '../../core/services/toast.service';
 import { createDocxBlob } from '../../core/utilities/docx.util';
 import { formatBytes } from '../../core/utilities/file.util';
 
+import { BreadcrumbsComponent } from '../../shared/components/breadcrumbs/breadcrumbs.component';
+import { ToolSeoContentComponent } from '../../shared/components/tool-seo-content/tool-seo-content.component';
+import { SeoService } from '../../core/services/seo/seo.service';
+import { SEO_CONFIGS } from '../../core/constants/seo-data';
+
 interface ConvertMode {
   id: string;
   label: string;
@@ -24,7 +29,14 @@ interface ConvertMode {
 @Component({
   selector: 'app-convert',
   standalone: true,
-  imports: [RouterLink, FormsModule, NgClass, FileDropzoneComponent],
+  imports: [
+    RouterLink,
+    FormsModule,
+    NgClass,
+    FileDropzoneComponent,
+    BreadcrumbsComponent,
+    ToolSeoContentComponent,
+  ],
   templateUrl: './convert.component.html',
   styleUrl: './convert.component.scss',
 })
@@ -33,6 +45,9 @@ export class ConvertComponent {
   private readonly downloads = inject(DownloadService);
   private readonly toasts = inject(ToastService);
   private readonly route = inject(ActivatedRoute);
+  private readonly seo = inject(SeoService);
+
+  readonly currentSeoConfig = signal(SEO_CONFIGS['convert']);
 
   readonly modes: ConvertMode[] = [
     {
@@ -91,6 +106,40 @@ export class ConvertComponent {
   protected readonly formatBytes = formatBytes;
 
   constructor() {
+    const data = this.route.snapshot.data;
+    const path = this.route.snapshot.routeConfig?.path || '';
+
+    let initialMode = 'pdf-word';
+    let initialConfig = SEO_CONFIGS['convert'];
+
+    if (data['mode']) {
+      initialMode = data['mode'];
+    } else if (path.includes('jpg-to-pdf')) {
+      initialMode = 'img-pdf';
+    } else if (path.includes('pdf-to-text')) {
+      initialMode = 'pdf-text';
+    } else if (path.includes('pdf-to-jpg')) {
+      initialMode = 'pdf-jpg';
+    } else if (path.includes('word')) {
+      initialMode = 'pdf-word';
+    }
+
+    if (data['seoKey'] && SEO_CONFIGS[data['seoKey']]) {
+      initialConfig = SEO_CONFIGS[data['seoKey']];
+    } else if (path === 'pdf-to-word') {
+      initialConfig = SEO_CONFIGS['pdfToWord'];
+    } else if (path === 'jpg-to-pdf') {
+      initialConfig = SEO_CONFIGS['jpgToPdf'];
+    } else if (path === 'pdf-to-text') {
+      initialConfig = SEO_CONFIGS['pdfToText'];
+    } else if (path === 'pdf-to-jpg') {
+      initialConfig = SEO_CONFIGS['pdfToJpg'];
+    }
+
+    this.active.set(initialMode);
+    this.currentSeoConfig.set(initialConfig);
+    this.seo.updatePage(initialConfig);
+
     this.route.queryParamMap.subscribe((params) => {
       const mode = params.get('mode');
       if (mode && this.modes.some((m) => m.id === mode)) {
@@ -201,8 +250,8 @@ export class ConvertComponent {
     this.progressPercent.set(30);
 
     const doc = await PDFDocument.create();
-    doc.setProducer('PDFForge Client-Side');
-    doc.setCreator('PDFForge');
+    doc.setProducer('iPDFEditor Client-Side');
+    doc.setCreator('iPDFEditor');
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -263,7 +312,7 @@ export class ConvertComponent {
       textOutput = ocrResult.text;
     } catch {
       // Direct raw text fallback
-      textOutput = `Extracted from ${file.name} via PDFForge Client-Side OCR.`;
+      textOutput = `Extracted from ${file.name} via iPDFEditor Client-Side OCR.`;
     }
 
     this.extractedText.set(textOutput);

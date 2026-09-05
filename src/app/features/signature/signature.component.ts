@@ -11,14 +11,25 @@ import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NgClass } from '@angular/common';
 import { FileDropzoneComponent } from '../../shared/components/dropzone/file-dropzone.component';
+import { BreadcrumbsComponent } from '../../shared/components/breadcrumbs/breadcrumbs.component';
+import { ToolSeoContentComponent } from '../../shared/components/tool-seo-content/tool-seo-content.component';
 import { DownloadService } from '../../core/services/download/download.service';
 import { ToastService } from '../../core/services/toast.service';
+import { SeoService } from '../../core/services/seo/seo.service';
+import { SEO_CONFIGS } from '../../core/constants/seo-data';
 import { LoadedFile } from '../../core/models/file.models';
 
 @Component({
   selector: 'app-signature',
   standalone: true,
-  imports: [RouterLink, FormsModule, NgClass, FileDropzoneComponent],
+  imports: [
+    RouterLink,
+    FormsModule,
+    NgClass,
+    FileDropzoneComponent,
+    BreadcrumbsComponent,
+    ToolSeoContentComponent,
+  ],
   templateUrl: './signature.component.html',
   styleUrl: './signature.component.scss',
 })
@@ -27,6 +38,9 @@ export class SignatureComponent {
   private readonly router = inject(Router);
   private readonly downloads = inject(DownloadService);
   private readonly toasts = inject(ToastService);
+  private readonly seo = inject(SeoService);
+
+  readonly seoConfig = SEO_CONFIGS['signature'];
 
   readonly tab = signal<'draw' | 'type' | 'upload'>('draw');
 
@@ -46,6 +60,7 @@ export class SignatureComponent {
   readonly dataUrl = signal<string | null>(null);
 
   constructor() {
+    this.seo.updatePage(this.seoConfig);
     afterNextRender(() => this.setupCanvas());
   }
 

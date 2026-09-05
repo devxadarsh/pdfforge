@@ -6,6 +6,9 @@ import { FileService } from '../../core/services/file/file.service';
 import { LoadedFile } from '../../core/models/file.models';
 import { FileDropzoneComponent } from '../../shared/components/dropzone/file-dropzone.component';
 
+import { SeoService } from '../../core/services/seo/seo.service';
+import { SEO_CONFIGS } from '../../core/constants/seo-data';
+
 @Component({
   selector: 'app-home',
   standalone: true,
@@ -16,7 +19,13 @@ import { FileDropzoneComponent } from '../../shared/components/dropzone/file-dro
 export class HomeComponent {
   private readonly router = inject(Router);
   private readonly files = inject(FileService);
+  private readonly seo = inject(SeoService);
   readonly categories = TOOL_CATEGORIES;
+  readonly homeFaqs = SEO_CONFIGS['home'].faqs || [];
+
+  constructor() {
+    this.seo.updatePage(SEO_CONFIGS['home']);
+  }
 
   readonly stats = [
     { value: '100%', label: 'Client-Side Processing' },
@@ -80,7 +89,7 @@ export class HomeComponent {
     {
       icon: 'fa-solid fa-shield-halved',
       title: 'Absolute Privacy & Zero Storage',
-      description: 'Traditional PDF tools upload sensitive contracts, tax records, and medical files to remote servers. PDFForge computes everything in your browser memory sandbox.',
+      description: 'Traditional PDF tools upload sensitive contracts, tax records, and medical files to remote servers. iPDFEditor computes everything in your browser memory sandbox.',
       tag: 'Zero Cloud',
     },
     {

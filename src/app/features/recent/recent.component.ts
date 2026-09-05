@@ -10,6 +10,8 @@ import { formatRelativeTime } from '../../core/utilities/time.util';
 import { formatBytes } from '../../core/utilities/file.util';
 import { LoadedFile } from '../../core/models/file.models';
 
+import { SeoService } from '../../core/services/seo/seo.service';
+
 @Component({
   selector: 'app-recent',
   standalone: true,
@@ -25,6 +27,7 @@ export class RecentComponent implements OnInit {
   private readonly dialog = inject(DialogService);
   private readonly state = inject(EditorStateService);
   private readonly router = inject(Router);
+  private readonly seo = inject(SeoService);
 
   readonly entries = signal<RecentFileEntry[]>([]);
   readonly loading = signal(true);
@@ -65,6 +68,7 @@ export class RecentComponent implements OnInit {
   });
 
   async ngOnInit(): Promise<void> {
+    this.seo.setNoIndex('Recent Documents');
     await this.loadEntries();
   }
 

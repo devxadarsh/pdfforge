@@ -14,10 +14,10 @@ describe('AppComponent', () => {
     expect(app).toBeTruthy();
   });
 
-  it(`should have the 'PDFForge' title`, () => {
+  it(`should have the 'iPDFEditor' title`, () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
-    expect(app.title).toEqual('PDFForge');
+    expect(app.title).toEqual('iPDFEditor');
   });
 
   it('should render router outlet', () => {

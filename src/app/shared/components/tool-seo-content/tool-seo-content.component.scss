@@ -1,0 +1,328 @@
+.pf-seo-article {
+  margin-top: 3.5rem;
+  padding-top: 2.5rem;
+  border-top: 1px solid var(--pf-border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+.pf-seo-section {
+  margin-bottom: 3.5rem;
+
+  &__header {
+    text-align: center;
+    max-width: 680px;
+    margin: 0 auto 2rem;
+  }
+
+  &__title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--pf-text-primary, #0f172a);
+    margin: 0.5rem 0 0.5rem;
+  }
+
+  &__subtitle {
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+}
+
+/* Steps Grid */
+.pf-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+}
+
+.pf-step-card {
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-radius: 1rem;
+  border: 1px solid var(--pf-border-color, rgba(255, 255, 255, 0.08));
+  background: var(--pf-card-bg, #ffffff);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+  }
+
+  &__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+
+  &__num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    background: var(--pf-primary, #3b82f6);
+    color: #ffffff;
+    font-size: 0.875rem;
+    font-weight: 700;
+  }
+
+  &__icon-wrap {
+    font-size: 1.25rem;
+    color: var(--pf-primary, #3b82f6);
+  }
+
+  &__title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--pf-text-primary, #0f172a);
+    margin: 0 0 0.5rem;
+  }
+
+  &__desc {
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--pf-text-secondary, #64748b);
+    margin: 0;
+  }
+}
+
+/* Benefits Grid */
+.pf-benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.pf-benefit-card {
+  padding: 1.5rem;
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-start;
+  border-radius: 1rem;
+  border: 1px solid var(--pf-border-color, rgba(255, 255, 255, 0.08));
+  background: var(--pf-card-bg, #ffffff);
+
+  &__icon {
+    font-size: 1.5rem;
+    color: var(--pf-primary, #3b82f6);
+    flex-shrink: 0;
+    padding-top: 0.25rem;
+  }
+
+  &__title {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    color: var(--pf-text-primary, #0f172a);
+    margin: 0 0 0.375rem;
+  }
+
+  &__desc {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--pf-text-secondary, #64748b);
+    margin: 0;
+  }
+}
+
+/* FAQs List */
+.pf-faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+.pf-faq-item {
+  border-radius: 0.875rem;
+  border: 1px solid var(--pf-border-color, rgba(255, 255, 255, 0.08));
+  background: var(--pf-card-bg, #ffffff);
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+
+  &[open] {
+    border-color: var(--pf-primary, #3b82f6);
+
+    .pf-faq-item__chevron {
+      transform: rotate(180deg);
+    }
+  }
+
+  &__summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.125rem 1.25rem;
+    cursor: pointer;
+    user-select: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+  }
+
+  &__question-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  &__icon {
+    color: var(--pf-primary, #3b82f6);
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  &__question {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--pf-text-primary, #0f172a);
+    margin: 0;
+  }
+
+  &__chevron {
+    font-size: 0.8125rem;
+    color: var(--pf-text-muted, #94a3b8);
+    transition: transform 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  &__content {
+    padding: 0 1.25rem 1.25rem 3rem;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--pf-text-secondary, #64748b);
+
+    p {
+      margin: 0;
+    }
+  }
+}
+
+/* Related Tools Grid */
+.pf-related-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+}
+
+.pf-related-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1.375rem;
+  border-radius: 1rem;
+  border: 1px solid var(--pf-border-color, rgba(255, 255, 255, 0.08));
+  background: var(--pf-card-bg, #ffffff);
+  text-decoration: none;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: var(--pf-primary, #3b82f6);
+    box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.08);
+
+    .pf-related-card__link i {
+      transform: translateX(3px);
+    }
+  }
+
+  &__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  &__icon {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.625rem;
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--pf-primary, #3b82f6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.125rem;
+  }
+
+  &__title {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    color: var(--pf-text-primary, #0f172a);
+    margin: 0 0 0.375rem;
+  }
+
+  &__desc {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--pf-text-secondary, #64748b);
+    margin: 0 0 1rem;
+    flex-grow: 1;
+  }
+
+  &__link {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--pf-primary, #3b82f6);
+
+    i {
+      transition: transform 0.2s ease;
+    }
+  }
+}
+
+/* Bottom Privacy Assurance Banner */
+.pf-seo-trust-banner {
+  margin-top: 2rem;
+
+  &__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 2rem;
+    border-radius: 1.25rem;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(16, 185, 129, 0.05));
+    border: 1px solid rgba(59, 130, 246, 0.15);
+
+    @media (min-width: 768px) {
+      flex-direction: row;
+      align-items: center;
+    }
+  }
+
+  &__icon {
+    font-size: 2.25rem;
+    color: #10b981;
+    flex-shrink: 0;
+  }
+
+  &__text {
+    flex-grow: 1;
+  }
+
+  &__title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--pf-text-primary, #0f172a);
+    margin: 0 0 0.375rem;
+  }
+
+  &__desc {
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: var(--pf-text-secondary, #64748b);
+    margin: 0;
+  }
+
+  &__action {
+    flex-shrink: 0;
+  }
+}

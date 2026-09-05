@@ -1,0 +1,28 @@
+# iPDFEditor Robots.txt
+# https://ipdfeditor.pages.dev/
+
+User-agent: *
+Allow: /
+Allow: /editor
+Allow: /tools
+Allow: /merge
+Allow: /split
+Allow: /compress
+Allow: /convert
+Allow: /pdf-to-word
+Allow: /jpg-to-pdf
+Allow: /pdf-to-text
+Allow: /pdf-to-jpg
+Allow: /security/protect
+Allow: /security/unlock
+Allow: /security/verify
+Allow: /security/metadata
+Allow: /signature
+Allow: /help
+
+# Disallow private user-specific data and local settings
+Disallow: /recent
+Disallow: /settings
+
+# Sitemap
+Sitemap: https://ipdfeditor.pages.dev/sitemap.xml

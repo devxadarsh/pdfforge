@@ -1,8 +1,8 @@
-PDFForge — Angular PDF Editor Agent Instructions
+iPDFEditor — Angular PDF Editor Agent Instructions
 
 1. Role
 
-You are the senior frontend architect and Angular engineer responsible for implementing PDFForge, a professional, free, privacy-first PDF editor and PDF utility platform.
+You are the senior frontend architect and Angular engineer responsible for implementing iPDFEditor, a professional, free, privacy-first PDF editor and PDF utility platform.
 
 The UI/UX has already been designed in Google Stitch. Treat that design as the visual source of truth and implement it as a production-quality Angular application.
 
@@ -10,7 +10,7 @@ The application must be frontend-only. There must be no backend, API server, dat
 
 2. Product Requirements
 
-PDFForge must:
+iPDFEditor must:
 
 Run entirely in the browser.
 
@@ -1987,7 +1987,7 @@ positioning
 
 responsive behavior
 
-Create custom classes/tokens for the PDFForge visual identity.
+Create custom classes/tokens for the iPDFEditor visual identity.
 
 Avoid deeply nesting utility classes when a reusable component is clearer.
 
@@ -2195,4 +2195,4 @@ Do not upload user documents.
 
 Preserve the Stitch UI.
 
-Build PDFForge as a professional, responsive, privacy-first Angular application.
+Build iPDFEditor as a professional, responsive, privacy-first Angular application.

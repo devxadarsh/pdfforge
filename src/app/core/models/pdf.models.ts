@@ -1,4 +1,4 @@
-// PDFForge domain models
+// iPDFEditor domain models
 
 export type PdfToolId =
   | 'select'

@@ -1,10 +1,11 @@
 {
-  "name": "pdfforge",
+  "name": "ipdfeditor",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
+    "build": "ng build && node scripts/generate-static-pages.mjs",
+    "prerender": "node scripts/generate-static-pages.mjs",
     "watch": "ng build --watch --configuration development",
     "check": "ngc -p tsconfig.app.json --noEmit",
     "test": "ng test"

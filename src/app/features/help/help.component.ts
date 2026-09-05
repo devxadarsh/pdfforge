@@ -1,7 +1,10 @@
-import { Component, signal, computed } from '@angular/core';
+import { Component, signal, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NgClass, UpperCasePipe } from '@angular/common';
+import { BreadcrumbsComponent } from '../../shared/components/breadcrumbs/breadcrumbs.component';
+import { SeoService } from '../../core/services/seo/seo.service';
+import { SEO_CONFIGS } from '../../core/constants/seo-data';
 
 interface FaqItem {
   readonly q: string;
@@ -29,11 +32,18 @@ interface GuideCard {
 @Component({
   selector: 'app-help',
   standalone: true,
-  imports: [RouterLink, FormsModule, NgClass, UpperCasePipe],
+  imports: [RouterLink, FormsModule, NgClass, UpperCasePipe, BreadcrumbsComponent],
   templateUrl: './help.component.html',
   styleUrl: './help.component.scss',
 })
 export class HelpComponent {
+  private readonly seo = inject(SeoService);
+  readonly seoConfig = SEO_CONFIGS['help'];
+
+  constructor() {
+    this.seo.updatePage(this.seoConfig);
+  }
+
   readonly searchQuery = signal<string>('');
   readonly activeCategory = signal<'all' | 'general' | 'editor' | 'convert' | 'security'>('all');
 
@@ -123,49 +133,49 @@ export class HelpComponent {
       category: 'general',
       icon: 'fa-solid fa-shield-halved',
       q: 'Are my files ever uploaded to any cloud server or database?',
-      a: 'Absolutely not. PDFForge is architected strictly as a browser-only client application. All rendering, editing, merging, conversion, and compression occurs in your local machine RAM using WebAssembly and HTML5 Canvas. No server receives, logs, or even sees your PDF bytes.',
+      a: 'Absolutely not. iPDFEditor is architected strictly as a browser-only client application. All rendering, editing, merging, conversion, and compression occurs in your local machine RAM using WebAssembly and HTML5 Canvas. No server receives, logs, or even sees your PDF bytes.',
     },
     {
       category: 'general',
       icon: 'fa-solid fa-user-xmark',
       q: 'Do I need an account, credit card, or email signup?',
-      a: 'No account, no sign-in, and no hidden subscriptions. PDFForge is 100% free and unmetered forever. You can open, edit, and export as many documents as you need without creating credentials.',
+      a: 'No account, no sign-in, and no hidden subscriptions. iPDFEditor is 100% free and unmetered forever. You can open, edit, and export as many documents as you need without creating credentials.',
     },
     {
       category: 'editor',
       icon: 'fa-solid fa-floppy-disk',
       q: 'Will I lose my work if I accidentally close the tab or reload?',
-      a: 'No! If you have Auto-Save enabled in Settings, PDFForge continuously synchronizes your active document and annotations into your browser local IndexedDB database. When you reopen the editor, your document and edits will be restored automatically.',
+      a: 'No! If you have Auto-Save enabled in Settings, iPDFEditor continuously synchronizes your active document and annotations into your browser local IndexedDB database. When you reopen the editor, your document and edits will be restored automatically.',
     },
     {
       category: 'convert',
       icon: 'fa-solid fa-file-word',
       q: 'How does PDF to Word (.docx) conversion work without a backend?',
-      a: 'PDFForge uses an in-memory OpenXML packaging engine combined with client-side OCR text extraction. It compiles valid Microsoft Word (.docx) ZIP archives directly in browser memory and initiates a local Blob download, preserving document paragraphs with zero server communication.',
+      a: 'iPDFEditor uses an in-memory OpenXML packaging engine combined with client-side OCR text extraction. It compiles valid Microsoft Word (.docx) ZIP archives directly in browser memory and initiates a local Blob download, preserving document paragraphs with zero server communication.',
     },
     {
       category: 'convert',
       icon: 'fa-solid fa-compress',
       q: 'How does local PDF compression work and why are results honest?',
-      a: 'Browser compression works by re-encoding embedded image rasters and compressing uncompressed PDF object streams. Unlike commercial sites that promise a fabricated "90% reduction" for every file, PDFForge reports genuine byte reductions. Already compressed or vector-heavy files may see smaller reductions.',
+      a: 'Browser compression works by re-encoding embedded image rasters and compressing uncompressed PDF object streams. Unlike commercial sites that promise a fabricated "90% reduction" for every file, iPDFEditor reports genuine byte reductions. Already compressed or vector-heavy files may see smaller reductions.',
     },
     {
       category: 'security',
       icon: 'fa-solid fa-signature',
       q: 'Are drawn signatures or electronic signatures stored anywhere?',
-      a: 'Never. Signatures drawn or uploaded in PDFForge are converted into inline vector graphics or embedded raster elements that are burned directly into your downloaded PDF file. They are never transmitted over the internet or saved to external databases.',
+      a: 'Never. Signatures drawn or uploaded in iPDFEditor are converted into inline vector graphics or embedded raster elements that are burned directly into your downloaded PDF file. They are never transmitted over the internet or saved to external databases.',
     },
     {
       category: 'general',
       icon: 'fa-solid fa-hard-drive',
       q: 'Is there a document size limit for processing?',
-      a: 'There is no artificial platform limit. PDFForge can handle multi-hundred page documents, governed only by your device memory (RAM) and browser processing power. For large documents (100MB+), client-side processing may take a few seconds longer.',
+      a: 'There is no artificial platform limit. iPDFEditor can handle multi-hundred page documents, governed only by your device memory (RAM) and browser processing power. For large documents (100MB+), client-side processing may take a few seconds longer.',
     },
     {
       category: 'security',
       icon: 'fa-solid fa-lock',
-      q: 'Can PDFForge unlock any password-protected PDF?',
-      a: 'PDFForge can unlock and decrypt PDFs locally as long as you provide the valid user/owner password or if the document uses standard PDF encryption supported by our local WebAssembly engine.',
+      q: 'Can iPDFEditor unlock any password-protected PDF?',
+      a: 'iPDFEditor can unlock and decrypt PDFs locally as long as you provide the valid user/owner password or if the document uses standard PDF encryption supported by our local WebAssembly engine.',
     },
   ];
 

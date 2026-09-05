@@ -218,7 +218,7 @@
   </div>
 </section>
 
-<!-- "Why PDFForge" Architecture Bento Grid -->
+<!-- "Why iPDFEditor" Architecture Bento Grid -->
 <section class="pillars-section">
   <div class="pf-container">
     <div class="section-heading">
@@ -227,7 +227,7 @@
       </span>
       <h2 class="section-title">Why Traditional PDF Sites Are Obsolete</h2>
       <p class="section-subtitle">
-        Most web-based PDF editors quietly upload your personal contracts, tax sheets, and confidential reports to remote servers. PDFForge operates on a zero-trust, browser-only architecture.
+        Most web-based PDF editors quietly upload your personal contracts, tax sheets, and confidential reports to remote servers. iPDFEditor operates on a zero-trust, browser-only architecture.
       </p>
     </div>
 
@@ -255,7 +255,7 @@
       <span class="section-tag">
         <i class="fa-solid fa-diagram-project"></i> Simple &amp; Seamless
       </span>
-      <h2 class="section-title">How PDFForge Works</h2>
+      <h2 class="section-title">How iPDFEditor Works</h2>
       <p class="section-subtitle">
         Three streamlined steps from file selection to perfected export.
       </p>
@@ -324,6 +324,38 @@
             }
           </div>
         </div>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- Frequently Asked Questions Section (Google SERP Rich Snippet Optimization) -->
+<section class="home-faq-section" aria-labelledby="home-faq-title">
+  <div class="pf-container">
+    <div class="section-heading">
+      <span class="section-tag">
+        <i class="fa-solid fa-circle-question"></i> Answers &amp; Privacy
+      </span>
+      <h2 id="home-faq-title" class="section-title">Frequently Asked Questions</h2>
+      <p class="section-subtitle">
+        Everything you need to know about iPDFEditor’s client-side privacy, capabilities, and zero-server security.
+      </p>
+    </div>
+
+    <div class="home-faq-list">
+      @for (faq of homeFaqs; track faq.question; let idx = $index) {
+        <details class="home-faq-item" [open]="idx === 0">
+          <summary class="home-faq-item__summary">
+            <div class="home-faq-item__q-wrap">
+              <i class="fa-solid fa-circle-question home-faq-item__icon"></i>
+              <h3 class="home-faq-item__question">{{ faq.question }}</h3>
+            </div>
+            <i class="fa-solid fa-chevron-down home-faq-item__chevron"></i>
+          </summary>
+          <div class="home-faq-item__content">
+            <p>{{ faq.answer }}</p>
+          </div>
+        </details>
       }
     </div>
   </div>

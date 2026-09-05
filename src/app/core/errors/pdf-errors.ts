@@ -1,5 +1,5 @@
 /**
- * Domain-specific error classes for PDF operations in PDFForge.
+ * Domain-specific error classes for PDF operations in iPDFEditor.
  * Prevents raw internal stack traces from bubbling to user-facing UI.
  */
 

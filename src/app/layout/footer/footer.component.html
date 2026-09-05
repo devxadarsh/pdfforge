@@ -1,23 +1,67 @@
 <footer class="pf-footer">
-  <div class="pf-footer__inner pf-container">
-    <div class="pf-footer__brand">
-      <span class="pf-brand__name">PDF<span class="pf-brand__accent">Forge</span></span>
+  <div class="pf-container pf-footer__grid">
+    <!-- Brand & Privacy Mission -->
+    <div class="pf-footer__col pf-footer__col--brand">
+      <div class="pf-footer__brand">
+        <span class="pf-brand__name">iPDF<span class="pf-brand__accent">Editor</span></span>
+      </div>
       <p class="pf-footer__tagline">
-        Free, privacy-first PDF tools. Your files never leave your device.
+        Professional, free, privacy-first PDF studio. Edit, merge, split, compress, convert, sign, and protect documents with 100% in-browser WebAssembly processing.
       </p>
+      <div class="pf-footer__privacy-badge">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>Zero server uploads · 100% private sandbox</span>
+      </div>
     </div>
 
-    <nav class="pf-footer__links" aria-label="Footer">
-      <a routerLink="/tools">All Tools</a>
-      <a routerLink="/editor">Editor</a>
-      <a routerLink="/merge">Merge</a>
-      <a routerLink="/compress">Compress</a>
-      <a routerLink="/recent">Recent</a>
-      <a routerLink="/help">Help</a>
-    </nav>
+    <!-- Column 1: Core Tools -->
+    <div class="pf-footer__col">
+      <h3 class="pf-footer__title">PDF Tools</h3>
+      <nav class="pf-footer__nav" aria-label="PDF Tools">
+        <a routerLink="/editor">Online PDF Editor</a>
+        <a routerLink="/merge">Merge PDF Files</a>
+        <a routerLink="/split">Split &amp; Extract Pages</a>
+        <a routerLink="/compress">Compress PDF</a>
+        <a routerLink="/signature">Signature Studio</a>
+        <a routerLink="/tools">All Tools Directory</a>
+      </nav>
+    </div>
 
-    <p class="pf-footer__legal">
-      © {{ year }} PDFForge · Processed locally in your browser.
-    </p>
+    <!-- Column 2: Conversion Suite -->
+    <div class="pf-footer__col">
+      <h3 class="pf-footer__title">Convert Suite</h3>
+      <nav class="pf-footer__nav" aria-label="Convert Suite">
+        <a routerLink="/pdf-to-word">PDF to Word (.docx)</a>
+        <a routerLink="/jpg-to-pdf">Images to PDF</a>
+        <a routerLink="/pdf-to-text">Extract Text (OCR)</a>
+        <a routerLink="/pdf-to-jpg">PDF to JPG / PNG</a>
+        <a routerLink="/convert">All Converters</a>
+      </nav>
+    </div>
+
+    <!-- Column 3: Security & Trust -->
+    <div class="pf-footer__col">
+      <h3 class="pf-footer__title">Security &amp; Trust</h3>
+      <nav class="pf-footer__nav" aria-label="Security and Trust">
+        <a routerLink="/security/protect">Protect PDF (AES-256)</a>
+        <a routerLink="/security/unlock">Unlock PDF</a>
+        <a routerLink="/security/verify">Verify Signatures &amp; Forensics</a>
+        <a routerLink="/security/metadata">PDF Metadata Sanitizer</a>
+        <a routerLink="/help">Help &amp; Documentation</a>
+      </nav>
+    </div>
+  </div>
+
+  <div class="pf-footer__bottom">
+    <div class="pf-container pf-footer__bottom-inner">
+      <p class="pf-footer__copyright">
+        © {{ year }} iPDFEditor. All document processing executes locally on your device.
+      </p>
+      <div class="pf-footer__bottom-links">
+        <a routerLink="/help">Privacy &amp; Security FAQ</a>
+        <span class="pf-footer__sep">·</span>
+        <a routerLink="/tools">Sitemap &amp; Tools</a>
+      </div>
+    </div>
   </div>
 </footer>

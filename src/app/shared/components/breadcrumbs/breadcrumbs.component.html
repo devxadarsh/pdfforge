@@ -1,0 +1,28 @@
+<nav class="pf-breadcrumbs-nav" aria-label="Breadcrumb">
+  <ol class="pf-breadcrumbs" itemscope itemtype="https://schema.org/BreadcrumbList">
+    @for (item of items(); track item.path; let last = $last; let i = $index) {
+      <li
+        class="pf-breadcrumbs__item"
+        itemprop="itemListElement"
+        itemscope
+        itemtype="https://schema.org/ListItem"
+        [class.pf-breadcrumbs__item--active]="last"
+      >
+        @if (!last) {
+          <a class="pf-breadcrumbs__link" [routerLink]="item.path" itemprop="item">
+            @if (i === 0) {
+              <i class="fa-solid fa-house pf-breadcrumbs__icon" aria-hidden="true"></i>
+            }
+            <span itemprop="name">{{ item.label }}</span>
+          </a>
+          <i class="fa-solid fa-chevron-right pf-breadcrumbs__separator" aria-hidden="true"></i>
+        } @else {
+          <span class="pf-breadcrumbs__current" aria-current="page" itemprop="name">
+            {{ item.label }}
+          </span>
+        }
+        <meta itemprop="position" [content]="i + 1" />
+      </li>
+    }
+  </ol>
+</nav>

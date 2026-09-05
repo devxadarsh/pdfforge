@@ -1,5 +1,7 @@
 <section class="tool-page tool-page--convert">
   <div class="pf-container">
+    <app-breadcrumbs [items]="currentSeoConfig().breadcrumbs"></app-breadcrumbs>
+
     <!-- Symmetric Tool Header -->
     <header class="tool-header">
       <div class="tool-header__top">
@@ -13,20 +15,8 @@
         </span>
       </div>
 
-      <h1 class="tool-header__title">
-        @if (active() === 'pdf-word') {
-          Convert PDF to Word (.docx)
-        } @else {
-          Convert PDF Documents
-        }
-      </h1>
-      <p class="tool-header__subtitle">
-        @if (active() === 'pdf-word') {
-          Transform PDF documents into editable Microsoft Word (.docx) files locally in your browser.
-        } @else {
-          Convert between PDF, Word documents, plain text OCR, and images with 100% private client-side processing.
-        }
-      </p>
+      <h1 class="tool-header__title">{{ currentSeoConfig().heading }}</h1>
+      <p class="tool-header__subtitle">{{ currentSeoConfig().subHeading }}</p>
     </header>
 
     <div class="tool-page__body">
@@ -205,5 +195,8 @@
         </div>
       </div>
     </div>
+
+    <!-- Comprehensive On-Page SEO Section -->
+    <app-tool-seo-content [config]="currentSeoConfig()"></app-tool-seo-content>
   </div>
 </section>

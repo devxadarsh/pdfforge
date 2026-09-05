@@ -12,6 +12,11 @@ import { DownloadService } from '../../../core/services/download/download.servic
 import { ToastService } from '../../../core/services/toast.service';
 import { formatBytes } from '../../../core/utilities/file.util';
 
+import { BreadcrumbsComponent } from '../../../shared/components/breadcrumbs/breadcrumbs.component';
+import { ToolSeoContentComponent } from '../../../shared/components/tool-seo-content/tool-seo-content.component';
+import { SeoService } from '../../../core/services/seo/seo.service';
+import { SEO_CONFIGS } from '../../../core/constants/seo-data';
+
 export interface MetadataFormState {
   title: string;
   author: string;
@@ -26,7 +31,15 @@ export interface MetadataFormState {
 @Component({
   selector: 'app-security-metadata',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, FormsModule, DatePipe, FileDropzoneComponent],
+  imports: [
+    RouterLink,
+    RouterLinkActive,
+    FormsModule,
+    DatePipe,
+    FileDropzoneComponent,
+    BreadcrumbsComponent,
+    ToolSeoContentComponent,
+  ],
   templateUrl: './security-metadata.component.html',
   styleUrl: './security-metadata.component.scss',
 })
@@ -34,6 +47,13 @@ export class SecurityMetadataComponent implements OnDestroy {
   private readonly metaService = inject(PdfMetadataService);
   private readonly downloads = inject(DownloadService);
   private readonly toasts = inject(ToastService);
+  private readonly seo = inject(SeoService);
+
+  readonly seoConfig = SEO_CONFIGS['metadata'];
+
+  constructor() {
+    this.seo.updatePage(this.seoConfig);
+  }
 
   readonly loadedFile = signal<LoadedFile | null>(null);
   readonly loading = signal<boolean>(false);

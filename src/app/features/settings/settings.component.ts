@@ -6,12 +6,13 @@ import { ThemeService } from '../../core/services/theme.service';
 import { RecentFilesService } from '../../core/services/storage/recent-files.service';
 import { DocumentStorageService } from '../../core/services/storage/document-storage.service';
 import { ToastService } from '../../core/services/toast.service';
+import { SeoService } from '../../core/services/seo/seo.service';
 import { EditorTheme } from '../../core/models/pdf.models';
 import { formatBytes } from '../../core/utilities/file.util';
 
-const DEFAULT_ZOOM_KEY = 'pdfforge.default-zoom';
-const AUTO_SAVE_KEY = 'pdfforge.auto-save';
-const THUMBNAILS_KEY = 'pdfforge.show-thumbnails';
+const DEFAULT_ZOOM_KEY = 'ipdfeditor.default-zoom';
+const AUTO_SAVE_KEY = 'ipdfeditor.auto-save';
+const THUMBNAILS_KEY = 'ipdfeditor.show-thumbnails';
 
 @Component({
   selector: 'app-settings',
@@ -25,6 +26,7 @@ export class SettingsComponent implements OnInit {
   private readonly recentFilesSvc = inject(RecentFilesService);
   private readonly docStorageSvc = inject(DocumentStorageService);
   private readonly toasts = inject(ToastService);
+  private readonly seo = inject(SeoService);
 
   readonly theme = this.themeSvc.theme;
   readonly reduceMotion = this.themeSvc.reduceMotion;
@@ -81,6 +83,7 @@ export class SettingsComponent implements OnInit {
   ];
 
   ngOnInit(): void {
+    this.seo.setNoIndex('Settings');
     void this.calculateStorage();
   }
 

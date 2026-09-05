@@ -1,5 +1,7 @@
 <section class="tool-page tool-page--security">
   <div class="pf-container">
+    <app-breadcrumbs [items]="seoConfig.breadcrumbs"></app-breadcrumbs>
+
     <header class="tool-page__header">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <a class="tool-page__back mb-0" routerLink="/tools"><i class="fa-solid fa-arrow-left"></i> Tools</a>
@@ -329,5 +331,8 @@
     <p class="tool-page__privacy text-center mt-4">
       <i class="fa-solid fa-lock"></i> All cryptographic hash and forensic analysis runs locally in your browser.
     </p>
+
+    <!-- Comprehensive On-Page SEO Section -->
+    <app-tool-seo-content [config]="seoConfig"></app-tool-seo-content>
   </div>
 </section>

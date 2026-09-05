@@ -32,7 +32,7 @@ export interface FabricObjectMeta {
 /**
  * Adapter and lifecycle manager for Fabric.js v7 interactive canvas instances.
  * Bridges Fabric's canvas object model, selection bounds, and rotation handles
- * with PDFForge's domain models and reactive signals.
+ * with iPDFEditor's domain models and reactive signals.
  */
 @Injectable({ providedIn: 'root' })
 export class FabricCanvasManagerService {
@@ -114,7 +114,7 @@ export class FabricCanvasManagerService {
   }
 
   /**
-   * Synchronize PDFForge annotations into Fabric canvas objects.
+   * Synchronize iPDFEditor annotations into Fabric canvas objects.
    */
   async syncAnnotations(pageId: string, annotations: readonly PdfAnnotation[]): Promise<void> {
     const canvas = this.activeCanvases.get(pageId);

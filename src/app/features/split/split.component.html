@@ -1,5 +1,7 @@
 <section class="tool-page tool-page--split">
   <div class="pf-container">
+    <app-breadcrumbs [items]="seoConfig.breadcrumbs"></app-breadcrumbs>
+
     <!-- Symmetric Tool Header -->
     <header class="tool-header">
       <div class="tool-header__top">
@@ -476,5 +478,8 @@
         </div>
       </div>
     }
+
+    <!-- Comprehensive On-Page SEO Section -->
+    <app-tool-seo-content [config]="seoConfig"></app-tool-seo-content>
   </div>
 </section>

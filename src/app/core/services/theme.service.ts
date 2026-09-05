@@ -1,8 +1,8 @@
 import { Injectable, signal, effect, inject } from '@angular/core';
 import { EditorTheme } from '../models/pdf.models';
 
-const THEME_KEY = 'pdfforge.theme';
-const MOTION_KEY = 'pdfforge.reduce-motion';
+const THEME_KEY = 'ipdfeditor.theme';
+const MOTION_KEY = 'ipdfeditor.reduce-motion';
 
 @Injectable({ providedIn: 'root' })
 export class ThemeService {

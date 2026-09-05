@@ -10,10 +10,23 @@ import { DownloadService } from '../../core/services/download/download.service';
 import { ToastService } from '../../core/services/toast.service';
 import { formatBytes } from '../../core/utilities/file.util';
 
+import { computed } from '@angular/core';
+import { BreadcrumbsComponent } from '../../shared/components/breadcrumbs/breadcrumbs.component';
+import { ToolSeoContentComponent } from '../../shared/components/tool-seo-content/tool-seo-content.component';
+import { SeoService } from '../../core/services/seo/seo.service';
+import { SEO_CONFIGS } from '../../core/constants/seo-data';
+
 @Component({
   selector: 'app-security',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, FormsModule, FileDropzoneComponent],
+  imports: [
+    RouterLink,
+    RouterLinkActive,
+    FormsModule,
+    FileDropzoneComponent,
+    BreadcrumbsComponent,
+    ToolSeoContentComponent,
+  ],
   templateUrl: './security.component.html',
   styleUrl: './security.component.scss',
 })
@@ -22,8 +35,13 @@ export class SecurityComponent {
   private readonly worker = inject(PdfWorkerService);
   private readonly downloads = inject(DownloadService);
   private readonly toasts = inject(ToastService);
+  private readonly seo = inject(SeoService);
 
   readonly mode = signal<'protect' | 'unlock'>('protect');
+  readonly currentSeoConfig = computed(() =>
+    this.mode() === 'unlock' ? SEO_CONFIGS['unlock'] : SEO_CONFIGS['protect'],
+  );
+
   readonly password = signal('');
   readonly confirm = signal('');
   readonly showPassword = signal(false);
@@ -41,6 +59,7 @@ export class SecurityComponent {
     const syncMode = (url: string) => {
       const isUnlock = url.includes('unlock');
       this.mode.set(isUnlock ? 'unlock' : 'protect');
+      this.seo.updatePage(isUnlock ? SEO_CONFIGS['unlock'] : SEO_CONFIGS['protect']);
     };
 
     syncMode(this.router.url);

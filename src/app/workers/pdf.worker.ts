@@ -56,8 +56,8 @@ const api: PdfWorkerApi = {
       throw new Error('No PDF files provided for merge.');
     }
     const merged = await PDFDocument.create();
-    merged.setProducer('PDFForge (Client-Side Worker)');
-    merged.setCreator('PDFForge');
+    merged.setProducer('iPDFEditor (Client-Side Worker)');
+    merged.setCreator('iPDFEditor');
 
     for (const file of files) {
       const srcDoc = await PDFDocument.load(file.bytes, { ignoreEncryption: true });
@@ -85,7 +85,7 @@ const api: PdfWorkerApi = {
       if (validIndices.length === 0) continue;
 
       const subDoc = await PDFDocument.create();
-      subDoc.setProducer('PDFForge (Client-Side Worker)');
+      subDoc.setProducer('iPDFEditor (Client-Side Worker)');
       const copied = await subDoc.copyPages(srcDoc, validIndices);
       for (const page of copied) {
         subDoc.addPage(page);
@@ -139,7 +139,7 @@ const api: PdfWorkerApi = {
 
     // Fallback: Rebuild document with pdf-lib objects and stream compression
     const doc = await PDFDocument.load(sourceBytes, { ignoreEncryption: true });
-    doc.setProducer('PDFForge Compressed');
+    doc.setProducer('iPDFEditor Compressed');
     const saved = await doc.save({ useObjectStreams: true });
     return new Uint8Array(saved);
   },

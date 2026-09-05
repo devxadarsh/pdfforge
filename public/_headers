@@ -1,0 +1,38 @@
+# iPDFEditor Cloudflare Pages HTTP Headers
+
+# Global Security Headers
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+# Immutable caching for hashed assets (optimizes LCP, FCP, and Lighthouse performance scores)
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.css
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.wasm
+  Cache-Control: public, max-age=31536000, immutable
+
+# Favicon and static images caching
+/favicon.*
+  Cache-Control: public, max-age=86400
+
+/*.png
+  Cache-Control: public, max-age=604800
+
+/*.svg
+  Cache-Control: public, max-age=604800
+
+# HTML documents must always revalidate so users receive updates immediately
+/*.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/
+  Cache-Control: public, max-age=0, must-revalidate

@@ -66,6 +66,9 @@ import { EditorStateService } from './state/editor-state.service';
 
 import { MobileTooltipDirective } from '../../shared/directives/mobile-tooltip.directive';
 
+import { SeoService } from '../../core/services/seo/seo.service';
+import { SEO_CONFIGS } from '../../core/constants/seo-data';
+
 @Component({
   selector: 'app-editor',
   standalone: true,
@@ -98,6 +101,7 @@ export class EditorComponent implements OnDestroy {
   private readonly router = inject(Router);
   private readonly storage = inject(DocumentStorageService);
   private readonly recentFiles = inject(RecentFilesService);
+  private readonly seo = inject(SeoService);
   readonly pagesStore = inject(EditorPagesService);
   readonly state = inject(EditorStateService);
 
@@ -1144,6 +1148,8 @@ export class EditorComponent implements OnDestroy {
   });
 
   constructor() {
+    this.seo.updatePage(SEO_CONFIGS['editor']);
+
     effect(() => {
       const file = this.files.currentFiles()[0];
       if (!file || this.loadedRef === file) {

@@ -1,0 +1,65 @@
+{
+  "name": "iPDFEditor — Free Private PDF Editor & PDF Tools",
+  "short_name": "iPDFEditor",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "description": "Professional free PDF editor & utility suite running 100% locally in your browser. Edit, annotate, merge, split, compress, convert, sign, and protect PDFs with zero server uploads.",
+  "categories": ["productivity", "utilities", "business"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "PDF Editor",
+      "short_name": "Editor",
+      "url": "/editor",
+      "description": "Open full client-side PDF editor",
+      "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Merge PDF",
+      "short_name": "Merge",
+      "url": "/merge",
+      "description": "Combine multiple PDF documents",
+      "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Compress PDF",
+      "short_name": "Compress",
+      "url": "/compress",
+      "description": "Reduce PDF file size locally",
+      "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Convert to Word",
+      "short_name": "PDF to Word",
+      "url": "/pdf-to-word",
+      "description": "Convert PDF to Word document",
+      "icons": [{ "src": "/assets/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
