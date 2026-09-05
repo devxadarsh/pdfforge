@@ -168,7 +168,7 @@ code,
 
 .tool-page__body {
   width: 100%;
-  max-width: 840px;
+  max-width: 1020px;
   margin-inline: auto;
 }
 
@@ -437,11 +437,11 @@ code,
 
 .pf-landing-card {
   width: 100%;
-  max-width: 560px;
+  max-width: 880px;
   background: var(--pf-surface-container-low, #ffffff);
   border: 1px solid var(--pf-outline-variant, #e5e7eb);
   border-radius: 20px;
-  padding: 32px 28px;
+  padding: 38px 40px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
   text-align: center;
   display: flex;
@@ -481,7 +481,7 @@ code,
 
 .pf-landing-title {
   margin: 0 0 6px;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--pf-on-surface);
   line-height: 1.25;
@@ -492,11 +492,11 @@ code,
 }
 
 .pf-landing-subtitle {
-  margin: 0 0 20px;
-  font-size: 13.5px;
+  margin: 0 0 22px;
+  font-size: 14px;
   color: var(--pf-on-surface-variant);
-  line-height: 1.45;
-  max-width: 440px;
+  line-height: 1.5;
+  max-width: 660px;
 
   @media (max-width: 768px) {
     font-size: 12.5px;
@@ -506,7 +506,12 @@ code,
 
 .pf-landing-dropzone {
   width: 100%;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
+
+  .pf-dropzone {
+    padding: 38px 24px;
+    border-radius: 16px;
+  }
 }
 
 .pf-landing-privacy {
@@ -518,9 +523,10 @@ code,
   color: var(--pf-on-surface-variant);
   background: color-mix(in srgb, var(--pf-success) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--pf-success) 20%, transparent);
-  padding: 8px 14px;
+  padding: 8px 16px;
   border-radius: 9999px;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
+  max-width: 600px;
   line-height: 1.3;
 
   i {
@@ -567,5 +573,206 @@ code,
   @media (max-width: 768px) {
     padding: 3px 8px;
     font-size: 11px;
+  }
+}
+
+/* Category Badge Variations for .pf-landing-badge */
+.pf-landing-badge--organize {
+  background: var(--pf-cat-organize-bg, rgba(5, 150, 105, 0.1));
+  border-color: color-mix(in srgb, var(--pf-cat-organize) 30%, transparent);
+  color: var(--pf-cat-organize, #059669);
+}
+
+.pf-landing-badge--optimize {
+  background: var(--pf-cat-optimize-bg, rgba(217, 119, 6, 0.1));
+  border-color: color-mix(in srgb, var(--pf-cat-optimize) 30%, transparent);
+  color: var(--pf-cat-optimize, #d97706);
+}
+
+.pf-landing-badge--convert {
+  background: var(--pf-cat-edit-bg, rgba(37, 99, 235, 0.1));
+  border-color: color-mix(in srgb, var(--pf-cat-edit) 30%, transparent);
+  color: var(--pf-cat-edit, #2563eb);
+}
+
+.pf-landing-badge--security {
+  background: var(--pf-cat-security-bg, rgba(124, 58, 237, 0.1));
+  border-color: color-mix(in srgb, var(--pf-cat-security) 30%, transparent);
+  color: var(--pf-cat-security, #7c3aed);
+}
+
+/* ---- Symmetric Tool Page Header & Navigation ---- */
+.tool-header {
+  margin-bottom: 24px;
+}
+
+.tool-header__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.tool-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pf-on-surface-variant);
+  text-decoration: none;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--pf-surface-container-low);
+  border: 1px solid var(--pf-outline-variant);
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: var(--pf-primary);
+    border-color: var(--pf-primary);
+    background: var(--pf-surface-container);
+    text-decoration: none;
+  }
+
+  i {
+    font-size: 12px;
+    transition: transform 0.2s ease;
+  }
+
+  &:hover i {
+    transform: translateX(-3px);
+  }
+}
+
+.tool-cat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+
+  &--organize {
+    background: var(--pf-cat-organize-bg);
+    color: var(--pf-cat-organize);
+    border: 1px solid color-mix(in srgb, var(--pf-cat-organize) 30%, transparent);
+  }
+
+  &--optimize {
+    background: var(--pf-cat-optimize-bg);
+    color: var(--pf-cat-optimize);
+    border: 1px solid color-mix(in srgb, var(--pf-cat-optimize) 30%, transparent);
+  }
+
+  &--convert, &--edit {
+    background: var(--pf-cat-edit-bg);
+    color: var(--pf-cat-edit);
+    border: 1px solid color-mix(in srgb, var(--pf-cat-edit) 30%, transparent);
+  }
+
+  &--security {
+    background: var(--pf-cat-security-bg);
+    color: var(--pf-cat-security);
+    border: 1px solid color-mix(in srgb, var(--pf-cat-security) 30%, transparent);
+  }
+}
+
+.tool-header__title {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--pf-on-surface);
+  line-height: 1.2;
+  margin: 0 0 8px;
+  letter-spacing: -0.02em;
+
+  @media (max-width: 768px) {
+    font-size: 24px;
+  }
+}
+
+.tool-header__subtitle {
+  font-size: 14.5px;
+  color: var(--pf-on-surface-variant);
+  line-height: 1.5;
+  margin: 0;
+  max-width: 640px;
+
+  @media (max-width: 768px) {
+    font-size: 13.5px;
+  }
+}
+
+/* ---- Symmetric Tool Action Bar ---- */
+.tool-action-bar {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+
+  .tool-action-bar__hint {
+    font-size: 12.5px;
+    color: var(--pf-on-surface-variant);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    i {
+      color: var(--pf-primary);
+    }
+  }
+}
+
+/* ---- Symmetric Tool Trust Strip ---- */
+.tool-trust-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 44px;
+  padding-top: 28px;
+  border-top: 1px solid var(--pf-outline-variant);
+
+  @media (max-width: 860px) {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 32px;
+    padding-top: 20px;
+  }
+}
+
+.tool-trust-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--pf-surface-container-low);
+  border-radius: 12px;
+  border: 1px solid var(--pf-outline-variant);
+
+  i {
+    font-size: 18px;
+    color: var(--pf-primary);
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+
+  strong {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--pf-on-surface);
+    margin-bottom: 2px;
+  }
+
+  span {
+    display: block;
+    font-size: 12px;
+    color: var(--pf-on-surface-variant);
+    line-height: 1.35;
   }
 }

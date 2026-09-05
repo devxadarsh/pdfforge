@@ -1,49 +1,195 @@
-<section class="help-page">
+<section class="tool-page tool-page--help">
   <div class="pf-container">
-    <header class="help-page__header">
-      <h1>Help &amp; FAQ</h1>
-      <p class="pf-text-muted">Everything you need to use PDFForge confidently.</p>
+    <!-- Symmetric Tool Header -->
+    <header class="tool-header">
+      <div class="tool-header__top">
+        <a class="tool-back-btn" routerLink="/tools">
+          <i class="fa-solid fa-arrow-left"></i>
+          <span>All Tools</span>
+        </a>
+        <span class="tool-cat-pill tool-cat-pill--organize">
+          <i class="fa-solid fa-circle-question"></i>
+          <span>Knowledge &amp; Support</span>
+        </span>
+      </div>
+
+      <h1 class="tool-header__title">Help, Guides &amp; FAQ</h1>
+      <p class="tool-header__subtitle">
+        Master PDF editing, local document transformations, and explore how our 100% private sandbox protects your files.
+      </p>
     </header>
 
-    <div class="help-grid">
-      <div class="help-card pf-card">
-        <i class="fa-solid fa-shield-halved help-card__icon"></i>
-        <h3>Privacy by design</h3>
-        <p class="pf-text-muted">
-          All PDF processing happens locally in your browser. We can't see,
-          store, or transmit your documents.
-        </p>
+    <!-- Search & Category Filter Header -->
+    <div class="help-search-section">
+      <div class="help-search-box">
+        <i class="fa-solid fa-magnifying-glass help-search-box__icon"></i>
+        <input
+          type="text"
+          class="pf-input help-search-box__input"
+          placeholder="Search questions, tools, or keyboard shortcuts…"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)"
+        />
+        @if (searchQuery()) {
+          <button
+            type="button"
+            class="help-search-box__clear"
+            (click)="clearSearch()"
+            title="Clear search"
+          >
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        }
       </div>
-      <div class="help-card pf-card">
-        <i class="fa-solid fa-bolt help-card__icon"></i>
-        <h3>Fast &amp; free</h3>
-        <p class="pf-text-muted">
-          No installs, no accounts. Open a tool and start working in seconds.
-        </p>
-      </div>
-      <div class="help-card pf-card">
-        <i class="fa-solid fa-mobile-screen help-card__icon"></i>
-        <h3>Works everywhere</h3>
-        <p class="pf-text-muted">
-          Responsive design means it works on desktop, tablet, and mobile.
-        </p>
+
+      <div class="help-category-pills">
+        @for (cat of categories; track cat.id) {
+          <button
+            type="button"
+            class="help-pill"
+            [class.help-pill--active]="activeCategory() === cat.id"
+            (click)="setCategory(cat.id)"
+          >
+            <i [ngClass]="cat.icon"></i>
+            <span>{{ cat.label }}</span>
+          </button>
+        }
       </div>
     </div>
 
-    <div class="faq">
-      <h2>Frequently asked questions</h2>
-      @for (item of faqs; track item.q) {
-        <details class="faq__item pf-card">
-          <summary>{{ item.q }}</summary>
-          <p class="pf-text-muted">{{ item.a }}</p>
-        </details>
+    <!-- Feature Guides Bento Grid (Shown when not actively searching specific queries) -->
+    @if (!searchQuery() && (activeCategory() === 'all' || activeCategory() === 'editor' || activeCategory() === 'convert')) {
+      <div class="help-guides-section">
+        <div class="section-title">
+          <span class="pf-label-caps">Feature Walkthroughs</span>
+          <h2>Visual Tool Guides</h2>
+        </div>
+
+        <div class="guides-grid">
+          @for (guide of featureGuides; track guide.title) {
+            <div class="guide-card pf-card guide-card--{{ guide.categoryClass }}">
+              <div class="guide-card__top">
+                <div class="guide-card__icon-wrap">
+                  <i [ngClass]="guide.icon"></i>
+                </div>
+                <span class="guide-card__badge">{{ guide.categoryClass | uppercase }}</span>
+              </div>
+
+              <h3 class="guide-card__title">{{ guide.title }}</h3>
+              <p class="guide-card__desc">{{ guide.description }}</p>
+
+              <ul class="guide-card__points">
+                @for (point of guide.points; track point) {
+                  <li>
+                    <i class="fa-solid fa-check"></i>
+                    <span>{{ point }}</span>
+                  </li>
+                }
+              </ul>
+
+              <div class="guide-card__footer">
+                <a [routerLink]="guide.route" class="guide-card__link">
+                  <span>{{ guide.actionLabel }}</span>
+                  <i class="fa-solid fa-arrow-right"></i>
+                </a>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Keyboard Shortcuts Cheat Sheet -->
+    @if (filteredShortcuts().length > 0 && (activeCategory() === 'all' || activeCategory() === 'editor')) {
+      <div class="shortcuts-section pf-card">
+        <div class="shortcuts-section__header">
+          <div class="shortcuts-section__icon-badge">
+            <i class="fa-solid fa-keyboard"></i>
+          </div>
+          <div>
+            <h2 class="shortcuts-section__title">Keyboard Shortcuts Cheat Sheet</h2>
+            <p class="shortcuts-section__subtitle pf-text-muted">
+              Accelerate your editing workflow with quick productivity keystrokes.
+            </p>
+          </div>
+        </div>
+
+        <div class="shortcuts-grid">
+          @for (sc of filteredShortcuts(); track sc.action) {
+            <div class="shortcut-item">
+              <span class="shortcut-item__action">{{ sc.action }}</span>
+              <div class="shortcut-item__keys">
+                @for (key of sc.keys; track key) {
+                  <kbd class="pf-kbd">{{ key }}</kbd>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- Frequently Asked Questions -->
+    <div class="faq-section">
+      <div class="section-title">
+        <span class="pf-label-caps">Knowledge Base</span>
+        <h2>Frequently Asked Questions</h2>
+        <p class="pf-text-muted">Got questions about client-side PDF processing? We've got answers.</p>
+      </div>
+
+      @if (filteredFaqs().length > 0) {
+        <div class="faq-list">
+          @for (item of filteredFaqs(); track item.q) {
+            <details class="faq-item pf-card">
+              <summary class="faq-item__summary">
+                <div class="faq-item__title-wrap">
+                  <i [ngClass]="item.icon" class="faq-item__icon"></i>
+                  <span class="faq-item__question">{{ item.q }}</span>
+                </div>
+                <i class="fa-solid fa-chevron-down faq-item__chevron"></i>
+              </summary>
+              <div class="faq-item__content">
+                <p>{{ item.a }}</p>
+              </div>
+            </details>
+          }
+        </div>
+      } @else {
+        <div class="help-empty-state pf-card">
+          <i class="fa-solid fa-circle-exclamation text-primary"></i>
+          <h3>No matching topics found</h3>
+          <p class="pf-text-muted">We couldn't find any questions matching "{{ searchQuery() }}".</p>
+          <button type="button" class="pf-btn pf-btn--ghost pf-btn--sm" (click)="clearSearch()">
+            <i class="fa-solid fa-rotate-left"></i>
+            <span>Clear Search &amp; Filters</span>
+          </button>
+        </div>
       }
     </div>
 
-    <div class="help-cta">
-      <a class="pf-btn pf-btn--primary" routerLink="/tools">
-        <i class="fa-solid fa-toolbox"></i> Browse all tools
-      </a>
+    <!-- Trust & Privacy CTA Banner -->
+    <div class="help-cta-banner pf-card">
+      <div class="help-cta-banner__left">
+        <div class="help-cta-banner__shield">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div>
+          <h3>100% Privacy Guarantee</h3>
+          <p class="pf-text-muted">
+            All tools run exclusively in your web browser. No files are ever sent to remote servers or cloud storage.
+          </p>
+        </div>
+      </div>
+      <div class="help-cta-banner__actions">
+        <a class="pf-btn pf-btn--primary" routerLink="/editor">
+          <i class="fa-solid fa-pen-nib"></i>
+          <span>Open PDF Editor</span>
+        </a>
+        <a class="pf-btn pf-btn--ghost" routerLink="/tools">
+          <i class="fa-solid fa-toolbox"></i>
+          <span>Browse All Tools</span>
+        </a>
+      </div>
     </div>
   </div>
 </section>

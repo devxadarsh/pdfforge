@@ -31,6 +31,12 @@ export class MergeComponent {
   readonly merging = signal<boolean>(false);
   protected readonly formatBytes = formatBytes;
 
+  readonly totalBytes = () => this.items().reduce((acc, i) => acc + i.sizeBytes, 0);
+
+  clearAll(): void {
+    this.items.set([]);
+  }
+
   addFiles(files: LoadedFile[]): void {
     const next = files.map((f) => ({
       id: crypto.randomUUID(),

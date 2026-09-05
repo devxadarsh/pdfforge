@@ -1,71 +1,165 @@
-<section class="tool-page">
+<section class="tool-page tool-page--merge">
   <div class="pf-container">
-    <header class="tool-page__header">
-      <a class="tool-page__back" routerLink="/tools"><i class="fa-solid fa-arrow-left"></i> Tools</a>
-      <h1><i class="fa-solid fa-object-group tool-page__icon"></i> Merge PDF</h1>
-      <p class="pf-text-muted">
-        Combine multiple PDFs into a single document — entirely on your device.
+    <!-- Symmetric Tool Header -->
+    <header class="tool-header">
+      <div class="tool-header__top">
+        <a class="tool-back-btn" routerLink="/tools">
+          <i class="fa-solid fa-arrow-left"></i>
+          <span>All Tools</span>
+        </a>
+        <span class="tool-cat-pill tool-cat-pill--organize">
+          <i class="fa-solid fa-object-group"></i>
+          <span>Organize Suite</span>
+        </span>
+      </div>
+
+      <h1 class="tool-header__title">Merge PDF Files</h1>
+      <p class="tool-header__subtitle">
+        Combine multiple PDF documents into a single ordered file. Reorder pages and files with drag-and-drop.
       </p>
     </header>
 
     <div class="tool-page__body">
-      <app-file-dropzone
-        [multiple]="true"
-        label="Add PDFs to merge"
-        (filesLoaded)="addFiles($event)"
-      />
+      <!-- Symmetric Selection Landing Card (When no files are loaded) -->
+      @if (items().length === 0) {
+        <div class="pf-landing">
+          <div class="pf-landing-card">
+            <div class="pf-landing-badge pf-landing-badge--organize">
+              <i class="fa-solid fa-object-group"></i>
+            </div>
+            <h2 class="pf-landing-title">Merge Multiple PDF Files</h2>
+            <p class="pf-landing-subtitle">
+              Select or drop 2 or more PDF documents. You can easily reorder and arrange them before generating your unified file.
+            </p>
 
-      @if (items().length > 0) {
-        <ul
-          class="merge-list"
-          cdkDropList
-          [cdkDropListData]="items()"
-          (cdkDropListDropped)="onDrop($event)"
-        >
-          @for (item of items(); track item.id; let i = $index) {
-            <li class="merge-list__item pf-card" cdkDrag [cdkDragData]="item">
-              <span class="merge-list__index">{{ i + 1 }}</span>
-              <i class="fa-solid fa-file-pdf merge-list__file"></i>
-              <div class="merge-list__meta">
-                <span class="merge-list__name">{{ item.name }}</span>
-                <span class="merge-list__size pf-text-muted">{{ formatBytes(item.sizeBytes) }}</span>
-              </div>
-              <div class="merge-list__actions">
-                <button type="button" class="icon-btn" (click)="moveUp(i)" [disabled]="i === 0" aria-label="Move up">
-                  <i class="fa-solid fa-arrow-up"></i>
-                </button>
-                <button type="button" class="icon-btn" (click)="moveDown(i)" [disabled]="i === items().length - 1" aria-label="Move down">
-                  <i class="fa-solid fa-arrow-down"></i>
-                </button>
-                <button type="button" class="icon-btn icon-btn--danger" (click)="remove(item.id)" aria-label="Remove">
-                  <i class="fa-solid fa-trash"></i>
-                </button>
-              </div>
-            </li>
-          }
-        </ul>
+            <div class="pf-landing-dropzone">
+              <app-file-dropzone
+                [multiple]="true"
+                label="Choose or Drop PDF Files to Merge"
+                (filesLoaded)="addFiles($event)"
+              />
+            </div>
 
-        <div class="tool-page__footer">
-          <button
-            class="pf-btn pf-btn--primary"
-            type="button"
-            [disabled]="items().length < 2 || merging()"
-            (click)="merge()"
-          >
-            @if (merging()) {
-              <i class="fa-solid fa-spinner fa-spin me-2"></i> Merging…
-            } @else {
-              <i class="fa-solid fa-object-group me-2"></i> Merge {{ items().length }} files
-            }
-          </button>
+            <div class="pf-landing-privacy">
+              <i class="fa-solid fa-shield-halved"></i>
+              <span><strong>100% Private Sandbox</strong> · Files never leave your local device.</span>
+            </div>
+
+            <div class="pf-landing-features">
+              <span class="pf-feat-pill"><i class="fa-solid fa-layer-group"></i> Batch Selection</span>
+              <span class="pf-feat-pill"><i class="fa-solid fa-arrows-up-down"></i> Drag &amp; Drop Order</span>
+              <span class="pf-feat-pill"><i class="fa-solid fa-award"></i> Preserves Quality</span>
+              <span class="pf-feat-pill"><i class="fa-solid fa-bolt"></i> Local WASM Speed</span>
+            </div>
+          </div>
         </div>
       } @else {
-        <p class="tool-page__empty pf-text-muted">No files added yet.</p>
+        <!-- Loaded Files Workspace -->
+        <div class="merge-workspace">
+          <!-- Control Bar -->
+          <div class="merge-workspace__bar">
+            <div class="merge-workspace__stats">
+              <strong>{{ items().length }} files selected</strong>
+              <span class="pf-text-muted">· Total: {{ formatBytes(totalBytes()) }}</span>
+            </div>
+            <div class="merge-workspace__actions">
+              <div class="merge-add-more">
+                <app-file-dropzone
+                  [multiple]="true"
+                  label="Add more PDFs"
+                  (filesLoaded)="addFiles($event)"
+                />
+              </div>
+              <button type="button" class="pf-btn pf-btn--ghost" (click)="clearAll()">
+                <i class="fa-solid fa-trash"></i>
+                <span>Clear All</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Reorderable List of Files -->
+          <ul
+            class="merge-list"
+            cdkDropList
+            [cdkDropListData]="items()"
+            (cdkDropListDropped)="onDrop($event)"
+          >
+            @for (item of items(); track item.id; let i = $index) {
+              <li class="merge-list__item pf-card" cdkDrag [cdkDragData]="item">
+                <div class="merge-list__drag-handle" cdkDragHandle title="Drag to reorder">
+                  <i class="fa-solid fa-grip-vertical"></i>
+                </div>
+                <span class="merge-list__index">{{ i + 1 }}</span>
+                <i class="fa-solid fa-file-pdf merge-list__file-icon"></i>
+                <div class="merge-list__meta">
+                  <span class="merge-list__name">{{ item.name }}</span>
+                  <span class="merge-list__size pf-text-muted">{{ formatBytes(item.sizeBytes) }}</span>
+                </div>
+                <div class="merge-list__actions">
+                  <button type="button" class="icon-btn" (click)="moveUp(i)" [disabled]="i === 0" title="Move up" aria-label="Move up">
+                    <i class="fa-solid fa-arrow-up"></i>
+                  </button>
+                  <button type="button" class="icon-btn" (click)="moveDown(i)" [disabled]="i === items().length - 1" title="Move down" aria-label="Move down">
+                    <i class="fa-solid fa-arrow-down"></i>
+                  </button>
+                  <button type="button" class="icon-btn icon-btn--danger" (click)="remove(item.id)" title="Remove file" aria-label="Remove">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+              </li>
+            }
+          </ul>
+
+          <!-- Action Footer -->
+          <div class="tool-action-bar">
+            <button
+              class="pf-btn pf-btn--primary pf-btn--xl w-100"
+              type="button"
+              [disabled]="items().length < 2 || merging()"
+              (click)="merge()"
+            >
+              @if (merging()) {
+                <i class="fa-solid fa-spinner fa-spin"></i>
+                <span>Merging {{ items().length }} Files…</span>
+              } @else {
+                <i class="fa-solid fa-object-group"></i>
+                <span>Merge {{ items().length }} Files Now</span>
+              }
+            </button>
+            @if (items().length < 2) {
+              <p class="tool-action-bar__hint pf-text-muted">
+                <i class="fa-solid fa-circle-info"></i> Please add at least 2 PDF files to merge.
+              </p>
+            }
+          </div>
+        </div>
       }
     </div>
 
-    <p class="tool-page__privacy">
-      <i class="fa-solid fa-lock"></i> Files never leave your device.
-    </p>
+    <!-- Symmetric Bottom Trust Strip -->
+    <div class="tool-trust-strip">
+      <div class="tool-trust-item">
+        <i class="fa-solid fa-shield-halved"></i>
+        <div>
+          <strong>100% Client-Side</strong>
+          <span>Documents never uploaded to any server</span>
+        </div>
+      </div>
+      <div class="tool-trust-item">
+        <i class="fa-solid fa-bolt"></i>
+        <div>
+          <strong>Instant WASM Engine</strong>
+          <span>High-speed multi-threaded document merger</span>
+        </div>
+      </div>
+      <div class="tool-trust-item">
+        <i class="fa-solid fa-infinity"></i>
+        <div>
+          <strong>No Limits or Watermarks</strong>
+          <span>Merge as many files and pages as needed</span>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
+

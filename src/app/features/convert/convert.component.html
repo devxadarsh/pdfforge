@@ -1,84 +1,209 @@
-<section class="tool-page">
+<section class="tool-page tool-page--convert">
   <div class="pf-container">
-    <header class="tool-page__header">
-      <a class="tool-page__back" routerLink="/tools"><i class="fa-solid fa-arrow-left"></i> Tools</a>
-      <h1><i class="fa-solid fa-arrows-rotate tool-page__icon"></i> Convert PDF</h1>
-      <p class="pf-text-muted">Convert between PDF and images or text, all locally.</p>
+    <!-- Symmetric Tool Header -->
+    <header class="tool-header">
+      <div class="tool-header__top">
+        <a class="tool-back-btn" routerLink="/tools">
+          <i class="fa-solid fa-arrow-left"></i>
+          <span>All Tools</span>
+        </a>
+        <span class="tool-cat-pill tool-cat-pill--convert">
+          <i [ngClass]="current.icon"></i>
+          <span>Convert Suite</span>
+        </span>
+      </div>
+
+      <h1 class="tool-header__title">
+        @if (active() === 'pdf-word') {
+          Convert PDF to Word (.docx)
+        } @else {
+          Convert PDF Documents
+        }
+      </h1>
+      <p class="tool-header__subtitle">
+        @if (active() === 'pdf-word') {
+          Transform PDF documents into editable Microsoft Word (.docx) files locally in your browser.
+        } @else {
+          Convert between PDF, Word documents, plain text OCR, and images with 100% private client-side processing.
+        }
+      </p>
     </header>
 
     <div class="tool-page__body">
-      <div class="convert-modes">
+      <!-- Mode Selection Segmented Pill Tabs -->
+      <div class="convert-nav-tabs">
         @for (m of modes; track m.id) {
           <button
             type="button"
-            class="convert-mode"
-            [class.convert-mode--active]="active() === m.id"
+            class="convert-tab"
+            [class.convert-tab--active]="active() === m.id"
             (click)="setMode(m.id)"
           >
             <i [ngClass]="m.icon"></i>
             <span>{{ m.label }}</span>
+            <span class="convert-tab__badge">{{ m.badge }}</span>
           </button>
         }
       </div>
 
-      <p class="convert-hint pf-text-muted">{{ current.hint }}</p>
+      <!-- Symmetric Selection Landing Card (When no file is selected) -->
+      @if (selectedFiles().length === 0) {
+        <div class="pf-landing">
+          <div class="pf-landing-card">
+            <div class="pf-landing-badge pf-landing-badge--convert">
+              <i [ngClass]="current.icon"></i>
+            </div>
+            <h2 class="pf-landing-title">{{ current.label }}</h2>
+            <p class="pf-landing-subtitle">{{ current.hint }}</p>
 
-      <app-file-dropzone
-        [multiple]="current.id === 'img-pdf'"
-        [accept]="current.accept"
-        [label]="current.id === 'img-pdf' ? 'Add images to convert' : 'Add a PDF to convert'"
-        (filesLoaded)="onFilesLoaded($event)"
-      />
+            <div class="pf-landing-dropzone">
+              <app-file-dropzone
+                [multiple]="current.id === 'img-pdf'"
+                [accept]="current.accept"
+                [label]="current.id === 'img-pdf' ? 'Choose or Drop Image Files' : 'Choose or Drop a PDF File'"
+                (filesLoaded)="onFilesLoaded($event)"
+              />
+            </div>
 
-      @if (progress()) {
-        <div class="convert-progress my-3 p-3 rounded bg-light border">
-          <div class="d-flex justify-content-between mb-1">
-            <span class="small font-weight-bold">{{ progress() }}</span>
-            <span class="small text-muted">{{ progressPercent() }}%</span>
-          </div>
-          <div class="progress" style="height: 6px;">
-            <div
-              class="progress-bar bg-primary"
-              role="progressbar"
-              [style.width.%]="progressPercent()"
-              [attr.aria-valuenow]="progressPercent()"
-              aria-valuemin="0"
-              aria-valuemax="100"
-            ></div>
+            <div class="pf-landing-privacy">
+              <i class="fa-solid fa-shield-halved"></i>
+              <span><strong>100% Private Sandbox</strong> · Files never leave your local device.</span>
+            </div>
+
+            <div class="pf-landing-features">
+              <span class="pf-feat-pill"><i class="fa-solid fa-bolt"></i> Local Processing</span>
+              <span class="pf-feat-pill"><i class="fa-solid fa-file-shield"></i> Lossless Content</span>
+              <span class="pf-feat-pill"><i class="fa-solid fa-cloud-slash"></i> Zero Cloud Upload</span>
+              <span class="pf-feat-pill"><i class="fa-solid fa-award"></i> Free &amp; Unlimited</span>
+            </div>
           </div>
         </div>
-      }
-
-      @if (extractedText()) {
-        <div class="convert-result my-3 p-3 rounded border bg-white">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <h6 class="m-0 font-weight-bold"><i class="fa-solid fa-file-lines text-primary me-2"></i>Extracted Text</h6>
-            <button type="button" class="pf-btn pf-btn--sm pf-btn--outline" (click)="copyExtractedText()">
-              <i class="fa-solid fa-copy me-1"></i> Copy Text
+      } @else {
+        <!-- Loaded File Workspace -->
+        <div class="convert-workspace">
+          <!-- Loaded Document Summary -->
+          <div class="convert-file-card">
+            <div class="convert-file-card__left">
+              <i
+                class="convert-file-card__icon"
+                [ngClass]="active() === 'pdf-word' ? 'fa-solid fa-file-word' : (active() === 'img-pdf' ? 'fa-solid fa-file-image' : 'fa-solid fa-file-pdf')"
+              ></i>
+              <div class="convert-file-card__meta">
+                <span class="convert-file-card__name">
+                  @if (selectedFiles().length === 1) {
+                    {{ selectedFiles()[0].name }}
+                  } @else {
+                    {{ selectedFiles().length }} images selected
+                  }
+                </span>
+                <span class="convert-file-card__sub pf-text-muted">
+                  @if (selectedFiles().length === 1) {
+                    Size: {{ formatBytes(selectedFiles()[0].sizeBytes) }}
+                  } @else {
+                    Ready to compile into a unified PDF
+                  }
+                </span>
+              </div>
+            </div>
+            <button
+              class="pf-btn pf-btn--ghost convert-file-card__change"
+              type="button"
+              (click)="clearFiles()"
+              title="Select different files"
+            >
+              <i class="fa-solid fa-arrow-rotate-left"></i>
+              <span>Change File</span>
             </button>
           </div>
-          <pre class="p-2 rounded bg-light border" style="max-height: 240px; overflow-y: auto; font-size: 13px; white-space: pre-wrap;">{{ extractedText() }}</pre>
+
+          <!-- Progress Feedback (During conversion) -->
+          @if (progress()) {
+            <div class="convert-progress-box">
+              <div class="convert-progress-box__header">
+                <span class="convert-progress-box__status">
+                  <i class="fa-solid fa-spinner fa-spin me-2"></i>
+                  {{ progress() }}
+                </span>
+                <span class="convert-progress-box__pct">{{ progressPercent() }}%</span>
+              </div>
+              <div class="convert-progress-track">
+                <div
+                  class="convert-progress-bar"
+                  [style.width.%]="progressPercent()"
+                  role="progressbar"
+                  [attr.aria-valuenow]="progressPercent()"
+                  aria-valuemin="0"
+                  aria-valuemax="100"
+                ></div>
+              </div>
+            </div>
+          }
+
+          <!-- OCR Extracted Text Preview -->
+          @if (extractedText()) {
+            <div class="convert-text-result">
+              <div class="convert-text-result__header">
+                <span class="convert-text-result__title">
+                  <i class="fa-solid fa-file-lines text-primary"></i>
+                  Extracted Document Text
+                </span>
+                <button type="button" class="pf-btn pf-btn--ghost pf-btn--sm" (click)="copyExtractedText()">
+                  <i class="fa-solid fa-copy"></i>
+                  <span>Copy Text</span>
+                </button>
+              </div>
+              <pre class="convert-text-result__content">{{ extractedText() }}</pre>
+            </div>
+          }
+
+          <!-- Action Button -->
+          <div class="tool-action-bar">
+            <button
+              class="pf-btn pf-btn--primary pf-btn--xl w-100"
+              type="button"
+              [disabled]="converting()"
+              (click)="convert()"
+            >
+              @if (converting()) {
+                <i class="fa-solid fa-spinner fa-spin"></i>
+                <span>Converting Document…</span>
+              } @else {
+                <i [ngClass]="current.icon"></i>
+                <span>Convert to {{ current.badge }}</span>
+              }
+            </button>
+            <p class="convert-note pf-text-muted">
+              <i class="fa-solid fa-shield-halved"></i>
+              <span>Processing is performed 100% client-side via in-browser WASM. Your files never leave your device.</span>
+            </p>
+          </div>
         </div>
       }
-
-      <div class="tool-page__footer">
-        <button
-          class="pf-btn pf-btn--primary"
-          type="button"
-          [disabled]="!selectedFiles().length || converting()"
-          (click)="convert()"
-        >
-          @if (converting()) {
-            <i class="fa-solid fa-spinner fa-spin me-2"></i> Converting…
-          } @else {
-            <i class="fa-solid fa-arrows-rotate me-2"></i> Convert
-          }
-        </button>
-      </div>
     </div>
 
-    <p class="tool-page__privacy">
-      <i class="fa-solid fa-lock"></i> Files never leave your device.
-    </p>
+    <!-- Symmetric Bottom Trust Strip -->
+    <div class="tool-trust-strip">
+      <div class="tool-trust-item">
+        <i class="fa-solid fa-shield-halved"></i>
+        <div>
+          <strong>100% Client-Side</strong>
+          <span>Conversion takes place in browser memory only</span>
+        </div>
+      </div>
+      <div class="tool-trust-item">
+        <i class="fa-solid fa-bolt"></i>
+        <div>
+          <strong>WASM OCR &amp; Docx Engine</strong>
+          <span>Fast, accurate local text and document generation</span>
+        </div>
+      </div>
+      <div class="tool-trust-item">
+        <i class="fa-solid fa-infinity"></i>
+        <div>
+          <strong>Free &amp; Unlimited</strong>
+          <span>No file counts, no subscription, no watermarks</span>
+        </div>
+      </div>
+    </div>
   </div>
 </section>

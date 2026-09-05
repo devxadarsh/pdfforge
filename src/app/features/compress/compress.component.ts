@@ -49,6 +49,11 @@ export class CompressComponent {
     }
   }
 
+  clearFile(): void {
+    this.loadedFile.set(null);
+    this.result.set(null);
+  }
+
   async compress(): Promise<void> {
     const file = this.loadedFile();
     if (!file) return;

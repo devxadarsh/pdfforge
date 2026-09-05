@@ -54,6 +54,16 @@ export const routes: Routes = [
         title: 'Convert PDF — PDFForge',
       },
       {
+        path: 'word',
+        redirectTo: 'convert',
+        pathMatch: 'full',
+      },
+      {
+        path: 'convert/word',
+        redirectTo: 'convert',
+        pathMatch: 'full',
+      },
+      {
         path: 'security/protect',
         loadComponent: () =>
           import('./features/security/security.component').then(

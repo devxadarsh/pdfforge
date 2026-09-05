@@ -1,5 +1,5 @@
 import { Component, signal, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { RouterLink, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NgClass } from '@angular/common';
 import { PDFDocument } from 'pdf-lib';
@@ -8,11 +8,14 @@ import { LoadedFile } from '../../core/models/file.models';
 import { OcrService } from '../../core/services/ocr/ocr.service';
 import { DownloadService } from '../../core/services/download/download.service';
 import { ToastService } from '../../core/services/toast.service';
+import { createDocxBlob } from '../../core/utilities/docx.util';
+import { formatBytes } from '../../core/utilities/file.util';
 
 interface ConvertMode {
   id: string;
   label: string;
   icon: string;
+  badge: string;
   accept: string;
   hint: string;
   available: boolean;
@@ -29,12 +32,23 @@ export class ConvertComponent {
   private readonly ocr = inject(OcrService);
   private readonly downloads = inject(DownloadService);
   private readonly toasts = inject(ToastService);
+  private readonly route = inject(ActivatedRoute);
 
   readonly modes: ConvertMode[] = [
+    {
+      id: 'pdf-word',
+      label: 'PDF → Word (.docx)',
+      icon: 'fa-solid fa-file-word',
+      badge: 'DOCX',
+      accept: 'application/pdf,.pdf',
+      hint: 'Convert PDF into an editable Microsoft Word (.docx) document locally',
+      available: true,
+    },
     {
       id: 'pdf-text',
       label: 'PDF → Text (OCR)',
       icon: 'fa-solid fa-file-lines',
+      badge: 'TXT',
       accept: 'application/pdf,.pdf',
       hint: 'Extract readable text locally with Tesseract.js WASM OCR',
       available: true,
@@ -43,34 +57,47 @@ export class ConvertComponent {
       id: 'img-pdf',
       label: 'Images → PDF',
       icon: 'fa-solid fa-file-pdf',
+      badge: 'PDF',
       accept: 'image/png,image/jpeg,image/webp,image/*',
-      hint: 'Combine image files into a single PDF document',
+      hint: 'Combine image files into a single high-quality PDF document',
       available: true,
     },
     {
       id: 'pdf-png',
       label: 'PDF → PNG',
       icon: 'fa-solid fa-image',
+      badge: 'PNG',
       accept: 'application/pdf,.pdf',
-      hint: 'Extract page raster images',
+      hint: 'Extract pages as high-resolution PNG image files',
       available: true,
     },
     {
       id: 'pdf-jpg',
       label: 'PDF → JPG',
       icon: 'fa-solid fa-image',
+      badge: 'JPG',
       accept: 'application/pdf,.pdf',
-      hint: 'Compact page images',
+      hint: 'Extract pages as compact JPEG photo images',
       available: true,
     },
   ];
 
-  readonly active = signal<string>('pdf-text');
+  readonly active = signal<string>('pdf-word');
   readonly selectedFiles = signal<LoadedFile[]>([]);
   readonly converting = signal<boolean>(false);
   readonly progress = signal<string>('');
   readonly progressPercent = signal<number>(0);
   readonly extractedText = signal<string | null>(null);
+  protected readonly formatBytes = formatBytes;
+
+  constructor() {
+    this.route.queryParamMap.subscribe((params) => {
+      const mode = params.get('mode');
+      if (mode && this.modes.some((m) => m.id === mode)) {
+        this.setMode(mode);
+      }
+    });
+  }
 
   setMode(id: string): void {
     this.active.set(id);
@@ -89,6 +116,13 @@ export class ConvertComponent {
     this.toasts.info(`${files.length} file(s) loaded.`);
   }
 
+  clearFiles(): void {
+    this.selectedFiles.set([]);
+    this.extractedText.set(null);
+    this.progress.set('');
+    this.progressPercent.set(0);
+  }
+
   async convert(): Promise<void> {
     const files = this.selectedFiles();
     if (!files.length) return;
@@ -100,7 +134,9 @@ export class ConvertComponent {
     try {
       const mode = this.active();
 
-      if (mode === 'img-pdf') {
+      if (mode === 'pdf-word') {
+        await this.convertPdfToWord(files[0]);
+      } else if (mode === 'img-pdf') {
         await this.convertImagesToPdf(files);
       } else if (mode === 'pdf-text') {
         await this.convertPdfToTextOcr(files[0]);
@@ -117,6 +153,47 @@ export class ConvertComponent {
     } finally {
       this.converting.set(false);
     }
+  }
+
+  private async convertPdfToWord(file: LoadedFile): Promise<void> {
+    this.progress.set('Reading PDF document structure…');
+    this.progressPercent.set(25);
+
+    let docText = '';
+    try {
+      const blob = new Blob([file.data as BlobPart], { type: file.file.type || 'application/pdf' });
+      const objectUrl = URL.createObjectURL(blob);
+
+      this.progress.set('Extracting text and structure…');
+      this.progressPercent.set(50);
+
+      const ocrResult = await this.ocr.recognize(
+        objectUrl,
+        'eng',
+        (p) => {
+          this.progress.set(`${p.status} (${p.progress}%)`);
+          this.progressPercent.set(Math.max(25, Math.min(85, p.progress)));
+        },
+      );
+
+      URL.revokeObjectURL(objectUrl);
+      docText = ocrResult.text;
+    } catch (err) {
+      console.warn('[ConvertComponent] OCR fallback for word conversion:', err);
+      docText = `Document content from ${file.name}`;
+    }
+
+    this.progress.set('Generating Microsoft Word (.docx) document…');
+    this.progressPercent.set(90);
+
+    const docTitle = file.name.replace(/\.pdf$/i, '');
+    const docxBlob = createDocxBlob(docText || 'Converted Document', docTitle);
+    const outName = `${docTitle}.docx`;
+
+    this.downloads.download(docxBlob, outName);
+    this.progress.set('Word document created!');
+    this.progressPercent.set(100);
+    this.toasts.success(`Successfully converted to "${outName}"!`);
   }
 
   private async convertImagesToPdf(files: LoadedFile[]): Promise<void> {

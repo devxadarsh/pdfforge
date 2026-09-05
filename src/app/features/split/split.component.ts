@@ -1,6 +1,7 @@
 import { Component, signal, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { DecimalPipe } from '@angular/common';
 import { PDFDocument } from 'pdf-lib';
 import { FileDropzoneComponent } from '../../shared/components/dropzone/file-dropzone.component';
 import { LoadedFile } from '../../core/models/file.models';
@@ -13,7 +14,7 @@ import { formatBytes } from '../../core/utilities/file.util';
 @Component({
   selector: 'app-split',
   standalone: true,
-  imports: [RouterLink, FormsModule, FileDropzoneComponent],
+  imports: [RouterLink, FormsModule, DecimalPipe, FileDropzoneComponent],
   templateUrl: './split.component.html',
   styleUrl: './split.component.scss',
 })
@@ -31,6 +32,23 @@ export class SplitComponent {
 
   setMode(m: 'every' | 'range'): void {
     this.mode.set(m);
+  }
+
+  applyPreset(type: 'all' | 'odd' | 'even' | 'first-half'): void {
+    const total = this.pageCount();
+    if (total <= 0) return;
+    if (type === 'all') {
+      this.range.set(`1-${total}`);
+    } else if (type === 'odd') {
+      const odds = Array.from({ length: total }, (_, i) => i + 1).filter((n) => n % 2 !== 0);
+      this.range.set(odds.join(', '));
+    } else if (type === 'even') {
+      const evens = Array.from({ length: total }, (_, i) => i + 1).filter((n) => n % 2 === 0);
+      this.range.set(evens.join(', '));
+    } else if (type === 'first-half') {
+      const mid = Math.max(1, Math.ceil(total / 2));
+      this.range.set(`1-${mid}`);
+    }
   }
 
   async onFileLoaded(files: LoadedFile[]): Promise<void> {

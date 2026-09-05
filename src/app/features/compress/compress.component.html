@@ -1,78 +1,195 @@
-<section class="tool-page">
+<section class="tool-page tool-page--compress">
   <div class="pf-container">
-    <header class="tool-page__header">
-      <a class="tool-page__back" routerLink="/tools"><i class="fa-solid fa-arrow-left"></i> Tools</a>
-      <h1><i class="fa-solid fa-compress tool-page__icon"></i> Compress PDF</h1>
-      <p class="pf-text-muted">
-        Shrink PDF size with honest, local compression. Your file stays private.
+    <!-- Symmetric Tool Header -->
+    <header class="tool-header">
+      <div class="tool-header__top">
+        <a class="tool-back-btn" routerLink="/tools">
+          <i class="fa-solid fa-arrow-left"></i>
+          <span>All Tools</span>
+        </a>
+        <span class="tool-cat-pill tool-cat-pill--optimize">
+          <i class="fa-solid fa-compress"></i>
+          <span>Optimize Suite</span>
+        </span>
+      </div>
+
+      <h1 class="tool-header__title">Compress PDF Document</h1>
+      <p class="tool-header__subtitle">
+        Reduce PDF file size locally with intelligent stream compression and image optimization while keeping text sharp.
       </p>
     </header>
 
     <div class="tool-page__body">
-      <app-file-dropzone
-        [multiple]="false"
-        label="Add a PDF to compress"
-        (filesLoaded)="onFileLoaded($event)"
-      />
-
-      <div class="compress-levels">
-        @for (l of levels; track l.value) {
-          <button
-            type="button"
-            class="compress-level"
-            [class.compress-level--active]="level() === l.value"
-            (click)="setLevel(l.value)"
-          >
-            <span class="compress-level__radio"></span>
-            <span class="compress-level__label">{{ l.label }}</span>
-            <span class="compress-level__hint pf-text-muted">{{ l.hint }}</span>
-          </button>
-        }
-      </div>
-
-      @if (result()) {
-        <div class="compress-result my-3 p-3 rounded border bg-white">
-          <div class="d-flex justify-content-between align-items-center">
-            <div>
-              <span class="text-muted small d-block">Original Size</span>
-              <strong>{{ formatBytes(result()!.originalBytes) }}</strong>
+      <!-- Symmetric Selection Landing Card (When no file is loaded) -->
+      @if (!loadedFile()) {
+        <div class="pf-landing">
+          <div class="pf-landing-card">
+            <div class="pf-landing-badge pf-landing-badge--optimize">
+              <i class="fa-solid fa-compress"></i>
             </div>
-            <i class="fa-solid fa-arrow-right text-muted mx-3"></i>
-            <div>
-              <span class="text-muted small d-block">Compressed Size</span>
-              <strong class="text-success">{{ formatBytes(result()!.compressedBytes) }}</strong>
+            <h2 class="pf-landing-title">Select a PDF to Compress</h2>
+            <p class="pf-landing-subtitle">
+              Choose or drop a PDF file to reduce its size for faster emailing, sharing, and storage.
+            </p>
+
+            <div class="pf-landing-dropzone">
+              <app-file-dropzone
+                [multiple]="false"
+                label="Choose or Drop a PDF File"
+                (filesLoaded)="onFileLoaded($event)"
+              />
             </div>
-            <div class="ms-auto">
-              <span class="badge bg-success p-2 fs-6">-{{ result()!.ratio }}%</span>
+
+            <div class="pf-landing-privacy">
+              <i class="fa-solid fa-shield-halved"></i>
+              <span><strong>100% Private Sandbox</strong> · Files never leave your local device.</span>
+            </div>
+
+            <div class="pf-landing-features">
+              <span class="pf-feat-pill"><i class="fa-solid fa-gauge-high"></i> 3 Compression Levels</span>
+              <span class="pf-feat-pill"><i class="fa-solid fa-file-shield"></i> Retains Text Clarity</span>
+              <span class="pf-feat-pill"><i class="fa-solid fa-award"></i> Honest Sizing</span>
+              <span class="pf-feat-pill"><i class="fa-solid fa-bolt"></i> Local WASM Engine</span>
             </div>
           </div>
         </div>
-      }
+      } @else {
+        <!-- Loaded File Workspace -->
+        <div class="compress-workspace">
+          <!-- Loaded Document Summary -->
+          <div class="compress-file-card">
+            <div class="compress-file-card__left">
+              <i class="fa-solid fa-file-pdf compress-file-card__icon"></i>
+              <div class="compress-file-card__meta">
+                <span class="compress-file-card__name">{{ loadedFile()!.name }}</span>
+                <span class="compress-file-card__sub pf-text-muted">
+                  Original Size: <strong>{{ formatBytes(loadedFile()!.sizeBytes) }}</strong>
+                </span>
+              </div>
+            </div>
+            <button
+              class="pf-btn pf-btn--ghost compress-file-card__change"
+              type="button"
+              (click)="clearFile()"
+              title="Select a different file"
+            >
+              <i class="fa-solid fa-arrow-rotate-left"></i>
+              <span>Change File</span>
+            </button>
+          </div>
 
-      <div class="tool-page__footer">
-        <button
-          class="pf-btn pf-btn--primary"
-          type="button"
-          [disabled]="!loadedFile() || compressing()"
-          (click)="compress()"
-        >
-          @if (compressing()) {
-            <i class="fa-solid fa-spinner fa-spin me-2"></i> Compressing…
-          } @else {
-            <i class="fa-solid fa-compress me-2"></i> Compress PDF
+          <!-- Compression Levels Selector -->
+          <div class="compress-section-title">
+            <span class="pf-label-caps">Select Compression Strength</span>
+          </div>
+
+          <div class="compress-levels-grid">
+            @for (l of levels; track l.value) {
+              <button
+                type="button"
+                class="compress-level-card"
+                [class.compress-level-card--active]="level() === l.value"
+                (click)="setLevel(l.value)"
+              >
+                <div class="compress-level-card__header">
+                  <div class="compress-level-card__radio">
+                    <div class="compress-level-card__radio-dot"></div>
+                  </div>
+                  <span class="compress-level-card__tag" [class.compress-level-card__tag--popular]="l.value === 'recommended'">
+                    @if (l.value === 'recommended') {
+                      <i class="fa-solid fa-star"></i> Recommended
+                    } @else if (l.value === 'strong') {
+                      Strong
+                    } @else {
+                      Maximum
+                    }
+                  </span>
+                </div>
+
+                <div class="compress-level-card__body">
+                  <h3 class="compress-level-card__title">{{ l.label }}</h3>
+                  <p class="compress-level-card__hint">{{ l.hint }}</p>
+                </div>
+              </button>
+            }
+          </div>
+
+          <!-- Compression Result Feedback (When available) -->
+          @if (result()) {
+            <div class="compress-result-card">
+              <div class="compress-result-card__header">
+                <i class="fa-solid fa-circle-check text-success"></i>
+                <span>Compression Completed Successfully!</span>
+              </div>
+              <div class="compress-result-card__metrics">
+                <div class="compress-metric">
+                  <span class="compress-metric__label">Original Size</span>
+                  <span class="compress-metric__val">{{ formatBytes(result()!.originalBytes) }}</span>
+                </div>
+                <div class="compress-result-card__arrow">
+                  <i class="fa-solid fa-arrow-right"></i>
+                </div>
+                <div class="compress-metric">
+                  <span class="compress-metric__label">Compressed Size</span>
+                  <span class="compress-metric__val compress-metric__val--success">
+                    {{ formatBytes(result()!.compressedBytes) }}
+                  </span>
+                </div>
+                <div class="compress-result-card__badge">
+                  <span class="savings-pill">-{{ result()!.ratio }}% Smaller</span>
+                </div>
+              </div>
+            </div>
           }
-        </button>
-      </div>
 
-      <p class="compress-note pf-text-muted">
-        Note: browser-side compression relies on re-encoding images and
-        object streams. Some PDFs (e.g. already-optimized or scan-heavy) may
-        see limited reduction — we will never report a fake size.
-      </p>
+          <!-- Action Button -->
+          <div class="tool-action-bar">
+            <button
+              class="pf-btn pf-btn--primary pf-btn--xl w-100"
+              type="button"
+              [disabled]="compressing()"
+              (click)="compress()"
+            >
+              @if (compressing()) {
+                <i class="fa-solid fa-spinner fa-spin"></i>
+                <span>Compressing Document…</span>
+              } @else {
+                <i class="fa-solid fa-compress"></i>
+                <span>Compress &amp; Download PDF</span>
+              }
+            </button>
+            <p class="compress-note pf-text-muted">
+              <i class="fa-solid fa-circle-info"></i>
+              <span>Browser-side compression re-encodes embedded images and optimizes internal streams. Honest metrics are reported without fabrication.</span>
+            </p>
+          </div>
+        </div>
+      }
     </div>
 
-    <p class="tool-page__privacy">
-      <i class="fa-solid fa-lock"></i> Files never leave your device.
-    </p>
+    <!-- Symmetric Bottom Trust Strip -->
+    <div class="tool-trust-strip">
+      <div class="tool-trust-item">
+        <i class="fa-solid fa-shield-halved"></i>
+        <div>
+          <strong>100% Client-Side</strong>
+          <span>No documents are uploaded to cloud servers</span>
+        </div>
+      </div>
+      <div class="tool-trust-item">
+        <i class="fa-solid fa-bolt"></i>
+        <div>
+          <strong>Honest Compression</strong>
+          <span>Real-time byte size reduction with zero mock data</span>
+        </div>
+      </div>
+      <div class="tool-trust-item">
+        <i class="fa-solid fa-infinity"></i>
+        <div>
+          <strong>Free &amp; Unlimited</strong>
+          <span>Compress as many PDF files as needed without limits</span>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
