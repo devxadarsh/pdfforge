@@ -322,6 +322,12 @@
   flex-wrap: wrap;
 }
 
+.editor__toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .editor__toolset {
   display: flex;
   gap: 2px;
@@ -997,12 +1003,17 @@
 }
 
 .editor__pagenav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid var(--pf-outline-variant);
+  background: var(--pf-surface-container-lowest);
   border: none;
-  background: transparent;
   color: var(--pf-on-surface);
   cursor: pointer;
   border-radius: var(--pf-radius);
-  padding: 2px 6px;
   transition: background-color 0.15s ease;
 
   &:hover {
@@ -1011,11 +1022,15 @@
 }
 
 .editor__zoom-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  padding: 0 8px;
   border: 1px solid var(--pf-outline-variant);
   background: var(--pf-surface-container);
   color: var(--pf-on-surface);
   border-radius: var(--pf-radius);
-  padding: 3px 6px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -1024,12 +1039,17 @@
 }
 
 .editor__chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  padding: 0 10px;
   border: 1px solid var(--pf-outline-variant);
   background: var(--pf-surface-container);
   color: var(--pf-on-surface);
   border-radius: var(--pf-radius-full);
-  padding: 3px 8px;
   font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
 }
 

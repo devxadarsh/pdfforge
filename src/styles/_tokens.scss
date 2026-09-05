@@ -86,6 +86,22 @@ $pf-radius-full: 9999px;
   --pf-shadow-2: 0 4px 6px rgba(0, 0, 0, 0.05);
   --pf-shadow-3: 0 10px 15px rgba(0, 0, 0, 0.1);
 
+  // Categories
+  --pf-cat-edit: #2563eb;
+  --pf-cat-edit-bg: rgba(37, 99, 235, 0.08);
+  --pf-cat-organize: #059669;
+  --pf-cat-organize-bg: rgba(5, 150, 105, 0.08);
+  --pf-cat-optimize: #d97706;
+  --pf-cat-optimize-bg: rgba(217, 119, 6, 0.08);
+  --pf-cat-security: #7c3aed;
+  --pf-cat-security-bg: rgba(124, 58, 237, 0.08);
+
+  // Modern Accents & Gradients
+  --pf-gradient-brand: linear-gradient(135deg, #004ac6 0%, #2563eb 50%, #4b41e1 100%);
+  --pf-gradient-hero-text: linear-gradient(135deg, #004ac6 0%, #2563eb 60%, #7c3aed 100%);
+  --pf-card-border-hover: rgba(37, 99, 235, 0.35);
+  --pf-card-glow: 0 12px 32px rgba(37, 99, 235, 0.08);
+
   // Typography
   --pf-font-base: #{$pf-font-base};
   --pf-font-mono: #{$pf-font-mono};
@@ -140,4 +156,20 @@ $pf-radius-full: 9999px;
   --pf-shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
   --pf-shadow-2: 0 4px 6px rgba(0, 0, 0, 0.5);
   --pf-shadow-3: 0 10px 15px rgba(0, 0, 0, 0.6);
+
+  // Categories (Dark)
+  --pf-cat-edit: #60a5fa;
+  --pf-cat-edit-bg: rgba(96, 165, 250, 0.12);
+  --pf-cat-organize: #34d399;
+  --pf-cat-organize-bg: rgba(52, 211, 153, 0.12);
+  --pf-cat-optimize: #fbbf24;
+  --pf-cat-optimize-bg: rgba(251, 191, 36, 0.12);
+  --pf-cat-security: #a78bfa;
+  --pf-cat-security-bg: rgba(167, 139, 250, 0.12);
+
+  // Modern Accents & Gradients (Dark)
+  --pf-gradient-brand: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #6366f1 100%);
+  --pf-gradient-hero-text: linear-gradient(135deg, #60a5fa 0%, #93c5fd 50%, #c4b5fd 100%);
+  --pf-card-border-hover: rgba(96, 165, 250, 0.45);
+  --pf-card-glow: 0 12px 32px rgba(59, 130, 246, 0.15);
 }

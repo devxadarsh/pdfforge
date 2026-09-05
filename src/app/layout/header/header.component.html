@@ -1,68 +1,106 @@
 <header class="pf-header">
   <div class="pf-header__inner pf-container">
-    <a class="pf-brand" routerLink="/" (click)="closeMore()" aria-label="PDFForge home">
+    <!-- Brand Logo -->
+    <a class="pf-brand" routerLink="/" (click)="closeAllMenus()" aria-label="PDFForge home">
       <span class="pf-brand__mark"><i class="fa-solid fa-file-pdf"></i></span>
       <span class="pf-brand__name">PDF<span class="pf-brand__accent">Forge</span></span>
     </a>
 
-    <nav class="pf-nav-primary" aria-label="Primary">
+    <!-- Desktop Navigation Bar -->
+    <nav class="pf-nav-primary" aria-label="Primary navigation">
       <ul class="pf-nav-primary__list">
-        @for (item of primaryNav; track item.path) {
-          <li class="pf-nav-primary__item">
-            <a
-              class="pf-nav__link"
-              [routerLink]="item.path"
-              routerLinkActive="pf-nav__link--active"
-              [routerLinkActiveOptions]="{ exact: item.path === '/' }"
-              (click)="closeMore()"
-            >
-              <i class="pf-nav__icon" [ngClass]="item.icon"></i>
-              <span>{{ item.label }}</span>
-            </a>
-          </li>
-        }
-        <li class="pf-more">
-          <button
-            class="pf-more__btn"
-            type="button"
-            (click)="toggleMore()"
-            [attr.aria-expanded]="moreOpen()"
-            aria-haspopup="menu"
+        <!-- Direct Link: Home -->
+        <li class="pf-nav-primary__item">
+          <a
+            class="pf-nav__link"
+            routerLink="/"
+            routerLinkActive="pf-nav__link--active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            (click)="closeAllMenus()"
           >
-            More
-            <i class="fa-solid" [ngClass]="moreOpen() ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
-          </button>
-          @if (moreOpen()) {
-            <div class="pf-more__menu" role="menu">
-              @for (g of navGroups; track g.title) {
-                <div class="pf-more__group">
-                  @if (g.title) {
-                    <div class="pf-more__group-title">{{ g.title }}</div>
-                  }
-                  @for (item of g.items; track item.path) {
+            <i class="pf-nav__icon fa-solid fa-house"></i>
+            <span>Home</span>
+          </a>
+        </li>
+
+        <!-- Direct Link: Editor -->
+        <li class="pf-nav-primary__item">
+          <a
+            class="pf-nav__link"
+            routerLink="/editor"
+            routerLinkActive="pf-nav__link--active"
+            (click)="closeAllMenus()"
+          >
+            <i class="pf-nav__icon fa-solid fa-pen-to-square"></i>
+            <span>Editor</span>
+          </a>
+        </li>
+
+        <!-- Category Dropdown Menus: Organize, Optimize, Security, More -->
+        @for (cat of categoryMenus; track cat.id) {
+          <li class="pf-nav-dropdown" [class.pf-nav-dropdown--open]="isOpen(cat.id)">
+            <button
+              type="button"
+              class="pf-nav-dropdown__btn"
+              [class.pf-nav-dropdown__btn--active]="isOpen(cat.id)"
+              (click)="toggleMenu(cat.id)"
+              [attr.aria-expanded]="isOpen(cat.id)"
+              aria-haspopup="menu"
+            >
+              <i class="pf-nav__icon" [ngClass]="cat.icon"></i>
+              <span>{{ cat.label }}</span>
+              <i class="fa-solid fa-chevron-down pf-nav-dropdown__chevron" [class.pf-nav-dropdown__chevron--flipped]="isOpen(cat.id)"></i>
+            </button>
+
+            @if (isOpen(cat.id)) {
+              <div
+                class="pf-nav-dropdown__menu"
+                [ngClass]="'pf-nav-dropdown__menu--' + cat.categoryTheme"
+                role="menu"
+                [attr.aria-label]="cat.label + ' menu'"
+              >
+                <div class="pf-nav-dropdown__header">
+                  <span class="pf-nav-dropdown__category-title">{{ cat.label }} Tools</span>
+                </div>
+
+                <div class="pf-nav-dropdown__items">
+                  @for (item of cat.items; track item.path) {
                     <a
-                      class="pf-more__item"
+                      class="pf-tool-item"
                       role="menuitem"
                       [routerLink]="item.path"
-                      (click)="closeMore()"
+                      (click)="closeAllMenus()"
                     >
-                      <i class="pf-more__item-icon" [ngClass]="item.icon"></i>
-                      <span>{{ item.label }}</span>
+                      <div class="pf-tool-item__icon" [ngClass]="'pf-tool-item__icon--' + cat.categoryTheme">
+                        <i [ngClass]="item.icon"></i>
+                      </div>
+                      <div class="pf-tool-item__body">
+                        <div class="pf-tool-item__title-row">
+                          <span class="pf-tool-item__title">{{ item.label }}</span>
+                          @if (item.badge) {
+                            <span class="pf-tool-item__badge">{{ item.badge }}</span>
+                          }
+                        </div>
+                        <span class="pf-tool-item__desc">{{ item.description }}</span>
+                      </div>
+                      <i class="fa-solid fa-chevron-right pf-tool-item__arrow"></i>
                     </a>
                   }
                 </div>
-              }
-            </div>
-          }
-        </li>
+              </div>
+            }
+          </li>
+        }
       </ul>
     </nav>
 
+    <!-- Header Actions (Right) -->
     <div class="pf-header__actions">
       <span class="pf-privacy-pill" title="All processing happens locally in your browser.">
         <i class="fa-solid fa-shield-halved"></i>
         <span class="pf-privacy-pill__text">Stays on your device</span>
       </span>
+
       <button
         class="pf-icon-btn"
         type="button"
@@ -72,13 +110,71 @@
       >
         <i class="fa-solid" [ngClass]="themeIcon()"></i>
       </button>
-      <button class="pf-btn pf-btn--primary" type="button" (click)="openPdf()">
-        <i class="fa-solid fa-folder-open"></i> Open PDF
+
+      <button class="pf-btn pf-btn--primary pf-header__open-btn" type="button" (click)="openPdf()">
+        <i class="fa-solid fa-folder-open"></i>
+        <span>Open PDF</span>
+      </button>
+
+      <!-- Mobile Hamburger Toggle -->
+      <button
+        class="pf-mobile-toggle"
+        type="button"
+        (click)="toggleMobileMenu()"
+        [attr.aria-expanded]="mobileMenuOpen()"
+        aria-label="Toggle navigation menu"
+      >
+        <i class="fa-solid" [ngClass]="mobileMenuOpen() ? 'fa-xmark' : 'fa-bars'"></i>
       </button>
     </div>
   </div>
 
-  @if (moreOpen()) {
-    <div class="pf-more__backdrop" (click)="closeMore()"></div>
+  <!-- Transparent Backdrop to dismiss active dropdowns -->
+  @if (activeMenu() !== null) {
+    <div class="pf-dropdown-backdrop" (click)="closeAllMenus()"></div>
+  }
+
+  <!-- Mobile Drawer Menu (Responsive) -->
+  @if (mobileMenuOpen()) {
+    <div class="pf-mobile-drawer">
+      <div class="pf-container pf-mobile-drawer__content">
+        <div class="pf-mobile-nav__direct">
+          <a class="pf-mobile-nav__link" routerLink="/" (click)="closeAllMenus()">
+            <i class="fa-solid fa-house"></i>
+            <span>Home</span>
+          </a>
+          <a class="pf-mobile-nav__link" routerLink="/editor" (click)="closeAllMenus()">
+            <i class="fa-solid fa-pen-to-square"></i>
+            <span>PDF Editor</span>
+          </a>
+          <a class="pf-mobile-nav__link" routerLink="/tools" (click)="closeAllMenus()">
+            <i class="fa-solid fa-toolbox"></i>
+            <span>All Tools Directory</span>
+          </a>
+        </div>
+
+        @for (cat of categoryMenus; track cat.id) {
+          <div class="pf-mobile-category">
+            <div class="pf-mobile-category__title">
+              <i [ngClass]="cat.icon"></i>
+              <span>{{ cat.label }}</span>
+            </div>
+            <div class="pf-mobile-category__items">
+              @for (item of cat.items; track item.path) {
+                <a class="pf-mobile-item" [routerLink]="item.path" (click)="closeAllMenus()">
+                  <i [ngClass]="item.icon"></i>
+                  <div class="pf-mobile-item__info">
+                    <span class="pf-mobile-item__title">{{ item.label }}</span>
+                    <span class="pf-mobile-item__desc">{{ item.description }}</span>
+                  </div>
+                </a>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+    <div class="pf-dropdown-backdrop" (click)="closeAllMenus()"></div>
   }
 </header>
+

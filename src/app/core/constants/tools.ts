@@ -143,6 +143,7 @@ export interface ToolCard {
   readonly icon: string;
   readonly path: string;
   readonly badge?: string;
+  readonly category?: 'edit' | 'organize' | 'optimize' | 'security';
 }
 
 export const TOOL_CATEGORIES: ToolCategory[] = [
@@ -158,12 +159,16 @@ export const TOOL_CATEGORIES: ToolCategory[] = [
           'Add text, shapes, highlights, signatures and images. All locally.',
         icon: 'fa-solid fa-pen-to-square',
         path: '/editor',
+        badge: 'Full Studio',
+        category: 'edit',
       },
       {
         title: 'Add Signature',
         description: 'Draw, type, or upload your signature and place it.',
         icon: 'fa-solid fa-signature',
         path: '/signature',
+        badge: 'Sign & Save',
+        category: 'edit',
       },
     ],
   },
@@ -178,12 +183,16 @@ export const TOOL_CATEGORIES: ToolCategory[] = [
         description: 'Combine multiple PDFs into a single document.',
         icon: 'fa-solid fa-object-group',
         path: '/merge',
+        badge: 'Combine Files',
+        category: 'organize',
       },
       {
         title: 'Split PDF',
         description: 'Extract pages or split by range into new files.',
         icon: 'fa-solid fa-scissors',
         path: '/split',
+        badge: 'Page Ranges',
+        category: 'organize',
       },
     ],
   },
@@ -198,12 +207,16 @@ export const TOOL_CATEGORIES: ToolCategory[] = [
         description: 'Shrink file size with honest, local compression.',
         icon: 'fa-solid fa-compress',
         path: '/compress',
+        badge: 'Reduce Size',
+        category: 'optimize',
       },
       {
         title: 'Convert PDF',
         description: 'PDF to PNG/JPG/Text and images back to PDF.',
         icon: 'fa-solid fa-arrows-rotate',
         path: '/convert',
+        badge: 'Multi-Format',
+        category: 'optimize',
       },
     ],
   },
@@ -218,24 +231,32 @@ export const TOOL_CATEGORIES: ToolCategory[] = [
         description: 'Add a password and permission restrictions.',
         icon: 'fa-solid fa-lock',
         path: '/security/protect',
+        badge: 'AES-256',
+        category: 'security',
       },
       {
         title: 'Unlock PDF',
         description: 'Remove a password from a supported PDF.',
         icon: 'fa-solid fa-lock-open',
         path: '/security/unlock',
+        badge: 'Decrypt',
+        category: 'security',
       },
       {
         title: 'Verify & Forensics',
         description: 'Verify digital signatures, check tampering, and inspect revision history.',
         icon: 'fa-solid fa-shield-halved',
         path: '/security/verify',
+        badge: 'Forensics',
+        category: 'security',
       },
       {
         title: 'Edit Metadata',
         description: 'View, edit, or sanitize hidden PDF author and document properties.',
         icon: 'fa-solid fa-circle-info',
         path: '/security/metadata',
+        badge: 'Clean Exif',
+        category: 'security',
       },
     ],
   },

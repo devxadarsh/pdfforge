@@ -1,127 +1,361 @@
+<!-- Hero Section -->
 <section class="hero">
   <div class="pf-container hero__inner">
     <div class="hero__copy">
-      <span class="pf-privacy-pill hero__badge">
-        <i class="fa-solid fa-shield-halved"></i> Privacy-first PDF tools
-      </span>
+      <div class="hero__badge">
+        <span class="hero__badge-pulse"></span>
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>100% Client-Side Engine · Zero Cloud Uploads</span>
+      </div>
+
       <h1 class="hero__title">
-        Edit, merge &amp; secure PDFs —
-        <span class="hero__accent">right in your browser.</span>
+        Professional PDF Studio.
+        <span class="hero__title-accent">Zero Server Uploads.</span>
       </h1>
+
       <p class="hero__subtitle">
-        PDFForge is a free, professional PDF workspace that runs entirely on
-        your device. Your files never leave your browser.
+        Edit, annotate, merge, compress, sign, and inspect PDF files directly inside your browser.
+        Engineered with local WebAssembly for maximum privacy, zero wait queues, and pristine exports.
       </p>
 
       <div class="hero__actions">
-        <button class="pf-btn pf-btn--primary pf-btn--lg" type="button" (click)="openPdf()">
-          <i class="fa-solid fa-folder-open"></i> Open PDF
+        <button class="pf-btn pf-btn--primary pf-btn--xl hero__btn-primary" type="button" (click)="openPdf()">
+          <i class="fa-solid fa-folder-open"></i>
+          <span>Open PDF Document</span>
         </button>
-        <a class="pf-btn pf-btn--ghost pf-btn--lg" routerLink="/tools">
-          <i class="fa-solid fa-toolbox"></i> Explore all tools
+        <a class="pf-btn pf-btn--ghost pf-btn--xl hero__btn-ghost" routerLink="/tools">
+          <i class="fa-solid fa-toolbox"></i>
+          <span>Explore All Tools</span>
         </a>
       </div>
 
-      <ul class="hero__privacy">
+      <ul class="hero__privacy-list">
         @for (p of privacyPoints; track p.text) {
-          <li><i [ngClass]="p.icon"></i> {{ p.text }}</li>
+          <li class="hero__privacy-item">
+            <i [ngClass]="p.icon"></i>
+            <span>{{ p.text }}</span>
+          </li>
         }
       </ul>
     </div>
 
-    <div class="hero__panel" aria-hidden="true">
-      <div class="hero__doc">
-        <div class="hero__doc-bar">
-          <span></span><span></span><span></span>
+    <!-- Interactive Document Studio Showcase Preview -->
+    <div class="hero__showcase-wrapper" aria-hidden="true">
+      <div class="studio-mockup">
+        <!-- Window Chrome Bar -->
+        <div class="studio-mockup__chrome">
+          <div class="studio-mockup__controls">
+            <span class="ctrl ctrl--close"></span>
+            <span class="ctrl ctrl--min"></span>
+            <span class="ctrl ctrl--max"></span>
+          </div>
+          <div class="studio-mockup__title-pill">
+            <i class="fa-solid fa-file-pdf"></i>
+            <span>confidential-agreement.pdf</span>
+          </div>
+          <div class="studio-mockup__status-badge">
+            <span class="dot-online"></span>
+            <span>Local RAM</span>
+          </div>
         </div>
-        <div class="hero__doc-lines">
-          <span style="width: 80%"></span>
-          <span style="width: 95%"></span>
-          <span style="width: 60%"></span>
-          <span style="width: 88%"></span>
-          <span style="width: 72%"></span>
+
+        <!-- Studio Mini Toolbar -->
+        <div class="studio-mockup__toolbar">
+          <div class="toolbar-group">
+            <span class="tool-btn tool-btn--active" title="Select"><i class="fa-solid fa-arrow-pointer"></i></span>
+            <span class="tool-btn" title="Hand"><i class="fa-solid fa-hand"></i></span>
+            <span class="tool-separator"></span>
+            <span class="tool-btn" title="Add Text"><i class="fa-solid fa-font"></i></span>
+            <span class="tool-btn tool-btn--highlight" title="Highlight"><i class="fa-solid fa-highlighter"></i></span>
+            <span class="tool-btn" title="Pen"><i class="fa-solid fa-pen"></i></span>
+            <span class="tool-btn" title="Shapes"><i class="fa-solid fa-shapes"></i></span>
+            <span class="tool-btn tool-btn--sig" title="Signature"><i class="fa-solid fa-signature"></i></span>
+          </div>
+          <div class="toolbar-group toolbar-group--right">
+            <span class="tool-pill">100%</span>
+            <span class="tool-btn"><i class="fa-solid fa-magnifying-glass"></i></span>
+          </div>
         </div>
-        <div class="hero__doc-tools">
-          <i class="fa-solid fa-font"></i>
-          <i class="fa-solid fa-highlighter"></i>
-          <i class="fa-solid fa-shapes"></i>
-          <i class="fa-solid fa-signature"></i>
+
+        <!-- Canvas Document Preview -->
+        <div class="studio-mockup__canvas">
+          <div class="mockup-page">
+            <div class="mockup-page__header">
+              <div class="mockup-brand-mark">
+                <i class="fa-solid fa-building"></i>
+              </div>
+              <div class="mockup-header-text">
+                <div class="mockup-line mockup-line--h1"></div>
+                <div class="mockup-line mockup-line--sub"></div>
+              </div>
+            </div>
+
+            <div class="mockup-page__divider"></div>
+
+            <div class="mockup-page__body">
+              <div class="mockup-line mockup-line--full"></div>
+              <div class="mockup-line mockup-line--90"></div>
+              <div class="mockup-line mockup-line--highlight">
+                <span class="highlight-text">“All confidential information remains local to client hardware.”</span>
+              </div>
+              <div class="mockup-line mockup-line--full"></div>
+              <div class="mockup-line mockup-line--75"></div>
+            </div>
+
+            <!-- Authentic Signature Stamp -->
+            <div class="mockup-stamp">
+              <div class="mockup-stamp__seal">
+                <i class="fa-solid fa-shield-check"></i>
+              </div>
+              <div class="mockup-stamp__details">
+                <span class="mockup-stamp__sig-script">Adarsh Pandey</span>
+                <span class="mockup-stamp__label">VERIFIED CLIENT-SIDE SIGNATURE</span>
+                <span class="mockup-stamp__code">SHA-256: 4f8a...9c2d · 2026-09-05</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Floating Showcase Badges -->
+        <div class="floating-badge floating-badge--top">
+          <div class="floating-badge__icon floating-badge__icon--speed">
+            <i class="fa-solid fa-bolt"></i>
+          </div>
+          <div class="floating-badge__text">
+            <strong>12ms Engine</strong>
+            <span>Multi-thread WASM</span>
+          </div>
+        </div>
+
+        <div class="floating-badge floating-badge--bottom">
+          <div class="floating-badge__icon floating-badge__icon--privacy">
+            <i class="fa-solid fa-lock"></i>
+          </div>
+          <div class="floating-badge__text">
+            <strong>Zero Cloud Data</strong>
+            <span>Device Sandbox</span>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<section class="quickstart">
-  <div class="pf-container quickstart__inner">
-    <app-file-dropzone
-      (filesLoaded)="onFilesLoaded($event)"
-    ></app-file-dropzone>
-  </div>
-</section>
-
-<section class="howitworks">
+<!-- Stats & Trust Ribbon -->
+<section class="stats-ribbon">
   <div class="pf-container">
-    <h2 class="section-title">How it works</h2>
-    <div class="howitworks__grid">
-      @for (s of steps; track s.title) {
-        <div class="howitworks__step pf-card">
-          <span class="howitworks__icon"><i [ngClass]="s.icon"></i></span>
-          <h3>{{ s.title }}</h3>
-          <p class="pf-text-muted">{{ s.text }}</p>
+    <div class="stats-ribbon__grid">
+      @for (st of stats; track st.label) {
+        <div class="stats-ribbon__item">
+          <span class="stats-ribbon__value">{{ st.value }}</span>
+          <span class="stats-ribbon__label">{{ st.label }}</span>
         </div>
       }
     </div>
   </div>
 </section>
 
-<section class="tools">
+<!-- Quickstart Dropzone Area -->
+<section class="quickstart-section">
   <div class="pf-container">
-    <div class="tools__head">
-      <h2 class="section-title">Everything you need</h2>
-      <p class="pf-text-muted">
-        A complete PDF toolkit — no installs, no accounts, no uploads.
+    <div class="quickstart-card">
+      <div class="quickstart-card__header">
+        <span class="quickstart-badge"><i class="fa-solid fa-wand-magic-sparkles"></i> Instant Action</span>
+        <h2 class="quickstart-title">Drag &amp; Drop Any PDF to Open</h2>
+        <p class="quickstart-subtitle">
+          Loads instantly into local browser memory. No sign-up, no upload delays.
+        </p>
+      </div>
+      <div class="quickstart-card__dropzone">
+        <app-file-dropzone (filesLoaded)="onFilesLoaded($event)"></app-file-dropzone>
+      </div>
+      <div class="quickstart-card__badges">
+        <span class="qs-badge"><i class="fa-solid fa-file-shield"></i> 100% Private Sandbox</span>
+        <span class="qs-badge"><i class="fa-solid fa-gauge-high"></i> Max RAM Speed</span>
+        <span class="qs-badge"><i class="fa-solid fa-circle-check"></i> High Resolution Export</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Featured Tools Bento Grid -->
+<section class="featured-tools">
+  <div class="pf-container">
+    <div class="section-heading">
+      <span class="section-tag section-tag--primary">
+        <i class="fa-solid fa-toolbox"></i> Popular Workflows
+      </span>
+      <h2 class="section-title">Power Tools for Everyday Documents</h2>
+      <p class="section-subtitle">
+        Everything you need to edit, format, convert, and protect PDFs without leaving your browser.
       </p>
     </div>
 
-    @for (cat of categories; track cat.id) {
-      <div class="tools__category">
-        <div class="tools__category-head">
-          <i class="tools__category-icon" [ngClass]="cat.icon"></i>
-          <div>
-            <h3>{{ cat.title }}</h3>
-            <p class="pf-text-muted">{{ cat.description }}</p>
+    <div class="featured-grid">
+      @for (tool of featuredTools; track tool.title) {
+        <a class="bento-tool-card" [ngClass]="'bento-tool-card--' + tool.category" [routerLink]="tool.path">
+          <div class="bento-tool-card__top">
+            <div class="bento-tool-card__icon">
+              <i [ngClass]="tool.icon"></i>
+            </div>
+            @if (tool.badge) {
+              <span class="bento-tool-card__badge">{{ tool.badge }}</span>
+            }
+          </div>
+
+          <div class="bento-tool-card__content">
+            <h3 class="bento-tool-card__title">{{ tool.title }}</h3>
+            <p class="bento-tool-card__desc">{{ tool.description }}</p>
+          </div>
+
+          <div class="bento-tool-card__action">
+            <span>Launch tool</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </div>
+        </a>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- "Why PDFForge" Architecture Bento Grid -->
+<section class="pillars-section">
+  <div class="pf-container">
+    <div class="section-heading">
+      <span class="section-tag section-tag--success">
+        <i class="fa-solid fa-microchip"></i> Architectural Superiority
+      </span>
+      <h2 class="section-title">Why Traditional PDF Sites Are Obsolete</h2>
+      <p class="section-subtitle">
+        Most web-based PDF editors quietly upload your personal contracts, tax sheets, and confidential reports to remote servers. PDFForge operates on a zero-trust, browser-only architecture.
+      </p>
+    </div>
+
+    <div class="pillars-grid">
+      @for (pillar of pillars; track pillar.title) {
+        <div class="pillar-card">
+          <div class="pillar-card__head">
+            <div class="pillar-card__icon">
+              <i [ngClass]="pillar.icon"></i>
+            </div>
+            <span class="pillar-card__tag">{{ pillar.tag }}</span>
+          </div>
+          <h3 class="pillar-card__title">{{ pillar.title }}</h3>
+          <p class="pillar-card__desc">{{ pillar.description }}</p>
+        </div>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- 3-Step Process Flow -->
+<section class="howitworks-section">
+  <div class="pf-container">
+    <div class="section-heading">
+      <span class="section-tag">
+        <i class="fa-solid fa-diagram-project"></i> Simple &amp; Seamless
+      </span>
+      <h2 class="section-title">How PDFForge Works</h2>
+      <p class="section-subtitle">
+        Three streamlined steps from file selection to perfected export.
+      </p>
+    </div>
+
+    <div class="steps-grid">
+      @for (s of steps; track s.title) {
+        <div class="step-card">
+          <div class="step-card__header">
+            <span class="step-card__num">{{ s.num }}</span>
+            <div class="step-card__icon-box">
+              <i [ngClass]="s.icon"></i>
+            </div>
+          </div>
+          <h3 class="step-card__title">{{ s.title }}</h3>
+          <p class="step-card__text">{{ s.text }}</p>
+        </div>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- All Tools Directory -->
+<section class="tools-directory">
+  <div class="pf-container">
+    <div class="section-heading">
+      <span class="section-tag">
+        <i class="fa-solid fa-list-check"></i> Complete Catalog
+      </span>
+      <h2 class="section-title">Explore All 10 Precision Tools</h2>
+      <p class="section-subtitle">
+        Every capability is engineered to run offline and locally.
+      </p>
+    </div>
+
+    <div class="categories-list">
+      @for (cat of categories; track cat.id) {
+        <div class="category-block">
+          <div class="category-block__header">
+            <div class="category-block__icon" [ngClass]="'category-block__icon--' + cat.id">
+              <i [ngClass]="cat.icon"></i>
+            </div>
+            <div>
+              <h3 class="category-block__title">{{ cat.title }}</h3>
+              <p class="category-block__desc">{{ cat.description }}</p>
+            </div>
+          </div>
+
+          <div class="category-block__grid">
+            @for (item of cat.items; track item.title) {
+              <a class="directory-card" [routerLink]="item.path">
+                <div class="directory-card__icon" [ngClass]="'directory-card__icon--' + cat.id">
+                  <i [ngClass]="item.icon"></i>
+                </div>
+                <div class="directory-card__body">
+                  <div class="directory-card__title-row">
+                    <h4 class="directory-card__title">{{ item.title }}</h4>
+                    @if (item.badge) {
+                      <span class="directory-card__badge">{{ item.badge }}</span>
+                    }
+                  </div>
+                  <p class="directory-card__desc">{{ item.description }}</p>
+                </div>
+                <i class="fa-solid fa-chevron-right directory-card__arrow"></i>
+              </a>
+            }
           </div>
         </div>
-        <div class="tools__grid">
-          @for (item of cat.items; track item.title) {
-            <a class="tool-card pf-card" [routerLink]="item.path">
-              <span class="tool-card__icon"><i [ngClass]="item.icon"></i></span>
-              <div class="tool-card__body">
-                <h4>{{ item.title }}</h4>
-                <p class="pf-text-muted">{{ item.description }}</p>
-              </div>
-              <i class="fa-solid fa-arrow-right tool-card__arrow"></i>
-            </a>
-          }
-        </div>
-      </div>
-    }
+      }
+    </div>
   </div>
 </section>
 
-<section class="privacy-cta">
-  <div class="pf-container privacy-cta__inner">
-    <i class="fa-solid fa-lock privacy-cta__lock"></i>
-    <div>
-      <h2 class="section-title">Your files never leave your device.</h2>
-      <p class="pf-text-muted">
-        All PDF processing happens locally in your browser. We can't see,
-        store, or transmit your documents.
-      </p>
+<!-- Privacy Guarantee CTA Banner -->
+<section class="privacy-banner-section">
+  <div class="pf-container">
+    <div class="privacy-banner">
+      <div class="privacy-banner__glow" aria-hidden="true"></div>
+      <div class="privacy-banner__content">
+        <div class="privacy-banner__shield">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div class="privacy-banner__text">
+          <span class="privacy-banner__pill">100% Privacy Guarantee</span>
+          <h2 class="privacy-banner__title">Your Documents Never Leave Your Device.</h2>
+          <p class="privacy-banner__subtitle">
+            No cloud queues, no server logs, no external APIs. All transformations execute locally inside your browser sandbox.
+          </p>
+        </div>
+        <div class="privacy-banner__actions">
+          <button class="pf-btn pf-btn--primary pf-btn--xl" type="button" (click)="openPdf()">
+            <i class="fa-solid fa-folder-open"></i>
+            <span>Get Started Now</span>
+          </button>
+          <a class="pf-btn pf-btn--ghost pf-btn--xl" routerLink="/tools">
+            <span>View All Tools</span>
+          </a>
+        </div>
+      </div>
     </div>
-    <button class="pf-btn pf-btn--primary pf-btn--lg" type="button" (click)="openPdf()">
-      Get started
-    </button>
   </div>
 </section>
+

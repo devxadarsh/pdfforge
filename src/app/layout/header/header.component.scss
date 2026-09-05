@@ -27,9 +27,9 @@
 .pf-brand__mark {
   display: inline-grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: var(--pf-radius);
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   background-color: var(--pf-primary);
   color: var(--pf-on-primary);
   font-size: 14px;
@@ -39,7 +39,9 @@
   color: var(--pf-primary);
 }
 
-/* ---- Primary nav (inline) ---- */
+/* ==========================================================================
+   PRIMARY NAVIGATION (DESKTOP)
+   ========================================================================== */
 .pf-nav-primary {
   flex: 1 1 auto;
   min-width: 0;
@@ -59,138 +61,411 @@
 .pf-nav__link {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 6px;
-  border-radius: var(--pf-radius);
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 6px;
   color: var(--pf-on-surface-variant);
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
   text-decoration: none;
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
+  transition: all 0.15s ease;
 
-.pf-nav__link:hover {
-  background-color: var(--pf-surface-container);
-  color: var(--pf-on-surface);
-  text-decoration: none;
-}
+  &:hover {
+    background-color: var(--pf-surface-container);
+    color: var(--pf-on-surface);
+    text-decoration: none;
+  }
 
-.pf-nav__link--active {
-  background-color: var(--pf-primary-container);
-  color: var(--pf-on-primary-container);
+  &--active {
+    background-color: var(--pf-cat-edit-bg);
+    color: var(--pf-primary);
+  }
 }
 
 .pf-nav__icon {
-  width: 16px;
+  font-size: 12.5px;
+  width: 15px;
   text-align: center;
 }
 
-/* ---- More dropdown ---- */
-.pf-more {
+/* ==========================================================================
+   CATEGORY DROPDOWN BUTTON & MENU
+   ========================================================================== */
+.pf-nav-dropdown {
   position: relative;
 }
 
-.pf-more__btn {
+.pf-nav-dropdown__btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 6px;
-  border: 0;
+  gap: 4px;
+  padding: 4px 8px;
+  border: none;
   background: transparent;
-  border-radius: var(--pf-radius);
+  border-radius: 6px;
   color: var(--pf-on-surface-variant);
-  font: inherit;
+  font-family: inherit;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background-color: var(--pf-surface-container);
+    color: var(--pf-on-surface);
+  }
+
+  &--active {
+    background-color: var(--pf-surface-container-high);
+    color: var(--pf-primary);
+  }
 }
 
-.pf-more__btn:hover {
-  background-color: var(--pf-surface-container);
-  color: var(--pf-on-surface);
+.pf-nav-dropdown__chevron {
+  font-size: 9.5px;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &--flipped {
+    transform: rotate(180deg);
+  }
 }
 
-.pf-more__backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 150;
-}
-
-.pf-more__menu {
+.pf-nav-dropdown__menu {
   position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
+  top: calc(100% + 4px);
+  left: 0;
   z-index: 200;
-  min-width: 240px;
-  padding: 6px;
+  width: 320px;
+  padding: 8px;
   background: var(--pf-surface-container-lowest);
   border: 1px solid var(--pf-outline-variant);
-  border-radius: var(--pf-radius);
-  box-shadow: var(--pf-shadow-2);
+  border-radius: 14px;
+  box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
+  animation: pf-dropdown-enter 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+
+  &--more {
+    width: 340px;
+  }
 }
 
-.pf-more__group + .pf-more__group {
-  margin-top: 4px;
-  padding-top: 4px;
-  border-top: 1px solid var(--pf-outline-variant);
+@keyframes pf-dropdown-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.pf-more__group-title {
-  padding: 6px 12px 2px;
+.pf-nav-dropdown__header {
+  padding: 4px 10px 8px;
+  border-bottom: 1px solid var(--pf-outline-variant);
+  margin-bottom: 4px;
+}
+
+.pf-nav-dropdown__category-title {
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.05em;
   text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--pf-on-surface-variant);
 }
 
-.pf-more__item {
+.pf-nav-dropdown__items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Tool row within dropdown */
+.pf-tool-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  border-radius: var(--pf-radius);
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background-color: var(--pf-surface-container);
+    text-decoration: none;
+    transform: translateX(2px);
+
+    .pf-tool-item__arrow {
+      color: var(--pf-primary);
+      transform: translateX(2px);
+    }
+  }
+}
+
+.pf-tool-item__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  flex-shrink: 0;
+
+  &--organize {
+    background: var(--pf-cat-organize-bg);
+    color: var(--pf-cat-organize);
+  }
+  &--optimize {
+    background: var(--pf-cat-optimize-bg);
+    color: var(--pf-cat-optimize);
+  }
+  &--security {
+    background: var(--pf-cat-security-bg);
+    color: var(--pf-cat-security);
+  }
+  &--more {
+    background: var(--pf-cat-edit-bg);
+    color: var(--pf-primary);
+  }
+}
+
+.pf-tool-item__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pf-tool-item__title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pf-tool-item__title {
+  font-size: 13.5px;
+  font-weight: 600;
   color: var(--pf-on-surface);
-  font-size: 14px;
-  text-decoration: none;
-  transition: background-color 0.15s ease;
+  line-height: 1.25;
 }
 
-.pf-more__item:hover {
-  background-color: var(--pf-surface-container);
-  text-decoration: none;
-}
-
-.pf-more__item-icon {
-  width: 18px;
-  text-align: center;
+.pf-tool-item__badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--pf-surface-container-high);
   color: var(--pf-on-surface-variant);
+  border: 1px solid var(--pf-outline-variant);
 }
 
-/* ---- Actions ---- */
+.pf-tool-item__desc {
+  font-size: 11.5px;
+  color: var(--pf-on-surface-variant);
+  line-height: 1.35;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pf-tool-item__arrow {
+  color: var(--pf-outline);
+  font-size: 10px;
+  transition: all 0.15s ease;
+}
+
+/* ==========================================================================
+   ACTIONS & BUTTONS
+   ========================================================================== */
 .pf-header__actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
   white-space: nowrap;
 }
 
-@media (max-width: 1024px) {
+.pf-dropdown-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: transparent;
+}
+
+/* Mobile Toggle Hamburger */
+.pf-mobile-toggle {
+  display: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--pf-outline-variant);
+  background: var(--pf-surface-container-lowest);
+  color: var(--pf-on-surface);
+  font-size: 15px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: var(--pf-surface-container);
+  }
+}
+
+/* ==========================================================================
+   MOBILE DRAWER
+   ========================================================================== */
+.pf-mobile-drawer {
+  position: absolute;
+  top: var(--pf-header-height);
+  left: 0;
+  right: 0;
+  z-index: 160;
+  background: var(--pf-surface-container-lowest);
+  border-bottom: 1px solid var(--pf-outline-variant);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.12);
+  max-height: calc(100vh - var(--pf-header-height));
+  overflow-y: auto;
+  padding: 16px 0 24px;
+  animation: pf-drawer-enter 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes pf-drawer-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pf-mobile-drawer__content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pf-mobile-nav__direct {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--pf-outline-variant);
+}
+
+.pf-mobile-nav__link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--pf-on-surface);
+  text-decoration: none;
+
+  i {
+    width: 20px;
+    color: var(--pf-primary);
+  }
+
+  &:hover {
+    background: var(--pf-surface-container);
+    text-decoration: none;
+  }
+}
+
+.pf-mobile-category {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pf-mobile-category__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--pf-on-surface-variant);
+  padding-inline: 12px;
+
+  i {
+    font-size: 11px;
+    color: var(--pf-primary);
+  }
+}
+
+.pf-mobile-category__items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pf-mobile-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--pf-on-surface);
+
+  i {
+    width: 18px;
+    font-size: 14px;
+    color: var(--pf-primary);
+    text-align: center;
+  }
+
+  &:hover {
+    background: var(--pf-surface-container);
+    text-decoration: none;
+  }
+}
+
+.pf-mobile-item__info {
+  display: flex;
+  flex-direction: column;
+}
+
+.pf-mobile-item__title {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.pf-mobile-item__desc {
+  font-size: 11.5px;
+  color: var(--pf-on-surface-variant);
+}
+
+/* ==========================================================================
+   RESPONSIVE BREAKPOINTS
+   ========================================================================== */
+@media (max-width: 1080px) {
   .pf-privacy-pill__text {
     display: none;
   }
 }
 
-@media (max-width: 860px) {
-  .pf-nav-primary__item {
+@media (max-width: 880px) {
+  .pf-nav-primary {
     display: none;
   }
 
-  .pf-btn--primary {
+  .pf-header__open-btn {
     display: none;
   }
+
+  .pf-mobile-toggle {
+    display: grid;
+  }
 }
+

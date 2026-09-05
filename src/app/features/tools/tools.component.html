@@ -1,59 +1,161 @@
 <section class="tools-page">
   <div class="pf-container">
-    <header class="tools-page__header">
-      <h1 class="tools-page__title">All PDF tools</h1>
-      <p class="pf-text-muted">
-        Every tool runs locally in your browser. Pick one to get started.
+    <!-- Header with Search -->
+    <header class="tools-header">
+      <div class="tools-header__badge">
+        <i class="fa-solid fa-toolbox"></i>
+        <span>Client-Side Utilities</span>
+      </div>
+      <h1 class="tools-header__title">All PDF Tools</h1>
+      <p class="tools-header__subtitle">
+        Ten powerful, privacy-first PDF utilities running entirely inside your browser.
+        No uploads, no file queues, and zero tracking.
       </p>
 
-      <div class="tools-page__search">
-        <i class="fa-solid fa-magnifying-glass"></i>
-        <input
-          type="search"
-          class="pf-input"
-          placeholder="Search tools…"
-          [value]="query()"
-          (input)="setQuery($any($event.target).value)"
-          aria-label="Search tools"
-        />
+      <!-- Modern Search Bar -->
+      <div class="tools-search-wrapper">
+        <div class="tools-search-box">
+          <i class="fa-solid fa-magnifying-glass tools-search-box__icon"></i>
+          <input
+            type="search"
+            class="tools-search-box__input"
+            placeholder="Search tools by task (e.g., merge, compress, sign, password, forensics)…"
+            [value]="query()"
+            (input)="setQuery($any($event.target).value)"
+            aria-label="Search tools"
+          />
+          @if (query()) {
+            <button
+              type="button"
+              class="tools-search-box__clear"
+              (click)="setQuery('')"
+              aria-label="Clear search"
+              title="Clear search"
+            >
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- Category Filter Tabs -->
+      <div class="filter-tabs" role="tablist" aria-label="Filter tools by category">
+        @for (tab of filterTabs(); track tab.id) {
+          <button
+            type="button"
+            role="tab"
+            class="filter-tab"
+            [class.filter-tab--active]="selectedCategory() === tab.id"
+            [attr.aria-selected]="selectedCategory() === tab.id"
+            (click)="selectCategory(tab.id)"
+          >
+            <i [ngClass]="tab.icon"></i>
+            <span class="filter-tab__title">{{ tab.title }}</span>
+            <span class="filter-tab__count">{{ tab.count }}</span>
+          </button>
+        }
       </div>
     </header>
 
-    @if (filtered().length === 0) {
-      <div class="empty-state pf-card">
-        <i class="fa-solid fa-magnifying-glass empty-state__icon"></i>
-        <h3>No tools match “{{ query() }}”</h3>
-        <p class="pf-text-muted">Try a different keyword.</p>
+    <!-- Results Status Bar -->
+    <div class="tools-status-bar">
+      <span class="tools-status-bar__text">
+        Showing <strong>{{ totalVisibleCount() }}</strong> tool{{ totalVisibleCount() === 1 ? '' : 's' }}
+        @if (query()) {
+          for “<strong>{{ query() }}</strong>”
+        }
+      </span>
+      @if (query() || selectedCategory() !== 'all') {
+        <button type="button" class="tools-status-bar__reset" (click)="clearSearch()">
+          <i class="fa-solid fa-rotate-left"></i> Reset filters
+        </button>
+      }
+    </div>
+
+    <!-- Empty State -->
+    @if (filteredCategories().length === 0) {
+      <div class="empty-state">
+        <div class="empty-state__icon">
+          <i class="fa-solid fa-magnifying-glass"></i>
+        </div>
+        <h3 class="empty-state__title">No tools match “{{ query() }}”</h3>
+        <p class="empty-state__desc">
+          We couldn't find any PDF tools matching your query. Check for typos or try searching for another term like “merge”, “edit”, or “protect”.
+        </p>
+        <button class="pf-btn pf-btn--primary" type="button" (click)="clearSearch()">
+          <i class="fa-solid fa-rotate-left"></i>
+          <span>Clear Search &amp; Filters</span>
+        </button>
       </div>
     } @else {
-      @for (cat of categories; track cat.id) {
-        <section class="tools-page__category">
-          <div class="tools-page__category-head">
-            <i class="tools-page__category-icon" [ngClass]="cat.icon"></i>
-            <div>
-              <h2>{{ cat.title }}</h2>
-              <p class="pf-text-muted">{{ cat.description }}</p>
+      <!-- Categorized Tool Grids -->
+      <div class="categories-container">
+        @for (cat of filteredCategories(); track cat.id) {
+          <section class="category-section">
+            <div class="category-section__head">
+              <div class="category-section__icon" [ngClass]="'category-section__icon--' + cat.id">
+                <i [ngClass]="cat.icon"></i>
+              </div>
+              <div class="category-section__titles">
+                <h2 class="category-section__title">{{ cat.title }}</h2>
+                <p class="category-section__desc">{{ cat.description }}</p>
+              </div>
+              <span class="category-section__count">{{ cat.items.length }} tool{{ cat.items.length === 1 ? '' : 's' }}</span>
             </div>
-          </div>
 
-          <div class="tools-page__grid">
-            @for (item of cat.items; track item.title) {
-              @if (
-                filtered().includes(item)
-              ) {
-                <a class="tool-tile pf-card" [routerLink]="item.path">
-                  <span class="tool-tile__icon"><i [ngClass]="item.icon"></i></span>
-                  <div class="tool-tile__body">
-                    <h3>{{ item.title }}</h3>
-                    <p class="pf-text-muted">{{ item.description }}</p>
+            <div class="tools-grid">
+              @for (item of cat.items; track item.title) {
+                <a class="tool-tile" [ngClass]="'tool-tile--' + (item.category || cat.id)" [routerLink]="item.path">
+                  <div class="tool-tile__top">
+                    <div class="tool-tile__icon">
+                      <i [ngClass]="item.icon"></i>
+                    </div>
+                    @if (item.badge) {
+                      <span class="tool-tile__badge">{{ item.badge }}</span>
+                    }
                   </div>
-                  <i class="fa-solid fa-arrow-right tool-tile__arrow"></i>
+
+                  <div class="tool-tile__body">
+                    <h3 class="tool-tile__title">{{ item.title }}</h3>
+                    <p class="tool-tile__desc">{{ item.description }}</p>
+                  </div>
+
+                  <div class="tool-tile__action">
+                    <span>Open tool</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                  </div>
                 </a>
               }
-            }
-          </div>
-        </section>
-      }
+            </div>
+          </section>
+        }
+      </div>
     }
+
+    <!-- Bottom Reassurance Strip -->
+    <div class="tools-trust-strip">
+      <div class="tools-trust-item">
+        <i class="fa-solid fa-shield-halved"></i>
+        <div>
+          <strong>100% Client-Side</strong>
+          <span>Documents never uploaded to servers</span>
+        </div>
+      </div>
+      <div class="tools-trust-item">
+        <i class="fa-solid fa-bolt"></i>
+        <div>
+          <strong>Zero Wait Queues</strong>
+          <span>Instant processing with WebAssembly</span>
+        </div>
+      </div>
+      <div class="tools-trust-item">
+        <i class="fa-solid fa-infinity"></i>
+        <div>
+          <strong>No Account or Limits</strong>
+          <span>Free unmetered usage forever</span>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
+
