@@ -1,0 +1,372 @@
+<section class="tool-page tool-page--security">
+  <div class="pf-container">
+    <header class="tool-page__header">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <a class="tool-page__back mb-0" routerLink="/tools"><i class="fa-solid fa-arrow-left"></i> Tools</a>
+        <span class="text-muted small"><i class="fa-solid fa-shield-halved text-primary me-1"></i> Security Center</span>
+      </div>
+
+      <!-- Centered Security Subnavigation Tabs -->
+      <nav class="security-nav-tabs">
+        <a routerLink="/security/protect" routerLinkActive="sec-tab--active" class="sec-tab">
+          <i class="fa-solid fa-lock"></i> Protect
+        </a>
+        <a routerLink="/security/unlock" routerLinkActive="sec-tab--active" class="sec-tab">
+          <i class="fa-solid fa-lock-open"></i> Unlock
+        </a>
+        <a routerLink="/security/verify" routerLinkActive="sec-tab--active" class="sec-tab">
+          <i class="fa-solid fa-shield-halved"></i> Verify & Forensics
+        </a>
+        <a routerLink="/security/metadata" routerLinkActive="sec-tab--active" class="sec-tab">
+          <i class="fa-solid fa-circle-info"></i> Metadata
+        </a>
+      </nav>
+
+      @if (loadedFile()) {
+        <div class="text-center my-3">
+          <h1 class="fs-4 fw-bold mb-1">
+            <i class="fa-solid fa-circle-info me-2 text-primary"></i> PDF Metadata Inspector & Editor
+          </h1>
+          <p class="pf-text-muted small mb-0">
+            View hidden document properties, edit author and title information, or wipe all tracking metadata.
+          </p>
+        </div>
+      }
+    </header>
+
+    <div class="tool-page__body">
+      @if (!loadedFile()) {
+        <div class="pf-landing">
+          <div class="pf-landing-card">
+            <div class="pf-landing-badge">
+              <i class="fa-solid fa-circle-info"></i>
+            </div>
+            <h2 class="pf-landing-title">PDF Metadata Inspector & Editor</h2>
+            <p class="pf-landing-subtitle">
+              Inspect hidden document properties, edit author and title information, or sanitize tracking metadata.
+            </p>
+
+            <div class="pf-landing-dropzone">
+              <app-file-dropzone
+                [multiple]="false"
+                label="Tap to Choose or Drop PDF to Inspect Metadata"
+                (filesLoaded)="onFileLoaded($event)"
+              />
+            </div>
+
+            <div class="pf-landing-privacy">
+              <i class="fa-solid fa-shield-halved"></i>
+              <span><strong>100% Private</strong> · Metadata reading and stripping executes locally on your device.</span>
+            </div>
+
+            <div class="pf-landing-features">
+              <span class="pf-feat-pill"><i class="fa-solid fa-tag"></i> Title & Author</span>
+              <span class="pf-feat-pill"><i class="fa-solid fa-hashtag"></i> Subject & Keywords</span>
+              <span class="pf-feat-pill"><i class="fa-solid fa-sliders"></i> PDF Version & Specs</span>
+              <span class="pf-feat-pill"><i class="fa-solid fa-eraser"></i> Strip All Metadata</span>
+              <span class="pf-feat-pill"><i class="fa-solid fa-user-shield"></i> Privacy Sanitization</span>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <div class="security-metadata-workspace mx-auto" style="max-width: 1040px;">
+          <div class="d-flex align-items-center justify-content-between p-3 mb-4 bg-white border rounded">
+          <div class="d-flex align-items-center gap-3">
+            <i class="fa-solid fa-file-pdf text-danger fs-3"></i>
+            <div>
+              <div class="fw-semibold">{{ loadedFile()!.name }}</div>
+              <small class="text-muted">{{ formatBytes(loadedFile()!.sizeBytes) }}</small>
+            </div>
+          </div>
+          <button class="btn btn-sm btn-outline-secondary" type="button" (click)="clearFile()">
+            <i class="fa-solid fa-xmark"></i> Change File
+          </button>
+        </div>
+
+        @if (loading()) {
+          <div class="text-center py-5">
+            <i class="fa-solid fa-spinner fa-spin fs-2 text-primary"></i>
+            <p class="mt-2 text-muted">Reading document metadata…</p>
+          </div>
+        } @else if (rawMetadata()) {
+          <div class="row g-4 my-2">
+            <!-- Left Column: Editable Metadata Form -->
+            <div class="col-lg-7">
+              <div class="p-4 bg-white border rounded">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                  <div class="d-flex align-items-center gap-2">
+                    <h3 class="fs-6 fw-bold mb-0">
+                      <i class="fa-solid fa-pen-to-square text-primary me-2"></i>Edit Document Metadata
+                    </h3>
+                    @if (isModifiedFromInitial()) {
+                      <span class="badge bg-warning text-dark" style="font-size: 11px;">Modified</span>
+                    } @else {
+                      <span class="badge bg-light text-muted border" style="font-size: 11px;">Original</span>
+                    }
+                  </div>
+
+                  <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <!-- Undo / Redo Toolbar -->
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Undo and Redo">
+                      <button
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        (click)="undo()"
+                        [disabled]="!canUndo()"
+                        title="Undo change (Ctrl+Z)"
+                      >
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span class="d-none d-sm-inline ms-1">Undo</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        (click)="redo()"
+                        [disabled]="!canRedo()"
+                        title="Redo change (Ctrl+Shift+Z or Ctrl+Y)"
+                      >
+                        <i class="fa-solid fa-rotate-right"></i>
+                        <span class="d-none d-sm-inline ms-1">Redo</span>
+                      </button>
+                    </div>
+
+                    <!-- Revert to Original -->
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-secondary"
+                      (click)="revertToInitial()"
+                      [disabled]="!isModifiedFromInitial()"
+                      title="Revert all fields to initial file metadata"
+                    >
+                      <i class="fa-solid fa-clock-rotate-left me-1"></i>
+                      <span class="d-none d-sm-inline">Reset</span>
+                    </button>
+
+                    <!-- Strip All Metadata (clears data without downloading) -->
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-outline-danger"
+                      (click)="stripMetadata()"
+                      [disabled]="saving()"
+                      title="Clear all metadata fields without downloading yet"
+                    >
+                      <i class="fa-solid fa-eraser me-1"></i>
+                      <span>Strip All</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="d-flex flex-column gap-3">
+                  <div>
+                    <label class="pf-label-caps d-block mb-1">Title</label>
+                    <input
+                      type="text"
+                      class="pf-input w-100"
+                      [value]="title()"
+                      (input)="onFieldInput('title', $any($event.target).value)"
+                      (blur)="onFieldBlur()"
+                      placeholder="e.g. Quarterly Financial Report"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="pf-label-caps d-block mb-1">Author / Creator Name</label>
+                    <input
+                      type="text"
+                      class="pf-input w-100"
+                      [value]="author()"
+                      (input)="onFieldInput('author', $any($event.target).value)"
+                      (blur)="onFieldBlur()"
+                      placeholder="e.g. Jane Doe"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="pf-label-caps d-block mb-1">Subject / Summary</label>
+                    <input
+                      type="text"
+                      class="pf-input w-100"
+                      [value]="subject()"
+                      (input)="onFieldInput('subject', $any($event.target).value)"
+                      (blur)="onFieldBlur()"
+                      placeholder="e.g. Fiscal Q3 Overview"
+                    />
+                  </div>
+
+                  <div>
+                    <label class="pf-label-caps d-block mb-1">Keywords</label>
+                    <input
+                      type="text"
+                      class="pf-input w-100"
+                      [value]="keywords()"
+                      (input)="onFieldInput('keywords', $any($event.target).value)"
+                      (blur)="onFieldBlur()"
+                      placeholder="e.g. report, finance, confidential (comma-separated)"
+                    />
+                  </div>
+
+                  <div class="row g-3">
+                    <div class="col-sm-6">
+                      <label class="pf-label-caps d-block mb-1">Authoring Tool / Creator</label>
+                      <input
+                        type="text"
+                        class="pf-input w-100"
+                        [value]="creator()"
+                        (input)="onFieldInput('creator', $any($event.target).value)"
+                        (blur)="onFieldBlur()"
+                        placeholder="e.g. Microsoft Word"
+                      />
+                    </div>
+                    <div class="col-sm-6">
+                      <label class="pf-label-caps d-block mb-1">PDF Producer Software</label>
+                      <input
+                        type="text"
+                        class="pf-input w-100"
+                        [value]="producer()"
+                        (input)="onFieldInput('producer', $any($event.target).value)"
+                        (blur)="onFieldBlur()"
+                        placeholder="e.g. Acrobat Distiller"
+                      />
+                    </div>
+                  </div>
+
+                  <div class="row g-3">
+                    <div class="col-sm-6">
+                      <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="pf-label-caps mb-0">Creation Date</label>
+                        @if (creationDate()) {
+                          <button
+                            type="button"
+                            class="btn btn-link btn-sm text-decoration-none p-0 text-muted"
+                            style="font-size: 11px;"
+                            (click)="onFieldInput('creationDate', '')"
+                            title="Clear creation date"
+                          >
+                            Clear
+                          </button>
+                        }
+                      </div>
+                      <input
+                        type="datetime-local"
+                        class="pf-input w-100"
+                        [value]="creationDate()"
+                        (input)="onFieldInput('creationDate', $any($event.target).value)"
+                        (blur)="onFieldBlur()"
+                      />
+                      <small class="text-muted" style="font-size: 11px;">
+                        Preserves original creation date unless edited.
+                      </small>
+                    </div>
+                    <div class="col-sm-6">
+                      <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="pf-label-caps mb-0">Last Modified Date</label>
+                        @if (modificationDate()) {
+                          <button
+                            type="button"
+                            class="btn btn-link btn-sm text-decoration-none p-0 text-muted"
+                            style="font-size: 11px;"
+                            (click)="onFieldInput('modificationDate', '')"
+                            title="Clear modification date"
+                          >
+                            Clear
+                          </button>
+                        }
+                      </div>
+                      <input
+                        type="datetime-local"
+                        class="pf-input w-100"
+                        [value]="modificationDate()"
+                        (input)="onFieldInput('modificationDate', $any($event.target).value)"
+                        (blur)="onFieldBlur()"
+                      />
+                      <small class="text-muted" style="font-size: 11px;">
+                        Updates automatically on change, or customize manually.
+                      </small>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-top d-flex gap-2">
+                  <button
+                    type="button"
+                    class="pf-btn pf-btn--primary"
+                    [disabled]="saving()"
+                    (click)="saveMetadata()"
+                  >
+                    @if (saving()) {
+                      <i class="fa-solid fa-spinner fa-spin me-2"></i> Saving…
+                    } @else {
+                      <i class="fa-solid fa-floppy-disk me-2"></i> Save & Download PDF
+                    }
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column: Document Technical Properties -->
+            <div class="col-lg-5">
+              <div class="p-4 bg-light border rounded">
+                <h3 class="fs-6 fw-bold mb-3">
+                  <i class="fa-solid fa-sliders text-secondary me-2"></i>Technical Document Specs
+                </h3>
+
+                <div class="d-flex flex-column gap-3 small text-muted">
+                  <div class="d-flex justify-content-between py-1 border-bottom">
+                    <span>PDF Specification:</span>
+                    <strong class="text-dark">{{ rawMetadata()!.pdfVersion }}</strong>
+                  </div>
+
+                  <div class="d-flex justify-content-between py-1 border-bottom">
+                    <span>Total Pages:</span>
+                    <strong class="text-dark">{{ rawMetadata()!.pageCount }}</strong>
+                  </div>
+
+                  <div class="d-flex justify-content-between py-1 border-bottom">
+                    <span>File Size:</span>
+                    <strong class="text-dark">{{ formatBytes(rawMetadata()!.fileSizeBytes) }}</strong>
+                  </div>
+
+                  <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                    <span>Creation Date:</span>
+                    <strong class="text-dark text-end">
+                      {{ rawMetadata()!.creationDate ? (rawMetadata()!.creationDate | date: 'medium') : 'Not specified' }}
+                    </strong>
+                  </div>
+
+                  <div class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                    <span>Last Modified Date:</span>
+                    <div class="text-end">
+                      <strong class="text-dark">
+                        {{ rawMetadata()!.modificationDate ? (rawMetadata()!.modificationDate | date: 'medium') : 'Not specified' }}
+                      </strong>
+                      @if (rawMetadata()!.modificationDate && rawMetadata()!.creationDate && isUnmodifiedDate()) {
+                        <span class="badge bg-secondary-subtle text-secondary ms-1" style="font-size: 10px;">Same as creation</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-4 p-3 bg-white border rounded">
+                  <div class="d-flex gap-2 align-items-start">
+                    <i class="fa-solid fa-user-shield text-success fs-5 mt-1"></i>
+                    <div>
+                      <strong class="d-block text-dark small">Privacy Recommendation</strong>
+                      <span class="small text-muted">
+                        PDF metadata can leak usernames, software versions, and edit history. Use "Strip All Metadata" before sharing publicly.
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+        </div>
+      }
+    </div>
+
+    <p class="tool-page__privacy text-center mt-4">
+      <i class="fa-solid fa-lock"></i> Metadata is read and modified locally in your browser.
+    </p>
+  </div>
+</section>

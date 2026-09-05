@@ -167,7 +167,53 @@ code,
 }
 
 .tool-page__body {
-  max-width: 720px;
+  width: 100%;
+  max-width: 840px;
+  margin-inline: auto;
+}
+
+.tool-page--security {
+  .tool-page__body {
+    max-width: 100%;
+    width: 100%;
+    margin-inline: auto;
+  }
+}
+
+/* ---- Security Subnavigation Tabs ---- */
+.security-nav-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  margin: 0 auto 24px;
+}
+
+.sec-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--pf-radius-pill, 9999px);
+  background: var(--pf-surface-container-high, #e5e7eb);
+  color: var(--pf-on-surface-variant, #4b5563);
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: var(--pf-surface-container-highest, #d1d5db);
+    color: var(--pf-on-surface, #111827);
+    text-decoration: none;
+  }
+
+  &--active {
+    background: var(--pf-primary, #005fb8);
+    color: #ffffff !important;
+    box-shadow: 0 2px 8px rgba(0, 95, 184, 0.25);
+  }
 }
 
 .tool-page__footer {
@@ -373,3 +419,154 @@ code,
   color: var(--pf-on-primary);
   border-color: var(--pf-primary);
 }
+
+/* ---- Universal Tool Landing & File Selection Card (Editor Symmetry) ---- */
+.pf-landing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 16px 0 32px;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    padding: 12px 0 20px;
+  }
+}
+
+.pf-landing-card {
+  width: 100%;
+  max-width: 560px;
+  background: var(--pf-surface-container-low, #ffffff);
+  border: 1px solid var(--pf-outline-variant, #e5e7eb);
+  border-radius: 20px;
+  padding: 32px 28px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+  margin: 0 auto;
+
+  @media (max-width: 768px) {
+    padding: 22px 16px;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  }
+}
+
+.pf-landing-badge {
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--pf-primary) 15%, transparent), color-mix(in srgb, var(--pf-primary) 6%, transparent));
+  border: 1px solid color-mix(in srgb, var(--pf-primary) 22%, transparent);
+  color: var(--pf-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  margin-bottom: 14px;
+
+  @media (max-width: 768px) {
+    width: 48px;
+    height: 48px;
+    font-size: 22px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+  }
+}
+
+.pf-landing-title {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--pf-on-surface);
+  line-height: 1.25;
+
+  @media (max-width: 768px) {
+    font-size: 19px;
+  }
+}
+
+.pf-landing-subtitle {
+  margin: 0 0 20px;
+  font-size: 13.5px;
+  color: var(--pf-on-surface-variant);
+  line-height: 1.45;
+  max-width: 440px;
+
+  @media (max-width: 768px) {
+    font-size: 12.5px;
+    margin-bottom: 16px;
+  }
+}
+
+.pf-landing-dropzone {
+  width: 100%;
+  margin-bottom: 18px;
+}
+
+.pf-landing-privacy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--pf-on-surface-variant);
+  background: color-mix(in srgb, var(--pf-success) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pf-success) 20%, transparent);
+  padding: 8px 14px;
+  border-radius: 9999px;
+  margin-bottom: 18px;
+  line-height: 1.3;
+
+  i {
+    color: var(--pf-success);
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 11.5px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    text-align: left;
+    margin-bottom: 14px;
+  }
+}
+
+.pf-landing-features {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.pf-feat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--pf-on-surface-variant);
+  background: var(--pf-surface-container-high, #f1f5f9);
+  border-radius: 9999px;
+  border: 1px solid var(--pf-outline-variant, #e5e7eb);
+
+  i {
+    color: var(--pf-primary);
+    font-size: 10.5px;
+  }
+
+  @media (max-width: 768px) {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+}
+

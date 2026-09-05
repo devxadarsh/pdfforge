@@ -225,6 +225,18 @@ export const TOOL_CATEGORIES: ToolCategory[] = [
         icon: 'fa-solid fa-lock-open',
         path: '/security/unlock',
       },
+      {
+        title: 'Verify & Forensics',
+        description: 'Verify digital signatures, check tampering, and inspect revision history.',
+        icon: 'fa-solid fa-shield-halved',
+        path: '/security/verify',
+      },
+      {
+        title: 'Edit Metadata',
+        description: 'View, edit, or sanitize hidden PDF author and document properties.',
+        icon: 'fa-solid fa-circle-info',
+        path: '/security/metadata',
+      },
     ],
   },
 ];

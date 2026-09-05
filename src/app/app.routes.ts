@@ -70,6 +70,22 @@ export const routes: Routes = [
         title: 'Unlock PDF — PDFForge',
       },
       {
+        path: 'security/verify',
+        loadComponent: () =>
+          import('./features/security/verify/security-verify.component').then(
+            (m) => m.SecurityVerifyComponent,
+          ),
+        title: 'Verify PDF & Forensics — PDFForge',
+      },
+      {
+        path: 'security/metadata',
+        loadComponent: () =>
+          import('./features/security/metadata/security-metadata.component').then(
+            (m) => m.SecurityMetadataComponent,
+          ),
+        title: 'PDF Metadata Inspector & Editor — PDFForge',
+      },
+      {
         path: 'signature',
         loadComponent: () =>
           import('./features/signature/signature.component').then(

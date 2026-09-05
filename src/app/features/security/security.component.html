@@ -1,70 +1,189 @@
-<section class="tool-page">
+<section class="tool-page tool-page--security">
   <div class="pf-container">
     <header class="tool-page__header">
-      <a class="tool-page__back" routerLink="/tools"><i class="fa-solid fa-arrow-left"></i> Tools</a>
-      @if (mode() === 'protect') {
-        <h1><i class="fa-solid fa-lock tool-page__icon"></i> Protect PDF</h1>
-        <p class="pf-text-muted">Add a password and permission restrictions — locally.</p>
-      } @else {
-        <h1><i class="fa-solid fa-lock-open tool-page__icon"></i> Unlock PDF</h1>
-        <p class="pf-text-muted">Remove a password from a supported PDF — locally.</p>
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <a class="tool-page__back mb-0" routerLink="/tools"><i class="fa-solid fa-arrow-left"></i> Tools</a>
+        <span class="text-muted small"><i class="fa-solid fa-shield-halved text-primary me-1"></i> Security Center</span>
+      </div>
+
+      <!-- Centered Security Subnavigation Tabs -->
+      <nav class="security-nav-tabs">
+        <a routerLink="/security/protect" routerLinkActive="sec-tab--active" class="sec-tab">
+          <i class="fa-solid fa-lock"></i> Protect
+        </a>
+        <a routerLink="/security/unlock" routerLinkActive="sec-tab--active" class="sec-tab">
+          <i class="fa-solid fa-lock-open"></i> Unlock
+        </a>
+        <a routerLink="/security/verify" routerLinkActive="sec-tab--active" class="sec-tab">
+          <i class="fa-solid fa-shield-halved"></i> Verify & Forensics
+        </a>
+        <a routerLink="/security/metadata" routerLinkActive="sec-tab--active" class="sec-tab">
+          <i class="fa-solid fa-circle-info"></i> Metadata
+        </a>
+      </nav>
+
+      @if (loadedFile()) {
+        <div class="text-center my-3">
+          <h1 class="fs-4 fw-bold mb-1">
+            <i class="fa-solid me-2 text-primary" [class.fa-lock]="mode() === 'protect'" [class.fa-lock-open]="mode() === 'unlock'"></i>
+            {{ mode() === 'protect' ? 'Protect PDF' : 'Unlock PDF' }}
+          </h1>
+          <p class="pf-text-muted small mb-0">
+            {{ mode() === 'protect' ? 'Add a password and permission restrictions — locally.' : 'Remove a password from a supported PDF — locally.' }}
+          </p>
+        </div>
       }
     </header>
 
     <div class="tool-page__body">
-      <app-file-dropzone
-        [multiple]="false"
-        label="Add a PDF"
-        (filesLoaded)="onFileLoaded($event)"
-      />
+      @if (!loadedFile()) {
+        <div class="pf-landing">
+          <div class="pf-landing-card">
+            <div class="pf-landing-badge">
+              <i class="fa-solid" [class.fa-lock]="mode() === 'protect'" [class.fa-lock-open]="mode() === 'unlock'"></i>
+            </div>
+            <h2 class="pf-landing-title">
+              {{ mode() === 'protect' ? 'Protect & Encrypt PDF' : 'Unlock Password-Protected PDF' }}
+            </h2>
+            <p class="pf-landing-subtitle">
+              {{ mode() === 'protect'
+                ? 'Add military-grade AES encryption and configure granular permissions directly on your device.'
+                : 'Remove password restrictions from supported PDF documents safely in your browser.' }}
+            </p>
 
-      @if (mode() === 'protect') {
-        <div class="security-form">
-          <label class="security-field">
-            <span class="pf-label-caps">Password</span>
-            <input class="pf-input" type="password" [value]="password()" (input)="password.set($any($event.target).value)" />
-          </label>
-          <label class="security-field">
-            <span class="pf-label-caps">Confirm password</span>
-            <input class="pf-input" type="password" [value]="confirm()" (input)="confirm.set($any($event.target).value)" />
-          </label>
+            <div class="pf-landing-dropzone">
+              <app-file-dropzone
+                [multiple]="false"
+                [label]="mode() === 'protect' ? 'Tap to Choose or Drop PDF to Protect' : 'Tap to Choose or Drop PDF to Unlock'"
+                (filesLoaded)="onFileLoaded($event)"
+              />
+            </div>
 
-          <fieldset class="security-perms">
-            <legend class="pf-label-caps">Permissions</legend>
-            <label class="security-check"><input type="checkbox" [checked]="permissions().print" (change)="togglePerm('print')" /> Allow printing</label>
-            <label class="security-check"><input type="checkbox" [checked]="permissions().copy" (change)="togglePerm('copy')" /> Allow copy / extract</label>
-            <label class="security-check"><input type="checkbox" [checked]="permissions().modify" (change)="togglePerm('modify')" /> Allow modifications</label>
-          </fieldset>
+            <div class="pf-landing-privacy">
+              <i class="fa-solid fa-shield-halved"></i>
+              <span><strong>100% Private</strong> · Passwords & document bytes never leave your browser.</span>
+            </div>
+
+            <div class="pf-landing-features">
+              @if (mode() === 'protect') {
+                <span class="pf-feat-pill"><i class="fa-solid fa-key"></i> AES-256 Encryption</span>
+                <span class="pf-feat-pill"><i class="fa-solid fa-print"></i> Restrict Printing</span>
+                <span class="pf-feat-pill"><i class="fa-solid fa-copy"></i> Restrict Copying</span>
+                <span class="pf-feat-pill"><i class="fa-solid fa-file-pen"></i> Restrict Edits</span>
+                <span class="pf-feat-pill"><i class="fa-solid fa-user-lock"></i> Owner & User Passwords</span>
+              } @else {
+                <span class="pf-feat-pill"><i class="fa-solid fa-unlock"></i> Instant Decryption</span>
+                <span class="pf-feat-pill"><i class="fa-solid fa-file-shield"></i> Remove Restrictions</span>
+                <span class="pf-feat-pill"><i class="fa-solid fa-bolt"></i> Fast WebAssembly</span>
+                <span class="pf-feat-pill"><i class="fa-solid fa-laptop-code"></i> 100% Offline</span>
+              }
+            </div>
+          </div>
         </div>
       } @else {
-        <div class="security-form">
-          <label class="security-field">
-            <span class="pf-label-caps">Password</span>
-            <input class="pf-input" type="password" [value]="password()" (input)="password.set($any($event.target).value)" />
-          </label>
+        <div class="security-loaded-workspace mx-auto" style="max-width: 520px;">
+          <div class="d-flex align-items-center justify-content-between p-3 mb-4 bg-white border rounded">
+            <div class="d-flex align-items-center gap-3">
+              <i class="fa-solid fa-file-pdf text-danger fs-3"></i>
+              <div>
+                <div class="fw-semibold">{{ loadedFile()!.name }}</div>
+                <small class="text-muted">{{ formatBytes(loadedFile()!.sizeBytes) }}</small>
+              </div>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary" type="button" (click)="clearFile()">
+              <i class="fa-solid fa-xmark"></i> Change File
+            </button>
+          </div>
+
+          @if (mode() === 'protect') {
+            <div class="security-form">
+              <label class="security-field">
+                <span class="pf-label-caps">Password</span>
+                <div class="position-relative">
+                  <input
+                    class="pf-input w-100 pe-5"
+                    [type]="showPassword() ? 'text' : 'password'"
+                    [value]="password()"
+                    (input)="password.set($any($event.target).value)"
+                    placeholder="Enter document password"
+                  />
+                  <button
+                    type="button"
+                    class="btn btn-sm position-absolute top-50 end-0 translate-middle-y me-2 text-muted border-0 bg-transparent"
+                    (click)="showPassword.set(!showPassword())"
+                    [title]="showPassword() ? 'Hide password' : 'Show password'"
+                  >
+                    <i class="fa-solid" [class.fa-eye]="!showPassword()" [class.fa-eye-slash]="showPassword()"></i>
+                  </button>
+                </div>
+              </label>
+              <label class="security-field">
+                <span class="pf-label-caps">Confirm password</span>
+                <div class="position-relative">
+                  <input
+                    class="pf-input w-100 pe-5"
+                    [type]="showPassword() ? 'text' : 'password'"
+                    [value]="confirm()"
+                    (input)="confirm.set($any($event.target).value)"
+                    placeholder="Re-enter password"
+                  />
+                </div>
+              </label>
+
+              <fieldset class="security-perms">
+                <legend class="pf-label-caps">Permissions</legend>
+                <label class="security-check"><input type="checkbox" [checked]="permissions().print" (change)="togglePerm('print')" /> Allow printing</label>
+                <label class="security-check"><input type="checkbox" [checked]="permissions().copy" (change)="togglePerm('copy')" /> Allow copy / extract</label>
+                <label class="security-check"><input type="checkbox" [checked]="permissions().modify" (change)="togglePerm('modify')" /> Allow modifications</label>
+              </fieldset>
+            </div>
+          } @else {
+            <div class="security-form">
+              <label class="security-field">
+                <span class="pf-label-caps">Password</span>
+                <div class="position-relative">
+                  <input
+                    class="pf-input w-100 pe-5"
+                    [type]="showPassword() ? 'text' : 'password'"
+                    [value]="password()"
+                    (input)="password.set($any($event.target).value)"
+                    placeholder="Enter password to unlock"
+                  />
+                  <button
+                    type="button"
+                    class="btn btn-sm position-absolute top-50 end-0 translate-middle-y me-2 text-muted border-0 bg-transparent"
+                    (click)="showPassword.set(!showPassword())"
+                    [title]="showPassword() ? 'Hide password' : 'Show password'"
+                  >
+                    <i class="fa-solid" [class.fa-eye]="!showPassword()" [class.fa-eye-slash]="showPassword()"></i>
+                  </button>
+                </div>
+              </label>
+            </div>
+          }
+
+          <div class="tool-page__footer text-center">
+            <button
+              class="pf-btn pf-btn--primary w-100"
+              type="button"
+              [disabled]="!loadedFile() || !password() || processing()"
+              (click)="runAction()"
+            >
+              @if (processing()) {
+                <i class="fa-solid fa-spinner fa-spin me-2"></i> Processing…
+              } @else if (mode() === 'protect') {
+                <i class="fa-solid fa-lock me-2"></i> Protect PDF
+              } @else {
+                <i class="fa-solid fa-lock-open me-2"></i> Unlock PDF
+              }
+            </button>
+          </div>
         </div>
       }
-
-      <div class="tool-page__footer">
-        <button
-          class="pf-btn pf-btn--primary"
-          type="button"
-          [disabled]="!loadedFile() || !password() || processing()"
-          (click)="runAction()"
-        >
-          @if (processing()) {
-            <i class="fa-solid fa-spinner fa-spin me-2"></i> Processing…
-          } @else if (mode() === 'protect') {
-            <i class="fa-solid fa-lock me-2"></i> Protect PDF
-          } @else {
-            <i class="fa-solid fa-lock-open me-2"></i> Unlock PDF
-          }
-        </button>
-      </div>
     </div>
 
-    <p class="tool-page__privacy">
-      <i class="fa-solid fa-lock"></i> Files never leave your device.
+    <p class="tool-page__privacy text-center">
+      <i class="fa-solid fa-lock"></i> Files never leave your device. All encryption and decryption runs locally in your browser.
     </p>
   </div>
 </section>

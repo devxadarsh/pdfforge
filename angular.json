@@ -43,6 +43,11 @@
                 "glob": "**/*",
                 "input": "node_modules/ngx-extended-pdf-viewer/assets",
                 "output": "assets"
+              },
+              {
+                "glob": "qpdf.wasm",
+                "input": "node_modules/@neslinesli93/qpdf-wasm/dist",
+                "output": "assets"
               }
             ],
             "styles": [
@@ -106,6 +111,11 @@
               {
                 "glob": "**/*",
                 "input": "node_modules/ngx-extended-pdf-viewer/assets",
+                "output": "assets"
+              },
+              {
+                "glob": "qpdf.wasm",
+                "input": "node_modules/@neslinesli93/qpdf-wasm/dist",
                 "output": "assets"
               }
             ],

@@ -1,16 +1,19 @@
 import { Component, signal, inject } from '@angular/core';
-import { RouterLink, Router } from '@angular/router';
+import { RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { filter } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FileDropzoneComponent } from '../../shared/components/dropzone/file-dropzone.component';
 import { LoadedFile } from '../../core/models/file.models';
 import { PdfWorkerService } from '../../core/services/worker/pdf-worker.service';
 import { DownloadService } from '../../core/services/download/download.service';
 import { ToastService } from '../../core/services/toast.service';
+import { formatBytes } from '../../core/utilities/file.util';
 
 @Component({
   selector: 'app-security',
   standalone: true,
-  imports: [RouterLink, FormsModule, FileDropzoneComponent],
+  imports: [RouterLink, RouterLinkActive, FormsModule, FileDropzoneComponent],
   templateUrl: './security.component.html',
   styleUrl: './security.component.scss',
 })
@@ -23,6 +26,7 @@ export class SecurityComponent {
   readonly mode = signal<'protect' | 'unlock'>('protect');
   readonly password = signal('');
   readonly confirm = signal('');
+  readonly showPassword = signal(false);
   readonly permissions = signal({
     print: true,
     copy: true,
@@ -31,10 +35,26 @@ export class SecurityComponent {
 
   readonly loadedFile = signal<LoadedFile | null>(null);
   readonly processing = signal<boolean>(false);
+  protected readonly formatBytes = formatBytes;
 
   constructor() {
-    const isUnlock = this.router.url.includes('unlock');
-    this.mode.set(isUnlock ? 'unlock' : 'protect');
+    const syncMode = (url: string) => {
+      const isUnlock = url.includes('unlock');
+      this.mode.set(isUnlock ? 'unlock' : 'protect');
+    };
+
+    syncMode(this.router.url);
+
+    this.router.events
+      .pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        takeUntilDestroyed(),
+      )
+      .subscribe((e) => {
+        syncMode(e.urlAfterRedirects);
+        this.password.set('');
+        this.confirm.set('');
+      });
   }
 
   togglePerm(key: 'print' | 'copy' | 'modify'): void {
@@ -46,6 +66,12 @@ export class SecurityComponent {
       this.loadedFile.set(files[0]);
       this.toasts.info(`Loaded ${files[0].name}`);
     }
+  }
+
+  clearFile(): void {
+    this.loadedFile.set(null);
+    this.password.set('');
+    this.confirm.set('');
   }
 
   async runAction(): Promise<void> {

@@ -1,0 +1,333 @@
+<section class="tool-page tool-page--security">
+  <div class="pf-container">
+    <header class="tool-page__header">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <a class="tool-page__back mb-0" routerLink="/tools"><i class="fa-solid fa-arrow-left"></i> Tools</a>
+        <span class="text-muted small"><i class="fa-solid fa-shield-halved text-primary me-1"></i> Security Center</span>
+      </div>
+
+      <!-- Centered Security Subnavigation Tabs -->
+      <nav class="security-nav-tabs">
+        <a routerLink="/security/protect" routerLinkActive="sec-tab--active" class="sec-tab">
+          <i class="fa-solid fa-lock"></i> Protect
+        </a>
+        <a routerLink="/security/unlock" routerLinkActive="sec-tab--active" class="sec-tab">
+          <i class="fa-solid fa-lock-open"></i> Unlock
+        </a>
+        <a routerLink="/security/verify" routerLinkActive="sec-tab--active" class="sec-tab">
+          <i class="fa-solid fa-shield-halved"></i> Verify & Forensics
+        </a>
+        <a routerLink="/security/metadata" routerLinkActive="sec-tab--active" class="sec-tab">
+          <i class="fa-solid fa-circle-info"></i> Metadata
+        </a>
+      </nav>
+
+      @if (loadedFile()) {
+        <div class="text-center my-3">
+          <h1 class="fs-4 fw-bold mb-1">
+            <i class="fa-solid fa-shield-halved me-2 text-primary"></i> Verify PDF & Forensics
+          </h1>
+          <p class="pf-text-muted small mb-0">
+            Verify cryptographic digital signatures, detect tampering, and inspect incremental revision history.
+          </p>
+        </div>
+      }
+    </header>
+
+    <div class="tool-page__body">
+      @if (!loadedFile()) {
+        <div class="pf-landing">
+          <div class="pf-landing-card">
+            <div class="pf-landing-badge">
+              <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <h2 class="pf-landing-title">Verify PDF & Forensics</h2>
+            <p class="pf-landing-subtitle">
+              Verify cryptographic digital signatures, validate document integrity, and trace incremental revision history.
+            </p>
+
+            <div class="pf-landing-dropzone">
+              <app-file-dropzone
+                [multiple]="false"
+                label="Tap to Choose or Drop PDF to Verify"
+                (filesLoaded)="onFileLoaded($event)"
+              />
+            </div>
+
+            <div class="pf-landing-privacy">
+              <i class="fa-solid fa-shield-halved"></i>
+              <span><strong>100% Private</strong> · Cryptographic hashing and forensic parsing execute locally in browser.</span>
+            </div>
+
+            <div class="pf-landing-features">
+              <span class="pf-feat-pill"><i class="fa-solid fa-certificate"></i> Digital Signatures</span>
+              <span class="pf-feat-pill"><i class="fa-solid fa-fingerprint"></i> SHA-256 ByteRange</span>
+              <span class="pf-feat-pill"><i class="fa-solid fa-clock-rotate-left"></i> Revision History</span>
+              <span class="pf-feat-pill"><i class="fa-solid fa-triangle-exclamation"></i> Tamper Detection</span>
+              <span class="pf-feat-pill"><i class="fa-solid fa-rotate-left"></i> Rollback to Rev 1</span>
+            </div>
+          </div>
+        </div>
+      } @else {
+        <div class="security-verify-workspace mx-auto" style="max-width: 880px;">
+          <div class="d-flex align-items-center justify-content-between p-3 mb-4 bg-white border rounded">
+          <div class="d-flex align-items-center gap-3">
+            <i class="fa-solid fa-file-pdf text-danger fs-3"></i>
+            <div>
+              <div class="fw-semibold">{{ loadedFile()!.name }}</div>
+              <small class="text-muted">{{ formatBytes(loadedFile()!.sizeBytes) }}</small>
+            </div>
+          </div>
+          <button class="btn btn-sm btn-outline-secondary" type="button" (click)="clearFile()">
+            <i class="fa-solid fa-xmark"></i> Change File
+          </button>
+        </div>
+
+        @if (analyzing()) {
+          <div class="text-center py-5">
+            <i class="fa-solid fa-spinner fa-spin fs-2 text-primary"></i>
+            <p class="mt-2 text-muted">Analyzing cryptographic signatures and forensic structure…</p>
+          </div>
+        } @else {
+          <!-- View Selection Sub-tabs -->
+          <div class="verify-subtabs mb-4">
+            <button
+              type="button"
+              class="subtab-btn"
+              [class.subtab-btn--active]="activeTab() === 'signature'"
+              (click)="activeTab.set('signature')"
+            >
+              <i class="fa-solid fa-signature"></i>
+              <span>Digital Signatures</span>
+              @if (signatureResult()?.hasSignature) {
+                <span class="badge bg-primary ms-1">{{ signatureResult()!.signatureCount }}</span>
+              }
+            </button>
+            <button
+              type="button"
+              class="subtab-btn"
+              [class.subtab-btn--active]="activeTab() === 'forensics'"
+              (click)="activeTab.set('forensics')"
+            >
+              <i class="fa-solid fa-clock-rotate-left"></i>
+              <span>Forensic Revision History</span>
+              @if (forensicsReport() && forensicsReport()!.revisionCount > 1) {
+                <span class="badge bg-warning text-dark ms-1">{{ forensicsReport()!.revisionCount }} revs</span>
+              }
+            </button>
+          </div>
+
+          <!-- TAB 1: Cryptographic Digital Signatures -->
+          @if (activeTab() === 'signature') {
+            @if (signatureResult()?.hasSignature) {
+              <!-- Overall Status Card -->
+              <div
+                class="status-banner mb-4"
+                [class.status-banner--valid]="signatureResult()!.overallStatus === 'valid'"
+                [class.status-banner--tampered]="signatureResult()!.overallStatus === 'tampered'"
+              >
+                <div class="status-banner__icon">
+                  @if (signatureResult()!.overallStatus === 'valid') {
+                    <i class="fa-solid fa-shield-check fs-1 text-success"></i>
+                  } @else {
+                    <i class="fa-solid fa-triangle-exclamation fs-1 text-danger"></i>
+                  }
+                </div>
+                <div class="status-banner__text">
+                  <h3 class="mb-1">
+                    {{ signatureResult()!.overallStatus === 'valid' ? 'Authentic Document — Untampered' : 'Tamper Warning — Signature Invalid' }}
+                  </h3>
+                  <p class="mb-0">{{ signatureResult()!.message }}</p>
+                </div>
+              </div>
+
+              <!-- List of signatures -->
+              <div class="d-flex flex-column gap-3">
+                @for (sig of signatureResult()!.signatures; track $index) {
+                  <div class="sig-card border rounded p-3 bg-white">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <div class="d-flex align-items-center gap-2">
+                        <i class="fa-solid fa-certificate text-primary fs-4"></i>
+                        <div>
+                          <h4 class="mb-0 fs-6 fw-bold">{{ sig.signerName }}</h4>
+                          @if (sig.signerOrganization) {
+                            <small class="text-muted">{{ sig.signerOrganization }}</small>
+                          }
+                        </div>
+                      </div>
+                      <span
+                        class="badge"
+                        [class.bg-success]="sig.isValid"
+                        [class.bg-danger]="!sig.isValid"
+                      >
+                        {{ sig.isValid ? 'Valid Signature' : 'Modified / Tampered' }}
+                      </span>
+                    </div>
+
+                    <div class="sig-grid text-muted small my-3">
+                      @if (sig.signingTime) {
+                        <div><strong>Signed At:</strong> {{ sig.signingTime | date: 'medium' }}</div>
+                      }
+                      @if (sig.reason) {
+                        <div><strong>Reason:</strong> {{ sig.reason }}</div>
+                      }
+                      @if (sig.location) {
+                        <div><strong>Location:</strong> {{ sig.location }}</div>
+                      }
+                      @if (sig.digestAlgorithm) {
+                        <div><strong>Digest Algorithm:</strong> {{ sig.digestAlgorithm }}</div>
+                      }
+                      @if (sig.filter || sig.subFilter) {
+                        <div><strong>Algorithm / Format:</strong> {{ sig.filter }} / {{ sig.subFilter }}</div>
+                      }
+                      @if (sig.hasSubsequentUpdates) {
+                        <div class="text-warning">
+                          <i class="fa-solid fa-info-circle"></i> Document contains incremental updates after this signature.
+                        </div>
+                      }
+                    </div>
+
+                    <div class="p-2 rounded bg-light border font-monospace small text-break">
+                      <span class="text-muted d-block small">Computed SHA-256 Digest:</span>
+                      <code>{{ sig.sha256Calculated }}</code>
+                    </div>
+                  </div>
+                }
+              </div>
+            } @else {
+              <!-- No signatures card -->
+              <div class="empty-sig-card text-center p-4 bg-white border rounded">
+                <i class="fa-solid fa-file-shield fs-1 text-muted mb-2"></i>
+                <h4>No Digital Signatures Found</h4>
+                <p class="text-muted mb-3">
+                  This PDF does not contain an embedded cryptographic certificate or PKCS#7 signature.
+                </p>
+                <button
+                  type="button"
+                  class="btn btn-outline-primary btn-sm"
+                  (click)="activeTab.set('forensics')"
+                >
+                  <i class="fa-solid fa-clock-rotate-left me-1"></i> Inspect Forensic Revisions
+                </button>
+              </div>
+            }
+          }
+
+          <!-- TAB 2: Forensic Revision History -->
+          @if (activeTab() === 'forensics' && forensicsReport()) {
+            <!-- Anomalies -->
+            @if (forensicsReport()!.anomalies.length > 0) {
+              <div class="d-flex flex-column gap-2 mb-4">
+                @for (anomaly of forensicsReport()!.anomalies; track anomaly.title) {
+                  <div
+                    class="alert mb-0 d-flex align-items-center gap-3"
+                    [class.alert-danger]="anomaly.severity === 'danger'"
+                    [class.alert-warning]="anomaly.severity === 'warning'"
+                    [class.alert-info]="anomaly.severity === 'info'"
+                  >
+                    <i
+                      class="fa-solid fs-4"
+                      [class.fa-triangle-exclamation]="anomaly.severity === 'danger' || anomaly.severity === 'warning'"
+                      [class.fa-circle-info]="anomaly.severity === 'info'"
+                    ></i>
+                    <div>
+                      <strong class="d-block">{{ anomaly.title }}</strong>
+                      <span class="small">{{ anomaly.description }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Forensic Overview -->
+            <div class="row g-3 mb-4">
+              <div class="col-sm-4">
+                <div class="p-3 bg-white border rounded text-center">
+                  <div class="text-muted small">Total Revisions</div>
+                  <div class="fs-3 fw-bold text-primary">{{ forensicsReport()!.revisionCount }}</div>
+                  <small class="text-muted">
+                    {{ forensicsReport()!.revisionCount === 1 ? 'Original only' : (forensicsReport()!.revisionCount - 1) + ' incremental save(s)' }}
+                  </small>
+                </div>
+              </div>
+              <div class="col-sm-4">
+                <div class="p-3 bg-white border rounded text-center">
+                  <div class="text-muted small">PDF Specification</div>
+                  <div class="fs-3 fw-bold text-dark">{{ forensicsReport()!.pdfVersion }}</div>
+                  <small class="text-muted">
+                    {{ forensicsReport()!.isLinearized ? 'Fast Web View (Linearized)' : 'Standard Encoding' }}
+                  </small>
+                </div>
+              </div>
+              <div class="col-sm-4">
+                <div class="p-3 bg-white border rounded text-center">
+                  <div class="text-muted small">Total File Size</div>
+                  <div class="fs-3 fw-bold text-dark">{{ formatBytes(forensicsReport()!.totalFileSize) }}</div>
+                  <small class="text-muted">
+                    {{ forensicsReport()!.hasTrailingData ? 'Has trailing unreferenced bytes' : 'Clean byte stream' }}
+                  </small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Revision Tree -->
+            <h4 class="fs-6 fw-bold mb-3"><i class="fa-solid fa-list-ol text-primary me-2"></i>Incremental Revision Tree</h4>
+            <div class="timeline">
+              @for (rev of forensicsReport()!.revisions; track rev.revisionNumber) {
+                <div class="timeline-item p-3 mb-3 bg-white border rounded">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="badge" [class.bg-primary]="rev.isInitialCreation" [class.bg-secondary]="!rev.isInitialCreation">
+                        Revision {{ rev.revisionNumber }}
+                      </span>
+                      <strong>{{ rev.isInitialCreation ? 'Initial Document Generation' : 'Incremental Update' }}</strong>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="text-muted small">{{ formatBytes(rev.byteLength) }} ({{ rev.percentageOfTotal }}%)</span>
+                      <button
+                        type="button"
+                        class="btn btn-sm btn-outline-secondary py-0 px-2"
+                        (click)="downloadRevision(rev.revisionNumber)"
+                        [title]="'Download isolated Revision ' + rev.revisionNumber"
+                      >
+                        <i class="fa-solid fa-download me-1"></i> Rev {{ rev.revisionNumber }}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="text-muted small">
+                    @if (rev.producer) {
+                      <div><strong>Producer Software:</strong> {{ rev.producer }}</div>
+                    }
+                    @if (rev.modificationDate) {
+                      <div><strong>Timestamp:</strong> {{ rev.modificationDate | date: 'medium' }}</div>
+                    }
+                    <div><strong>Byte Range:</strong> {{ rev.startOffset }} — {{ rev.endOffset }}</div>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- Rollback action -->
+            @if (forensicsReport()!.revisionCount > 1) {
+              <div class="mt-4 p-3 bg-light border rounded d-flex justify-content-between align-items-center">
+                <div>
+                  <h5 class="fs-6 mb-1">Rollback to Revision 1</h5>
+                  <p class="text-muted small mb-0">Extract the original pristine document before any incremental modifications were saved.</p>
+                </div>
+                <button type="button" class="btn btn-outline-primary" (click)="downloadOriginalRevision()">
+                  <i class="fa-solid fa-download me-1"></i> Download Original Rev 1
+                </button>
+              </div>
+            }
+          }
+        }
+        </div>
+      }
+    </div>
+
+    <p class="tool-page__privacy text-center mt-4">
+      <i class="fa-solid fa-lock"></i> All cryptographic hash and forensic analysis runs locally in your browser.
+    </p>
+  </div>
+</section>

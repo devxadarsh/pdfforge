@@ -29,6 +29,18 @@ export interface PdfWorkerApi {
   unlockPdf(sourceBytes: Uint8Array, password: string): Promise<Uint8Array>;
 }
 
+let cachedQpdf: any = null;
+
+async function getQpdf(): Promise<any> {
+  if (cachedQpdf) return cachedQpdf;
+  const qpdfModule = await import('@neslinesli93/qpdf-wasm');
+  const factory = ((qpdfModule as any).default || qpdfModule) as any;
+  cachedQpdf = await factory({
+    locateFile: (file: string) => `assets/${file || 'qpdf.wasm'}`,
+  });
+  return cachedQpdf;
+}
+
 const api: PdfWorkerApi = {
   async mergePdfs(files: WorkerFileInfo[]): Promise<Uint8Array> {
     if (!files || files.length === 0) {
@@ -86,13 +98,10 @@ const api: PdfWorkerApi = {
 
     // Try QPDF-WASM linearization & stream compression if available in browser worker
     try {
-      const qpdfModule = await import('@neslinesli93/qpdf-wasm');
-      const qpdf = await (qpdfModule.default as any)({
-        locateFile: () => 'assets/qpdf.wasm',
-      });
+      const qpdf = await getQpdf();
       if (qpdf && qpdf.FS) {
-        const inName = 'input.pdf';
-        const outName = 'compressed.pdf';
+        const inName = `input_${Date.now()}.pdf`;
+        const outName = `compressed_${Date.now()}.pdf`;
         qpdf.FS.writeFile(inName, sourceBytes);
 
         const args = ['--linearize'];
@@ -137,13 +146,10 @@ const api: PdfWorkerApi = {
     }
 
     try {
-      const qpdfModule = await import('@neslinesli93/qpdf-wasm');
-      const qpdf = await (qpdfModule.default as any)({
-        locateFile: () => 'assets/qpdf.wasm',
-      });
+      const qpdf = await getQpdf();
       if (qpdf && qpdf.FS) {
-        const inName = 'unprotected.pdf';
-        const outName = 'protected.pdf';
+        const inName = `unprot_${Date.now()}.pdf`;
+        const outName = `prot_${Date.now()}.pdf`;
         qpdf.FS.writeFile(inName, sourceBytes);
 
         const opw = ownerPassword || userPassword;
@@ -186,13 +192,10 @@ const api: PdfWorkerApi = {
     }
 
     try {
-      const qpdfModule = await import('@neslinesli93/qpdf-wasm');
-      const qpdf = await (qpdfModule.default as any)({
-        locateFile: () => 'assets/qpdf.wasm',
-      });
+      const qpdf = await getQpdf();
       if (qpdf && qpdf.FS) {
-        const inName = 'locked.pdf';
-        const outName = 'unlocked.pdf';
+        const inName = `locked_${Date.now()}.pdf`;
+        const outName = `unlocked_${Date.now()}.pdf`;
         qpdf.FS.writeFile(inName, sourceBytes);
 
         const args = [`--password=${password}`, '--decrypt', inName, outName];
