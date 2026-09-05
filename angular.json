@@ -24,7 +24,13 @@
               "zone.js"
             ],
             "allowedCommonJsDependencies": [
-              "pako"
+              "pako",
+              "@neslinesli93/qpdf-wasm",
+              "tesseract.js"
+            ],
+            "externalDependencies": [
+              "fs",
+              "path"
             ],
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",

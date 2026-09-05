@@ -9,7 +9,11 @@
     </header>
 
     <div class="tool-page__body">
-      <app-file-dropzone [multiple]="false" label="Add a PDF to compress" />
+      <app-file-dropzone
+        [multiple]="false"
+        label="Add a PDF to compress"
+        (filesLoaded)="onFileLoaded($event)"
+      />
 
       <div class="compress-levels">
         @for (l of levels; track l.value) {
@@ -26,9 +30,37 @@
         }
       </div>
 
+      @if (result()) {
+        <div class="compress-result my-3 p-3 rounded border bg-white">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <span class="text-muted small d-block">Original Size</span>
+              <strong>{{ formatBytes(result()!.originalBytes) }}</strong>
+            </div>
+            <i class="fa-solid fa-arrow-right text-muted mx-3"></i>
+            <div>
+              <span class="text-muted small d-block">Compressed Size</span>
+              <strong class="text-success">{{ formatBytes(result()!.compressedBytes) }}</strong>
+            </div>
+            <div class="ms-auto">
+              <span class="badge bg-success p-2 fs-6">-{{ result()!.ratio }}%</span>
+            </div>
+          </div>
+        </div>
+      }
+
       <div class="tool-page__footer">
-        <button class="pf-btn pf-btn--primary" type="button" disabled title="Compression pipeline arrives in the next milestone">
-          <i class="fa-solid fa-compress"></i> Compress PDF
+        <button
+          class="pf-btn pf-btn--primary"
+          type="button"
+          [disabled]="!loadedFile() || compressing()"
+          (click)="compress()"
+        >
+          @if (compressing()) {
+            <i class="fa-solid fa-spinner fa-spin me-2"></i> Compressing…
+          } @else {
+            <i class="fa-solid fa-compress me-2"></i> Compress PDF
+          }
         </button>
       </div>
 

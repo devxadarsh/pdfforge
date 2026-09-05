@@ -1,31 +1,20 @@
 import {
   Component,
   signal,
-  inject,
   viewChild,
   ElementRef,
   afterNextRender,
   output,
-  computed,
+  OnDestroy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import SignaturePad from 'signature_pad';
 
 export interface SignatureResult {
   readonly dataUrl: string;
   readonly width: number;
   readonly height: number;
-}
-
-interface StrokePoint {
-  readonly x: number;
-  readonly y: number;
-}
-
-interface Stroke {
-  readonly color: string;
-  readonly width: number;
-  readonly points: StrokePoint[];
 }
 
 @Component({
@@ -35,14 +24,15 @@ interface Stroke {
   templateUrl: './signature-modal.component.html',
   styleUrl: './signature-modal.component.scss',
 })
-export class SignatureModalComponent {
+export class SignatureModalComponent implements OnDestroy {
   readonly signatureSelected = output<SignatureResult>();
   readonly closed = output<void>();
 
   readonly activeTab = signal<'draw' | 'type' | 'upload'>('draw');
 
-  // --- DRAW STATE ---
+  // --- DRAW STATE (SignaturePad) ---
   private readonly canvasRef = viewChild<ElementRef<HTMLCanvasElement>>('drawCanvas');
+  private signaturePad: SignaturePad | null = null;
   readonly drawColor = signal<string>('#111827');
   readonly drawWidth = signal<number>(3);
   readonly colorPresets = ['#111827', '#1d4ed8', '#dc2626'];
@@ -52,11 +42,8 @@ export class SignatureModalComponent {
     { label: 'Bold', value: 5.5 },
   ];
 
-  private isDrawing = false;
-  private currentStroke: StrokePoint[] = [];
-  private readonly strokes = signal<Stroke[]>([]);
-  readonly canUndo = computed(() => this.strokes().length > 0);
-  readonly hasDrawn = computed(() => this.strokes().length > 0);
+  readonly canUndo = signal<boolean>(false);
+  readonly hasDrawn = signal<boolean>(false);
 
   // --- TYPE STATE ---
   readonly typedName = signal<string>('John Doe');
@@ -80,127 +67,93 @@ export class SignatureModalComponent {
 
   constructor() {
     afterNextRender(() => {
-      this.initCanvas();
+      this.initSignaturePad();
     });
+  }
+
+  ngOnDestroy(): void {
+    if (this.signaturePad) {
+      this.signaturePad.off();
+      this.signaturePad = null;
+    }
   }
 
   setTab(tab: 'draw' | 'type' | 'upload'): void {
     this.activeTab.set(tab);
     if (tab === 'draw') {
       setTimeout(() => {
-        this.initCanvas();
-        this.redrawCanvas();
+        this.initSignaturePad();
       }, 50);
     }
   }
 
-  private initCanvas(): void {
+  private initSignaturePad(): void {
     const canvas = this.canvasRef()?.nativeElement;
     if (!canvas) return;
+
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
     const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = Math.max(400, Math.floor(rect.width * dpr));
-    canvas.height = Math.max(180, Math.floor(rect.height * dpr));
+    canvas.width = Math.max(400, Math.floor(rect.width * ratio));
+    canvas.height = Math.max(180, Math.floor(rect.height * ratio));
     const ctx = canvas.getContext('2d');
     if (ctx) {
-      ctx.scale(dpr, dpr);
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
+      ctx.scale(ratio, ratio);
+    }
+
+    if (this.signaturePad) {
+      this.signaturePad.off();
+    }
+
+    this.signaturePad = new SignaturePad(canvas, {
+      penColor: this.drawColor(),
+      minWidth: Math.max(1, this.drawWidth() * 0.6),
+      maxWidth: this.drawWidth() * 1.6,
+      throttle: 16,
+      velocityFilterWeight: 0.7,
+    });
+
+    this.signaturePad.addEventListener('endStroke', () => {
+      this.hasDrawn.set(!this.signaturePad?.isEmpty());
+      const data = this.signaturePad?.toData();
+      this.canUndo.set(Boolean(data && data.length > 0));
+    });
+
+    this.hasDrawn.set(false);
+    this.canUndo.set(false);
+  }
+
+  setDrawColor(color: string): void {
+    this.drawColor.set(color);
+    if (this.signaturePad) {
+      this.signaturePad.penColor = color;
     }
   }
 
-  onPointerDown(event: PointerEvent): void {
-    const canvas = this.canvasRef()?.nativeElement;
-    if (!canvas) return;
-    canvas.setPointerCapture?.(event.pointerId);
-    this.isDrawing = true;
-    const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    this.currentStroke = [{ x, y }];
-    this.drawPoint(x, y);
-  }
-
-  onPointerMove(event: PointerEvent): void {
-    if (!this.isDrawing) return;
-    const canvas = this.canvasRef()?.nativeElement;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    this.currentStroke.push({ x, y });
-    this.drawSegment(this.currentStroke);
-  }
-
-  onPointerUp(event: PointerEvent): void {
-    if (!this.isDrawing) return;
-    this.isDrawing = false;
-    if (this.currentStroke.length > 0) {
-      this.strokes.update((list) => [
-        ...list,
-        {
-          color: this.drawColor(),
-          width: this.drawWidth(),
-          points: [...this.currentStroke],
-        },
-      ]);
-      this.currentStroke = [];
-    }
-  }
-
-  private drawPoint(x: number, y: number): void {
-    const canvas = this.canvasRef()?.nativeElement;
-    const ctx = canvas?.getContext('2d');
-    if (!ctx) return;
-    ctx.fillStyle = this.drawColor();
-    ctx.beginPath();
-    ctx.arc(x, y, this.drawWidth() / 2, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  private drawSegment(points: StrokePoint[]): void {
-    const canvas = this.canvasRef()?.nativeElement;
-    const ctx = canvas?.getContext('2d');
-    if (!ctx || points.length < 2) return;
-    ctx.strokeStyle = this.drawColor();
-    ctx.lineWidth = this.drawWidth();
-    ctx.beginPath();
-    const p1 = points[points.length - 2];
-    const p2 = points[points.length - 1];
-    ctx.moveTo(p1.x, p1.y);
-    ctx.lineTo(p2.x, p2.y);
-    ctx.stroke();
-  }
-
-  private redrawCanvas(): void {
-    const canvas = this.canvasRef()?.nativeElement;
-    const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx) return;
-    const dpr = window.devicePixelRatio || 1;
-    ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
-
-    for (const stroke of this.strokes()) {
-      if (stroke.points.length === 0) continue;
-      ctx.strokeStyle = stroke.color;
-      ctx.lineWidth = stroke.width;
-      ctx.beginPath();
-      ctx.moveTo(stroke.points[0].x, stroke.points[0].y);
-      for (let i = 1; i < stroke.points.length; i++) {
-        ctx.lineTo(stroke.points[i].x, stroke.points[i].y);
-      }
-      ctx.stroke();
+  setDrawWidth(w: number): void {
+    this.drawWidth.set(w);
+    if (this.signaturePad) {
+      this.signaturePad.minWidth = Math.max(1, w * 0.6);
+      this.signaturePad.maxWidth = w * 1.6;
     }
   }
 
   undoStroke(): void {
-    this.strokes.update((list) => list.slice(0, -1));
-    this.redrawCanvas();
+    if (!this.signaturePad) return;
+    const data = this.signaturePad.toData();
+    if (data && data.length > 0) {
+      data.pop();
+      this.signaturePad.fromData(data);
+      this.hasDrawn.set(!this.signaturePad.isEmpty());
+      this.canUndo.set(data.length > 0);
+    }
   }
 
   clearCanvas(): void {
-    this.strokes.set([]);
-    this.currentStroke = [];
-    this.redrawCanvas();
+    if (this.signaturePad) {
+      this.signaturePad.clear();
+    }
+    this.hasDrawn.set(false);
+    this.canUndo.set(false);
   }
 
   // --- UPLOAD HANDLING ---
@@ -275,15 +228,13 @@ export class SignatureModalComponent {
     const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const data = imgData.data;
 
-    // Threshold near white (e.g. RGB all > 220) to make transparent
     for (let i = 0; i < data.length; i += 4) {
       const r = data[i];
       const g = data[i + 1];
       const b = data[i + 2];
       if (r > 220 && g > 220 && b > 220) {
-        data[i + 3] = 0; // Alpha transparent
+        data[i + 3] = 0;
       } else {
-        // Boost contrast for signature ink
         const brightness = (r + g + b) / 3;
         if (brightness < 120) {
           data[i] = 17;
@@ -302,9 +253,8 @@ export class SignatureModalComponent {
 
     if (tab === 'draw') {
       const canvas = this.canvasRef()?.nativeElement;
-      if (!canvas || !this.hasDrawn()) return;
+      if (!canvas || !this.hasDrawn() || !this.signaturePad || this.signaturePad.isEmpty()) return;
 
-      // Crop canvas to bounding box of strokes for tight signature fit
       const croppedDataUrl = this.cropCanvasToSignature(canvas);
       this.signatureSelected.emit({
         dataUrl: croppedDataUrl,
@@ -365,7 +315,6 @@ export class SignatureModalComponent {
 
     if (!hasPixels) return canvas.toDataURL('image/png');
 
-    // Add padding around signature
     const pad = 12 * dpr;
     minX = Math.max(0, minX - pad);
     minY = Math.max(0, minY - pad);

@@ -27,11 +27,52 @@
         [multiple]="current.id === 'img-pdf'"
         [accept]="current.accept"
         [label]="current.id === 'img-pdf' ? 'Add images to convert' : 'Add a PDF to convert'"
+        (filesLoaded)="onFilesLoaded($event)"
       />
 
+      @if (progress()) {
+        <div class="convert-progress my-3 p-3 rounded bg-light border">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="small font-weight-bold">{{ progress() }}</span>
+            <span class="small text-muted">{{ progressPercent() }}%</span>
+          </div>
+          <div class="progress" style="height: 6px;">
+            <div
+              class="progress-bar bg-primary"
+              role="progressbar"
+              [style.width.%]="progressPercent()"
+              [attr.aria-valuenow]="progressPercent()"
+              aria-valuemin="0"
+              aria-valuemax="100"
+            ></div>
+          </div>
+        </div>
+      }
+
+      @if (extractedText()) {
+        <div class="convert-result my-3 p-3 rounded border bg-white">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="m-0 font-weight-bold"><i class="fa-solid fa-file-lines text-primary me-2"></i>Extracted Text</h6>
+            <button type="button" class="pf-btn pf-btn--sm pf-btn--outline" (click)="copyExtractedText()">
+              <i class="fa-solid fa-copy me-1"></i> Copy Text
+            </button>
+          </div>
+          <pre class="p-2 rounded bg-light border" style="max-height: 240px; overflow-y: auto; font-size: 13px; white-space: pre-wrap;">{{ extractedText() }}</pre>
+        </div>
+      }
+
       <div class="tool-page__footer">
-        <button class="pf-btn pf-btn--primary" type="button" disabled title="Conversion pipeline arrives in the next milestone">
-          <i class="fa-solid fa-arrows-rotate"></i> Convert
+        <button
+          class="pf-btn pf-btn--primary"
+          type="button"
+          [disabled]="!selectedFiles().length || converting()"
+          (click)="convert()"
+        >
+          @if (converting()) {
+            <i class="fa-solid fa-spinner fa-spin me-2"></i> Converting…
+          } @else {
+            <i class="fa-solid fa-arrows-rotate me-2"></i> Convert
+          }
         </button>
       </div>
     </div>

@@ -12,7 +12,11 @@
     </header>
 
     <div class="tool-page__body">
-      <app-file-dropzone [multiple]="false" label="Add a PDF" />
+      <app-file-dropzone
+        [multiple]="false"
+        label="Add a PDF"
+        (filesLoaded)="onFileLoaded($event)"
+      />
 
       @if (mode() === 'protect') {
         <div class="security-form">
@@ -42,11 +46,18 @@
       }
 
       <div class="tool-page__footer">
-        <button class="pf-btn pf-btn--primary" type="button" disabled title="Security pipeline arrives in the next milestone">
-          @if (mode() === 'protect') {
-            <i class="fa-solid fa-lock"></i> Protect PDF
+        <button
+          class="pf-btn pf-btn--primary"
+          type="button"
+          [disabled]="!loadedFile() || !password() || processing()"
+          (click)="runAction()"
+        >
+          @if (processing()) {
+            <i class="fa-solid fa-spinner fa-spin me-2"></i> Processing…
+          } @else if (mode() === 'protect') {
+            <i class="fa-solid fa-lock me-2"></i> Protect PDF
           } @else {
-            <i class="fa-solid fa-lock-open"></i> Unlock PDF
+            <i class="fa-solid fa-lock-open me-2"></i> Unlock PDF
           }
         </button>
       </div>

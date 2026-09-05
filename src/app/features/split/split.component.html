@@ -9,7 +9,26 @@
     </header>
 
     <div class="tool-page__body">
-      <app-file-dropzone [multiple]="false" label="Add a PDF to split" />
+      <app-file-dropzone
+        [multiple]="false"
+        label="Add a PDF to split"
+        (filesLoaded)="onFileLoaded($event)"
+      />
+
+      @if (loadedFile()) {
+        <div class="d-flex align-items-center justify-content-between p-3 my-3 bg-white border rounded">
+          <div class="d-flex align-items-center gap-3">
+            <i class="fa-solid fa-file-pdf text-danger fs-3"></i>
+            <div>
+              <div class="fw-semibold">{{ loadedFile()!.name }}</div>
+              <small class="text-muted">{{ formatBytes(loadedFile()!.sizeBytes) }} • {{ pageCount() }} page{{ pageCount() === 1 ? '' : 's' }}</small>
+            </div>
+          </div>
+          <button class="btn btn-sm btn-outline-secondary" type="button" (click)="clearFile()">
+            <i class="fa-solid fa-xmark"></i> Change
+          </button>
+        </div>
+      }
 
       <div class="split-modes">
         <button
@@ -47,8 +66,17 @@
       }
 
       <div class="tool-page__footer">
-        <button class="pf-btn pf-btn--primary" type="button" disabled title="Split pipeline arrives in the next milestone">
-          <i class="fa-solid fa-scissors"></i> Split PDF
+        <button
+          class="pf-btn pf-btn--primary"
+          type="button"
+          [disabled]="!loadedFile() || splitting()"
+          (click)="split()"
+        >
+          @if (splitting()) {
+            <i class="fa-solid fa-spinner fa-spin me-2"></i> Splitting…
+          } @else {
+            <i class="fa-solid fa-scissors me-2"></i> Split PDF
+          }
         </button>
       </div>
     </div>

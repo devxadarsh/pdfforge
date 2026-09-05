@@ -4,21 +4,30 @@ import {
   output,
   ChangeDetectionStrategy,
 } from '@angular/core';
+import {
+  DragDropModule,
+  CdkDragDrop,
+  moveItemInArray,
+} from '@angular/cdk/drag-drop';
 import { PanelSectionComponent } from '../../../../shared/components/panel/panel-section.component';
 import { PageThumbnailComponent } from '../page-thumbnail/page-thumbnail.component';
 import { EditorPagesService } from '../../state/editor-pages.service';
 import { EditorStateService } from '../../state/editor-state.service';
+import { EditorPage } from '../../models/editor-page.model';
 
 /**
  * Self-contained left side panel for page management. Injects the shared editor
- * page/state services directly, so the editor shell only needs to drop in
- * `<app-pages-panel />` — future side modules follow the same pattern.
+ * page/state services directly, enhanced with Angular CDK Drag-Drop and Virtual Scrolling.
  */
 @Component({
   selector: 'app-pages-panel',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [PanelSectionComponent, PageThumbnailComponent],
+  imports: [
+    DragDropModule,
+    PanelSectionComponent,
+    PageThumbnailComponent,
+  ],
   templateUrl: './pages-panel.component.html',
   styleUrl: './pages-panel.component.scss',
 })
@@ -27,8 +36,6 @@ export class PagesPanelComponent {
   readonly collapse = output<void>();
   readonly pageSelect = output<string>();
   private readonly state = inject(EditorStateService);
-
-  private dragId: string | null = null;
 
   rotateLeft(): void {
     this.state.pushHistorySnapshot('Rotate Page Left');
@@ -72,25 +79,18 @@ export class PagesPanelComponent {
     this.pageSelect.emit(id);
   }
 
-  /* Drag-and-drop reordering */
-  onDragStart(id: string): void {
-    this.dragId = id;
-  }
-
-  onDragOver(event: DragEvent): void {
-    event.preventDefault();
-  }
-
-  onDrop(id: string): void {
-    if (this.dragId && this.dragId !== id) {
-      const targetIndex = this.pages
-        .pages()
-        .findIndex((p) => p.id === id);
-      if (targetIndex >= 0) {
-        this.state.pushHistorySnapshot('Reorder Pages');
-        this.pages.move(this.dragId, targetIndex);
-      }
+  /* CDK Drag-and-drop reordering */
+  onCdkDrop(event: CdkDragDrop<EditorPage[]>): void {
+    if (event.previousIndex === event.currentIndex) {
+      return;
     }
-    this.dragId = null;
+    this.state.pushHistorySnapshot('Reorder Pages');
+    const list = [...this.pages.pages()];
+    moveItemInArray(list, event.previousIndex, event.currentIndex);
+    this.pages.restoreState(list, this.pages.selected(), this.pages.currentId());
+  }
+
+  trackByPageId(index: number, page: EditorPage): string {
+    return page.id;
   }
 }

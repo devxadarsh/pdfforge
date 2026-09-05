@@ -99,17 +99,21 @@
     </app-panel-section>
 
     <div class="ppanel__scroll">
-      <div class="ppanel__list">
+      <div
+        class="ppanel__list"
+        cdkDropList
+        [cdkDropListData]="pages.pages()"
+        (cdkDropListDropped)="onCdkDrop($event)"
+      >
         @for (page of pages.pages(); track page.id) {
           <div
             class="ppanel__item"
-            draggable="true"
+            cdkDrag
+            [cdkDragData]="page"
             [class.ppanel__item--selected]="pages.isSelected(page.id)"
-            (dragstart)="onDragStart(page.id)"
-            (dragover)="onDragOver($event)"
-            (drop)="onDrop(page.id)"
             (click)="selectPage(page.id, $event)"
           >
+            <div class="cdk-drag-placeholder ppanel__item--placeholder" *cdkDragPlaceholder></div>
             <app-page-thumbnail
               [pageIndex]="page.sourceIndex"
               [rotation]="page.rotation"

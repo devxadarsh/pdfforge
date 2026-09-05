@@ -1,19 +1,20 @@
 import { Injectable } from '@angular/core';
+import { openDB, IDBPDatabase, DBSchema } from 'idb';
 import { StoredEditorState } from '../../models/file.models';
 
 /** Key used inside the IndexedDB object store. */
 const DOC_KEY = 'last';
 
 /** IndexedDB database name. */
-const DB_NAME = 'pdfforge-docs';
+export const DB_NAME = 'pdfforge-docs';
 
 /** Object store that holds the persisted document. */
-const STORE_NAME = 'last-document';
+export const STORE_NAME = 'last-document';
 
 /** Schema version — bump when the store structure changes. */
-const DB_VERSION = 2;
+export const DB_VERSION = 2;
 
-const RECENT_STORE = 'recent-files';
+export const RECENT_STORE = 'recent-files';
 
 export interface StoredDocument {
   readonly name: string;
@@ -22,44 +23,53 @@ export interface StoredDocument {
   readonly editorState?: StoredEditorState;
 }
 
+export interface PdfForgeDBSchema extends DBSchema {
+  [STORE_NAME]: {
+    key: string;
+    value: StoredDocument;
+  };
+  [RECENT_STORE]: {
+    key: string;
+    value: any;
+  };
+}
+
 /**
- * Lightweight IndexedDB wrapper that persists the last-opened PDF document
+ * Modernized IndexedDB wrapper using `idb` that persists the last-opened PDF document
  * and its full editor state (annotations + pages) so it can be restored after a page reload.
  *
  * All data stays entirely local in the browser — nothing is uploaded.
  */
 @Injectable({ providedIn: 'root' })
 export class DocumentStorageService {
-  /**
-   * Opens (or creates) the IndexedDB database.
-   * The promise is cached so concurrent callers share the same connection.
-   */
-  private dbPromise: Promise<IDBDatabase> | null = null;
+  private dbPromise: Promise<IDBPDatabase<PdfForgeDBSchema>> | null = null;
 
-  private openDb(): Promise<IDBDatabase> {
+  private getDb(): Promise<IDBPDatabase<PdfForgeDBSchema>> {
     if (this.dbPromise) {
       return this.dbPromise;
     }
 
-    this.dbPromise = new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-      request.onupgradeneeded = () => {
-        const db = request.result;
+    this.dbPromise = openDB<PdfForgeDBSchema>(DB_NAME, DB_VERSION, {
+      upgrade(db) {
         if (!db.objectStoreNames.contains(STORE_NAME)) {
           db.createObjectStore(STORE_NAME);
         }
         if (!db.objectStoreNames.contains(RECENT_STORE)) {
           db.createObjectStore(RECENT_STORE, { keyPath: 'id' });
         }
-      };
-
-      request.onsuccess = () => resolve(request.result);
-
-      request.onerror = () => {
+      },
+      blocked() {
+        console.warn('[DocumentStorage] IndexedDB upgrade blocked by another tab.');
+      },
+      blocking() {
+        console.warn('[DocumentStorage] IndexedDB connection is blocking a newer version.');
+      },
+      terminated: () => {
         this.dbPromise = null;
-        reject(request.error);
-      };
+      },
+    }).catch((err) => {
+      this.dbPromise = null;
+      throw err;
     });
 
     return this.dbPromise;
@@ -72,42 +82,27 @@ export class DocumentStorageService {
     editorState?: StoredEditorState,
   ): Promise<void> {
     try {
-      const db = await this.openDb();
-      const tx = db.transaction(STORE_NAME, 'readwrite');
-      const store = tx.objectStore(STORE_NAME);
-
+      const db = await this.getDb();
       const record: StoredDocument = {
         name,
         data,
         storedAt: Date.now(),
         editorState,
       };
-
-      store.put(record, DOC_KEY);
-
-      await new Promise<void>((resolve, reject) => {
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-      });
-    } catch {
-      console.warn('[DocumentStorage] Could not save document to IndexedDB.');
+      await db.put(STORE_NAME, record, DOC_KEY);
+    } catch (err) {
+      console.warn('[DocumentStorage] Could not save document to IndexedDB via idb:', err);
     }
   }
 
   /** Retrieve the last-stored document, or `null` if none exists. */
   async loadDocument(): Promise<StoredDocument | null> {
     try {
-      const db = await this.openDb();
-      const tx = db.transaction(STORE_NAME, 'readonly');
-      const store = tx.objectStore(STORE_NAME);
-      const request = store.get(DOC_KEY);
-
-      return await new Promise<StoredDocument | null>((resolve, reject) => {
-        request.onsuccess = () => resolve(request.result ?? null);
-        request.onerror = () => reject(request.error);
-      });
-    } catch {
-      console.warn('[DocumentStorage] Could not load document from IndexedDB.');
+      const db = await this.getDb();
+      const result = await db.get(STORE_NAME, DOC_KEY);
+      return result ?? null;
+    } catch (err) {
+      console.warn('[DocumentStorage] Could not load document from IndexedDB via idb:', err);
       return null;
     }
   }
@@ -115,17 +110,10 @@ export class DocumentStorageService {
   /** Remove the persisted document. */
   async clearDocument(): Promise<void> {
     try {
-      const db = await this.openDb();
-      const tx = db.transaction(STORE_NAME, 'readwrite');
-      const store = tx.objectStore(STORE_NAME);
-      store.delete(DOC_KEY);
-
-      await new Promise<void>((resolve, reject) => {
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-      });
-    } catch {
-      console.warn('[DocumentStorage] Could not clear document from IndexedDB.');
+      const db = await this.getDb();
+      await db.delete(STORE_NAME, DOC_KEY);
+    } catch (err) {
+      console.warn('[DocumentStorage] Could not clear document from IndexedDB via idb:', err);
     }
   }
 }

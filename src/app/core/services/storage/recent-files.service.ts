@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { openDB, IDBPDatabase, DBSchema } from 'idb';
 import { StoredEditorState } from '../../models/file.models';
 
 /** 30 days in milliseconds. */
@@ -8,6 +9,7 @@ const EXPIRATION_MS = 30 * 24 * 60 * 60 * 1000;
 const DB_NAME = 'pdfforge-docs';
 const DB_VERSION = 2;
 const RECENT_STORE = 'recent-files';
+const LAST_DOC_STORE = 'last-document';
 
 export interface RecentFileEntry {
   readonly id: string;
@@ -30,8 +32,20 @@ export interface RecentFileRecord {
   readonly editorState?: StoredEditorState;
 }
 
+interface RecentFilesDBSchema extends DBSchema {
+  [LAST_DOC_STORE]: {
+    key: string;
+    value: any;
+  };
+  [RECENT_STORE]: {
+    key: string;
+    value: RecentFileRecord;
+  };
+}
+
 /**
- * Manages recently opened PDF files, raw document bytes, and full editor state (annotations + pages) in IndexedDB.
+ * Modernized IndexedDB manager using `idb` for recently opened PDF files, raw document bytes,
+ * and full editor state (annotations + pages).
  * Persists document bytes and edits locally so files can be reopened immediately with all edits intact.
  *
  * Automatically purges unpinned entries older than 30 days to free space.
@@ -41,32 +55,28 @@ export interface RecentFileRecord {
  */
 @Injectable({ providedIn: 'root' })
 export class RecentFilesService {
-  private dbPromise: Promise<IDBDatabase> | null = null;
+  private dbPromise: Promise<IDBPDatabase<RecentFilesDBSchema>> | null = null;
 
-  private openDb(): Promise<IDBDatabase> {
+  private getDb(): Promise<IDBPDatabase<RecentFilesDBSchema>> {
     if (this.dbPromise) {
       return this.dbPromise;
     }
 
-    this.dbPromise = new Promise<IDBDatabase>((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-      request.onupgradeneeded = () => {
-        const db = request.result;
-        if (!db.objectStoreNames.contains('last-document')) {
-          db.createObjectStore('last-document');
+    this.dbPromise = openDB<RecentFilesDBSchema>(DB_NAME, DB_VERSION, {
+      upgrade(db) {
+        if (!db.objectStoreNames.contains(LAST_DOC_STORE)) {
+          db.createObjectStore(LAST_DOC_STORE);
         }
         if (!db.objectStoreNames.contains(RECENT_STORE)) {
           db.createObjectStore(RECENT_STORE, { keyPath: 'id' });
         }
-      };
-
-      request.onsuccess = () => resolve(request.result);
-
-      request.onerror = () => {
+      },
+      terminated: () => {
         this.dbPromise = null;
-        reject(request.error);
-      };
+      },
+    }).catch((err) => {
+      this.dbPromise = null;
+      throw err;
     });
 
     return this.dbPromise;
@@ -84,11 +94,8 @@ export class RecentFilesService {
     editorState?: StoredEditorState,
   ): Promise<void> {
     try {
-      const db = await this.openDb();
-      const tx = db.transaction(RECENT_STORE, 'readwrite');
-      const store = tx.objectStore(RECENT_STORE);
-
-      const all = await this.getAllRecordsFromStore(store);
+      const db = await this.getDb();
+      const all = await db.getAll(RECENT_STORE);
       const existing = all.find(
         (e) => e.name.toLowerCase() === name.toLowerCase(),
       );
@@ -104,14 +111,9 @@ export class RecentFilesService {
         editorState: editorState ?? existing?.editorState,
       };
 
-      store.put(record);
-
-      await new Promise<void>((resolve, reject) => {
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-      });
-    } catch {
-      console.warn('[RecentFiles] Could not store recent file in IndexedDB.');
+      await db.put(RECENT_STORE, record);
+    } catch (err) {
+      console.warn('[RecentFiles] Could not store recent file in IndexedDB via idb:', err);
     }
   }
 
@@ -121,37 +123,21 @@ export class RecentFilesService {
    */
   async getFileData(id: string): Promise<RecentFileRecord | null> {
     try {
-      const db = await this.openDb();
-      const tx = db.transaction(RECENT_STORE, 'readwrite');
-      const store = tx.objectStore(RECENT_STORE);
-
-      const request = store.get(id);
-      const record = await new Promise<RecentFileRecord | null>(
-        (resolve, reject) => {
-          request.onsuccess = () => resolve(request.result ?? null);
-          request.onerror = () => reject(request.error);
-        },
-      );
+      const db = await this.getDb();
+      const record = await db.get(RECENT_STORE, id);
 
       if (record && record.data) {
-        // Update timestamp to bring to top
         const updated: RecentFileRecord = {
           ...record,
           lastOpenedAt: Date.now(),
         };
-        store.put(updated);
-
-        await new Promise<void>((resolve, reject) => {
-          tx.oncomplete = () => resolve();
-          tx.onerror = () => reject(tx.error);
-        });
-
+        await db.put(RECENT_STORE, updated);
         return updated;
       }
 
-      return record;
-    } catch {
-      console.warn('[RecentFiles] Could not load file data for ID:', id);
+      return record ?? null;
+    } catch (err) {
+      console.warn('[RecentFiles] Could not load file data for ID:', id, err);
       return null;
     }
   }
@@ -161,11 +147,8 @@ export class RecentFilesService {
    */
   async getFileDataByName(name: string): Promise<RecentFileRecord | null> {
     try {
-      const db = await this.openDb();
-      const tx = db.transaction(RECENT_STORE, 'readwrite');
-      const store = tx.objectStore(RECENT_STORE);
-
-      const all = await this.getAllRecordsFromStore(store);
+      const db = await this.getDb();
+      const all = await db.getAll(RECENT_STORE);
       const match = all.find(
         (e) => e.name.toLowerCase() === name.toLowerCase() && e.data,
       );
@@ -175,19 +158,13 @@ export class RecentFilesService {
           ...match,
           lastOpenedAt: Date.now(),
         };
-        store.put(updated);
-
-        await new Promise<void>((resolve, reject) => {
-          tx.oncomplete = () => resolve();
-          tx.onerror = () => reject(tx.error);
-        });
-
+        await db.put(RECENT_STORE, updated);
         return updated;
       }
 
       return null;
-    } catch {
-      console.warn('[RecentFiles] Could not load file data for name:', name);
+    } catch (err) {
+      console.warn('[RecentFiles] Could not load file data for name:', name, err);
       return null;
     }
   }
@@ -198,12 +175,8 @@ export class RecentFilesService {
    */
   async togglePin(id: string): Promise<boolean> {
     try {
-      const db = await this.openDb();
-      const tx = db.transaction(RECENT_STORE, 'readwrite');
-      const store = tx.objectStore(RECENT_STORE);
-
-      const all = await this.getAllRecordsFromStore(store);
-      const entry = all.find((e) => e.id === id);
+      const db = await this.getDb();
+      const entry = await db.get(RECENT_STORE, id);
       if (!entry) {
         return false;
       }
@@ -213,16 +186,10 @@ export class RecentFilesService {
         pinned: !entry.pinned,
       };
 
-      store.put(updated);
-
-      await new Promise<void>((resolve, reject) => {
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-      });
-
+      await db.put(RECENT_STORE, updated);
       return Boolean(updated.pinned);
-    } catch {
-      console.warn('[RecentFiles] Could not toggle pin for entry.');
+    } catch (err) {
+      console.warn('[RecentFiles] Could not toggle pin for entry:', err);
       return false;
     }
   }
@@ -234,18 +201,17 @@ export class RecentFilesService {
    */
   async getAll(): Promise<RecentFileEntry[]> {
     try {
-      const db = await this.openDb();
-      const tx = db.transaction(RECENT_STORE, 'readwrite');
-      const store = tx.objectStore(RECENT_STORE);
-
-      const all = await this.getAllRecordsFromStore(store);
+      const db = await this.getDb();
+      const all = await db.getAll(RECENT_STORE);
       const cutoff = Date.now() - EXPIRATION_MS;
 
       // Remove expired unpinned entries
+      const tx = db.transaction(RECENT_STORE, 'readwrite');
       const expired = all.filter((e) => !e.pinned && e.lastOpenedAt < cutoff);
       for (const entry of expired) {
-        store.delete(entry.id);
+        void tx.store.delete(entry.id);
       }
+      await tx.done;
 
       // Filter valid entries (either pinned or within 30-day window)
       const valid = all.filter((e) => e.pinned || e.lastOpenedAt >= cutoff);
@@ -255,11 +221,6 @@ export class RecentFilesService {
         if (a.pinned && !b.pinned) return -1;
         if (!a.pinned && b.pinned) return 1;
         return b.lastOpenedAt - a.lastOpenedAt;
-      });
-
-      await new Promise<void>((resolve, reject) => {
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
       });
 
       // Map to lightweight metadata entries (excluding raw ArrayBuffer to save memory)
@@ -272,8 +233,8 @@ export class RecentFilesService {
         pinned: r.pinned,
         hasData: Boolean(r.data && r.data.byteLength > 0),
       }));
-    } catch {
-      console.warn('[RecentFiles] Could not load recent files from IndexedDB.');
+    } catch (err) {
+      console.warn('[RecentFiles] Could not load recent files from IndexedDB via idb:', err);
       return [];
     }
   }
@@ -281,45 +242,20 @@ export class RecentFilesService {
   /** Remove a single recent file entry by ID. */
   async remove(id: string): Promise<void> {
     try {
-      const db = await this.openDb();
-      const tx = db.transaction(RECENT_STORE, 'readwrite');
-      const store = tx.objectStore(RECENT_STORE);
-      store.delete(id);
-
-      await new Promise<void>((resolve, reject) => {
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-      });
-    } catch {
-      console.warn('[RecentFiles] Could not remove recent file entry.');
+      const db = await this.getDb();
+      await db.delete(RECENT_STORE, id);
+    } catch (err) {
+      console.warn('[RecentFiles] Could not remove recent file entry via idb:', err);
     }
   }
 
   /** Clear all recent file entries (both pinned and unpinned). */
   async clearAll(): Promise<void> {
     try {
-      const db = await this.openDb();
-      const tx = db.transaction(RECENT_STORE, 'readwrite');
-      const store = tx.objectStore(RECENT_STORE);
-      store.clear();
-
-      await new Promise<void>((resolve, reject) => {
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-      });
-    } catch {
-      console.warn('[RecentFiles] Could not clear recent files.');
+      const db = await this.getDb();
+      await db.clear(RECENT_STORE);
+    } catch (err) {
+      console.warn('[RecentFiles] Could not clear recent files via idb:', err);
     }
-  }
-
-  private getAllRecordsFromStore(
-    store: IDBObjectStore,
-  ): Promise<RecentFileRecord[]> {
-    return new Promise<RecentFileRecord[]>((resolve, reject) => {
-      const request = store.getAll();
-      request.onsuccess = () =>
-        resolve((request.result as RecentFileRecord[]) ?? []);
-      request.onerror = () => reject(request.error);
-    });
   }
 }

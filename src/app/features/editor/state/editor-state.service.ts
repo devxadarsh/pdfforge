@@ -1,4 +1,5 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
+import { produce, enableMapSet } from 'immer';
 import {
   PdfToolId,
   PdfAnnotation,
@@ -13,6 +14,8 @@ import {
 } from '../../../core/models/pdf.models';
 import { EditorPage } from '../models/editor-page.model';
 import { EditorPagesService } from './editor-pages.service';
+
+enableMapSet();
 
 export type EditorFitMode = 'none' | 'width' | 'page';
  
@@ -451,7 +454,7 @@ export class EditorStateService {
         : null;
     return {
       description,
-      annotations: this.cloneAnnotationsMap(this._annotations()),
+      annotations: this._annotations(),
       pages: pageList,
       currentId: curId,
       selectedIds: [...this._selectedIds()],
@@ -491,7 +494,7 @@ export class EditorStateService {
     );
     this.redoStack.push(current);
 
-    this._annotations.set(this.cloneAnnotationsMap(previous.annotations));
+    this._annotations.set(previous.annotations);
     if (typeof this.pages.restoreState === 'function') {
       this.pages.restoreState(
         previous.pages.map((p) => ({ ...p })),
@@ -518,7 +521,7 @@ export class EditorStateService {
     );
     this.undoStack.push(current);
 
-    this._annotations.set(this.cloneAnnotationsMap(next.annotations));
+    this._annotations.set(next.annotations);
     if (typeof this.pages.restoreState === 'function') {
       this.pages.restoreState(
         next.pages.map((p) => ({ ...p })),
@@ -587,14 +590,19 @@ export class EditorStateService {
           `Add ${annotation.type.charAt(0).toUpperCase() + annotation.type.slice(1)}`,
       );
     }
-    const map = new Map(this._annotations());
-    const existing = map.get(pageId) ?? [];
-    map.set(pageId, [...existing, annotation]);
-    this._annotations.set(map);
+    const next = produce(this._annotations(), (draft) => {
+      const existing = draft.get(pageId);
+      if (existing) {
+        existing.push(annotation as any);
+      } else {
+        draft.set(pageId, [annotation as any]);
+      }
+    });
+    this._annotations.set(next);
     if (select) {
       this._selectedIds.set([annotation.id]);
     }
-    this._currentRevision.update(r => r + 1);
+    this._currentRevision.update((r) => r + 1);
   }
 
   updateAnnotation(
@@ -603,28 +611,34 @@ export class EditorStateService {
     recordHistory = true,
     description = 'Edit Object',
   ): void {
-    const map = new Map(this._annotations());
-    for (const [pageId, list] of map) {
-      const idx = list.findIndex((a) => a.id === id);
-      if (idx < 0) {
-        continue;
+    const current = this._annotations();
+    let isLocked = false;
+    let found = false;
+    for (const [, list] of current) {
+      const match = list.find((a) => a.id === id);
+      if (match) {
+        if (match.locked) isLocked = true;
+        found = true;
+        break;
       }
-      // A locked object is immutable through all state entry points. Unlocking
-      // remains intentionally available through `toggleLock()`.
-      if (list[idx].locked) {
-        return;
-      }
-      if (recordHistory) {
-        this.pushHistorySnapshot(description);
-      }
-      const updated = { ...list[idx], ...patch } as PdfAnnotation;
-      const next = [...list];
-      next[idx] = updated;
-      map.set(pageId, next);
-      this._annotations.set(map);
-      this._currentRevision.update(r => r + 1);
+    }
+    if (!found || isLocked) {
       return;
     }
+    if (recordHistory) {
+      this.pushHistorySnapshot(description);
+    }
+    const next = produce(current, (draft) => {
+      for (const [, list] of draft) {
+        const idx = list.findIndex((a) => a.id === id);
+        if (idx >= 0) {
+          list[idx] = { ...list[idx], ...patch } as any;
+          return;
+        }
+      }
+    });
+    this._annotations.set(next);
+    this._currentRevision.update((r) => r + 1);
   }
 
   nudgeAnnotation(id: string, dx: number, dy: number): void {
@@ -759,23 +773,33 @@ export class EditorStateService {
   }
 
   removeAnnotation(id: string): void {
-    const map = new Map(this._annotations());
-    for (const [pageId, list] of map) {
-      const cur = list.find((a) => a.id === id);
-      if (cur?.locked) {
-        return;
+    const current = this._annotations();
+    let isLocked = false;
+    let found = false;
+    for (const [, list] of current) {
+      const match = list.find((a) => a.id === id);
+      if (match) {
+        if (match.locked) isLocked = true;
+        found = true;
+        break;
       }
-      const next = list.filter((a) => a.id !== id);
-      if (next.length === list.length) {
-        continue;
-      }
-      this.pushHistorySnapshot();
-      map.set(pageId, next);
-      this._annotations.set(map);
-      this._currentRevision.update(r => r + 1);
-      this._selectedIds.update((ids) => ids.filter((i) => i !== id));
+    }
+    if (!found || isLocked) {
       return;
     }
+    this.pushHistorySnapshot();
+    const next = produce(current, (draft) => {
+      for (const [, list] of draft) {
+        const idx = list.findIndex((a) => a.id === id);
+        if (idx >= 0) {
+          list.splice(idx, 1);
+          return;
+        }
+      }
+    });
+    this._annotations.set(next);
+    this._currentRevision.update((r) => r + 1);
+    this._selectedIds.update((ids) => ids.filter((i) => i !== id));
   }
 
   /** Duplicate an annotation, offsetting the copy so it is visibly distinct. */

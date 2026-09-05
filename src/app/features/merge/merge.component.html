@@ -16,9 +16,14 @@
       />
 
       @if (items().length > 0) {
-        <ul class="merge-list">
+        <ul
+          class="merge-list"
+          cdkDropList
+          [cdkDropListData]="items()"
+          (cdkDropListDropped)="onDrop($event)"
+        >
           @for (item of items(); track item.id; let i = $index) {
-            <li class="merge-list__item pf-card">
+            <li class="merge-list__item pf-card" cdkDrag [cdkDragData]="item">
               <span class="merge-list__index">{{ i + 1 }}</span>
               <i class="fa-solid fa-file-pdf merge-list__file"></i>
               <div class="merge-list__meta">
@@ -41,8 +46,17 @@
         </ul>
 
         <div class="tool-page__footer">
-          <button class="pf-btn pf-btn--primary" type="button" disabled title="Merge pipeline arrives in the next milestone">
-            <i class="fa-solid fa-object-group"></i> Merge {{ items().length }} files
+          <button
+            class="pf-btn pf-btn--primary"
+            type="button"
+            [disabled]="items().length < 2 || merging()"
+            (click)="merge()"
+          >
+            @if (merging()) {
+              <i class="fa-solid fa-spinner fa-spin me-2"></i> Merging…
+            } @else {
+              <i class="fa-solid fa-object-group me-2"></i> Merge {{ items().length }} files
+            }
           </button>
         </div>
       } @else {

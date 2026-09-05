@@ -54,10 +54,6 @@
             <canvas
               #drawCanvas
               class="sig-draw__canvas"
-              (pointerdown)="onPointerDown($event)"
-              (pointermove)="onPointerMove($event)"
-              (pointerup)="onPointerUp($event)"
-              (pointercancel)="onPointerUp($event)"
             ></canvas>
             @if (!hasDrawn()) {
               <div class="sig-draw__hint">
@@ -77,7 +73,7 @@
                     class="sig-swatch"
                     [style.background-color]="c"
                     [class.sig-swatch--active]="drawColor() === c"
-                    (click)="drawColor.set(c)"
+                    (click)="setDrawColor(c)"
                     [title]="c"
                   ></button>
                 }
@@ -93,7 +89,7 @@
                     type="button"
                     class="sig-pill"
                     [class.sig-pill--active]="drawWidth() === w.value"
-                    (click)="drawWidth.set(w.value)"
+                    (click)="setDrawWidth(w.value)"
                   >
                     {{ w.label }}
                   </button>
