@@ -1,5 +1,5 @@
 import { Component, signal, computed, inject, OnDestroy } from '@angular/core';
-import { RouterLink, Router } from '@angular/router';
+import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { PDFDocument } from 'pdf-lib';
@@ -38,7 +38,6 @@ export interface MergedResult {
   selector: 'app-merge',
   standalone: true,
   imports: [
-    RouterLink,
     FormsModule,
     DragDropModule,
     FileDropzoneComponent,

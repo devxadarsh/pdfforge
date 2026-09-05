@@ -1,5 +1,5 @@
 import { Component, signal, computed, inject, OnInit, OnDestroy, viewChild } from '@angular/core';
-import { RouterLink, Router, ActivatedRoute } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { PDFDocument } from 'pdf-lib';
 import { NgxExtendedPdfViewerModule } from 'ngx-extended-pdf-viewer';
@@ -34,7 +34,6 @@ export interface SplitResult {
   selector: 'app-split',
   standalone: true,
   imports: [
-    RouterLink,
     FormsModule,
     FileDropzoneComponent,
     NgxExtendedPdfViewerModule,

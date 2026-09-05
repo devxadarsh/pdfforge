@@ -4,18 +4,13 @@
 
     <!-- Symmetric Tool Header -->
     <header class="tool-header">
-      <div class="tool-header__top">
-        <a class="tool-back-btn" routerLink="/tools">
-          <i class="fa-solid fa-arrow-left"></i>
-          <span>All Tools</span>
-        </a>
+      <div class="tool-header__title-row">
+        <h1 class="tool-header__title">{{ currentSeoConfig().heading }}</h1>
         <span class="tool-cat-pill tool-cat-pill--convert">
           <i [ngClass]="current.icon"></i>
           <span>Convert Suite</span>
         </span>
       </div>
-
-      <h1 class="tool-header__title">{{ currentSeoConfig().heading }}</h1>
       <p class="tool-header__subtitle">{{ currentSeoConfig().subHeading }}</p>
     </header>
 

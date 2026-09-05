@@ -116,4 +116,15 @@ export class DocumentStorageService {
       console.warn('[DocumentStorage] Could not clear document from IndexedDB via idb:', err);
     }
   }
+
+  /** Checks if an active document draft exists in storage without reading full payload into memory. */
+  async hasDocument(): Promise<boolean> {
+    try {
+      const db = await this.getDb();
+      const key = await db.getKey(STORE_NAME, DOC_KEY);
+      return key !== undefined;
+    } catch {
+      return false;
+    }
+  }
 }

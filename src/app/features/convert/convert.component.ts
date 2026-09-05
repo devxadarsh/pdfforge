@@ -1,5 +1,5 @@
 import { Component, signal, inject } from '@angular/core';
-import { RouterLink, ActivatedRoute } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NgClass } from '@angular/common';
 import { PDFDocument } from 'pdf-lib';
@@ -30,7 +30,6 @@ interface ConvertMode {
   selector: 'app-convert',
   standalone: true,
   imports: [
-    RouterLink,
     FormsModule,
     NgClass,
     FileDropzoneComponent,

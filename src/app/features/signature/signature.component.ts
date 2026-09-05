@@ -7,7 +7,7 @@ import {
   afterNextRender,
   NgZone,
 } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { NgClass } from '@angular/common';
 import { FileDropzoneComponent } from '../../shared/components/dropzone/file-dropzone.component';
@@ -23,7 +23,6 @@ import { LoadedFile } from '../../core/models/file.models';
   selector: 'app-signature',
   standalone: true,
   imports: [
-    RouterLink,
     FormsModule,
     NgClass,
     FileDropzoneComponent,

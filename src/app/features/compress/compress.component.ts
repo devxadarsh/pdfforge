@@ -1,5 +1,4 @@
 import { Component, signal, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { FileDropzoneComponent } from '../../shared/components/dropzone/file-dropzone.component';
 import { LoadedFile } from '../../core/models/file.models';
@@ -17,7 +16,6 @@ import { SEO_CONFIGS } from '../../core/constants/seo-data';
   selector: 'app-compress',
   standalone: true,
   imports: [
-    RouterLink,
     FormsModule,
     FileDropzoneComponent,
     BreadcrumbsComponent,

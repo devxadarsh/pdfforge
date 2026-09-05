@@ -693,8 +693,9 @@ export class EditorComponent implements OnDestroy {
   readonly exportProgress = signal<ExportProgressUpdate | null>(null);
   readonly defaultExportFilename = computed<string>(() => {
     const name = this.docName();
-    if (!name) return 'document-edited.pdf';
-    return name.replace(/\.pdf$/i, '') + '-edited.pdf';
+    const suffix = localStorage.getItem('ipdfeditor.default-export-suffix') || '-edited';
+    if (!name) return `document${suffix}.pdf`;
+    return name.replace(/\.pdf$/i, '') + `${suffix}.pdf`;
   });
   readonly stageSize = signal<{ width: number; height: number }>({
     width: 0,
@@ -1083,7 +1084,7 @@ export class EditorComponent implements OnDestroy {
                 : tool === 'arrow'
                   ? 'fa-solid fa-arrow-right'
                   : 'fa-solid fa-minus',
-          strokeColor: '#000000',
+          strokeColor: localStorage.getItem('ipdfeditor.default-color') || '#000000',
           strokeWidth: 2,
           shapeKind: tool,
         };
@@ -1094,9 +1095,9 @@ export class EditorComponent implements OnDestroy {
           title: 'Text Tool',
           icon: 'fa-solid fa-font',
           fontFamily: 'Inter',
-          fontSize: 16,
+          fontSize: parseInt(localStorage.getItem('ipdfeditor.default-font-size') || '16', 10) || 16,
           align: 'left',
-          color: '#111827',
+          color: localStorage.getItem('ipdfeditor.default-color') || '#111827',
         };
       case 'highlight':
       case 'underline':

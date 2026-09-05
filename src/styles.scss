@@ -823,6 +823,19 @@ app-editor,
   }
 }
 
+.tool-header__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+
+  .tool-header__title {
+    margin-bottom: 0;
+  }
+}
+
 .tool-header__title {
   font-size: 30px;
   font-weight: 800;
@@ -926,5 +939,48 @@ app-editor,
     font-size: 12px;
     color: var(--pf-on-surface-variant);
     line-height: 1.35;
+  }
+}
+
+/* ---- High Contrast Mode (Accessibility) ---- */
+html[data-high-contrast="true"] {
+  --pf-outline: #000000;
+  --pf-outline-variant: #1f2937;
+
+  .pf-card,
+  .tool-header,
+  .tool-trust-item,
+  .theme-card,
+  .settings-section,
+  .storage-meter {
+    border-color: #000000 !important;
+  }
+
+  .pf-btn {
+    border: 2px solid currentColor !important;
+  }
+
+  :focus-visible {
+    outline: 3px solid #000000 !important;
+    outline-offset: 2px !important;
+  }
+}
+
+html[data-theme="dark"][data-high-contrast="true"] {
+  --pf-outline: #ffffff;
+  --pf-outline-variant: #e5e7eb;
+
+  .pf-card,
+  .tool-header,
+  .tool-trust-item,
+  .theme-card,
+  .settings-section,
+  .storage-meter {
+    border-color: #ffffff !important;
+  }
+
+  :focus-visible {
+    outline: 3px solid #38bdf8 !important;
+    outline-offset: 2px !important;
   }
 }
