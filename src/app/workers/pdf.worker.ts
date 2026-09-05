@@ -31,12 +31,21 @@ export interface PdfWorkerApi {
 
 let cachedQpdf: any = null;
 
+function resolveWasmUrl(file: string): string {
+  const name = file || 'qpdf.wasm';
+  try {
+    return new URL(`assets/${name}`, self.location.href).href;
+  } catch {
+    return `assets/${name}`;
+  }
+}
+
 async function getQpdf(): Promise<any> {
   if (cachedQpdf) return cachedQpdf;
   const qpdfModule = await import('@neslinesli93/qpdf-wasm');
   const factory = ((qpdfModule as any).default || qpdfModule) as any;
   cachedQpdf = await factory({
-    locateFile: (file: string) => `assets/${file || 'qpdf.wasm'}`,
+    locateFile: (file: string) => resolveWasmUrl(file),
   });
   return cachedQpdf;
 }
