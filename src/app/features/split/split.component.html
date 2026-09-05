@@ -13,9 +13,9 @@
         </span>
       </div>
 
-      <h1 class="tool-header__title">Split PDF Document</h1>
+      <h1 class="tool-header__title">Split &amp; Extract PDF</h1>
       <p class="tool-header__subtitle">
-        Extract individual pages or separate by custom ranges into independent, high-fidelity PDF documents.
+        Preview pages live, select pages to extract into a new document, or split into separate files.
       </p>
     </header>
 
@@ -27,9 +27,9 @@
             <div class="pf-landing-badge pf-landing-badge--organize">
               <i class="fa-solid fa-scissors"></i>
             </div>
-            <h2 class="pf-landing-title">Select a PDF to Split</h2>
+            <h2 class="pf-landing-title">Split or Extract PDF Pages</h2>
             <p class="pf-landing-subtitle">
-              Choose or drop a PDF document to split every page separately or extract specific page ranges instantly.
+              Choose or drop a PDF document to preview pages, extract chosen pages into a new document, or split by intervals.
             </p>
 
             <div class="pf-landing-dropzone">
@@ -46,11 +46,117 @@
             </div>
 
             <div class="pf-landing-features">
-              <span class="pf-feat-pill"><i class="fa-solid fa-grid-2"></i> Split Every Page</span>
-              <span class="pf-feat-pill"><i class="fa-solid fa-sliders"></i> Custom Range Extraction</span>
-              <span class="pf-feat-pill"><i class="fa-solid fa-file-shield"></i> Lossless Quality</span>
-              <span class="pf-feat-pill"><i class="fa-solid fa-bolt"></i> Instant Local WASM</span>
+              <span class="pf-feat-pill"><i class="fa-solid fa-eye"></i> Live Page Preview</span>
+              <span class="pf-feat-pill"><i class="fa-solid fa-file-export"></i> Extract Selected</span>
+              <span class="pf-feat-pill"><i class="fa-solid fa-table-cells"></i> Split Every Page</span>
+              <span class="pf-feat-pill"><i class="fa-solid fa-file-zipper"></i> ZIP Archive</span>
             </div>
+          </div>
+        </div>
+      } @else if (splitResult(); as res) {
+        <!-- Post-Split / Extraction Completion Card -->
+        <div class="split-success-card pf-card">
+          <div class="split-success-icon">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+          <h2 class="split-success-title">
+            @if (res.mode === 'extract') {
+              Pages Extracted Successfully!
+            } @else {
+              PDF Document Split Successfully!
+            }
+          </h2>
+          <p class="split-success-subtitle">
+            @if (res.mode === 'extract') {
+              Extracted {{ selectedPages().length }} pages into <strong>{{ res.singleFilename }}</strong>.
+            } @else {
+              Generated <strong>{{ res.count }}</strong> separate documents from {{ loadedFile()!.name }}.
+            }
+          </p>
+
+          <div class="split-success-actions">
+            @if (res.count === 1 && res.singleBlob) {
+              <button
+                type="button"
+                class="pf-btn pf-btn--primary pf-btn--xl"
+                (click)="downloadSingleFile({ name: res.singleFilename!, blob: res.singleBlob! })"
+              >
+                <i class="fa-solid fa-download"></i>
+                <span>Download Extracted PDF</span>
+              </button>
+              <button
+                type="button"
+                class="pf-btn pf-btn--secondary pf-btn--xl"
+                (click)="openInEditor()"
+              >
+                <i class="fa-solid fa-pen-to-square"></i>
+                <span>Open in PDF Editor</span>
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="pf-btn pf-btn--primary pf-btn--xl"
+                (click)="downloadZip()"
+              >
+                <i class="fa-solid fa-file-zipper"></i>
+                <span>Download All ({{ res.count }} Files in ZIP)</span>
+              </button>
+              <button
+                type="button"
+                class="pf-btn pf-btn--secondary pf-btn--xl"
+                (click)="openInEditor()"
+              >
+                <i class="fa-solid fa-pen-to-square"></i>
+                <span>Open Part 1 in Editor</span>
+              </button>
+            }
+          </div>
+
+          <!-- List of individual files if multi-document -->
+          @if (res.individualFiles.length > 1) {
+            <div class="split-parts-list-wrap">
+              <h4 class="split-parts-title">Individual Files ({{ res.individualFiles.length }})</h4>
+              <ul class="split-parts-list">
+                @for (item of res.individualFiles; track item.name; let idx = $index) {
+                  <li class="split-part-item">
+                    <span class="split-part-item__idx">{{ idx + 1 }}</span>
+                    <span class="split-part-item__name" [title]="item.name">{{ item.name }}</span>
+                    <span class="split-part-item__size">{{ formatBytes(item.data.byteLength) }}</span>
+                    <div class="split-part-item__btns">
+                      <button
+                        type="button"
+                        class="icon-btn"
+                        (click)="downloadSingleFile(item)"
+                        title="Download file"
+                        aria-label="Download"
+                      >
+                        <i class="fa-solid fa-download"></i>
+                      </button>
+                      <button
+                        type="button"
+                        class="icon-btn"
+                        (click)="openInEditor(item)"
+                        title="Open in editor"
+                        aria-label="Edit"
+                      >
+                        <i class="fa-solid fa-pen-to-square"></i>
+                      </button>
+                    </div>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+
+          <div class="split-success-footer">
+            <button type="button" class="pf-btn pf-btn--ghost" (click)="resetForAnother()">
+              <i class="fa-solid fa-sliders"></i>
+              <span>Change Settings</span>
+            </button>
+            <button type="button" class="pf-btn pf-btn--ghost" (click)="clearFile()">
+              <i class="fa-solid fa-plus"></i>
+              <span>Choose Another File</span>
+            </button>
           </div>
         </div>
       } @else {
@@ -67,126 +173,223 @@
                 </span>
               </div>
             </div>
-            <button
-              class="pf-btn pf-btn--ghost split-file-card__change"
-              type="button"
-              (click)="clearFile()"
-              title="Select a different file"
-            >
-              <i class="fa-solid fa-arrow-rotate-left"></i>
-              <span>Change File</span>
-            </button>
+            <div class="split-file-card__actions">
+              <button
+                class="pf-btn pf-btn--ghost split-file-card__toggle-preview"
+                type="button"
+                (click)="toggleLivePreview()"
+                title="Toggle live page previewer"
+              >
+                <i class="fa-solid" [class.fa-eye]="!showLivePreview()" [class.fa-eye-slash]="showLivePreview()"></i>
+                <span>{{ showLivePreview() ? 'Hide Preview' : 'Show Live Preview' }}</span>
+              </button>
+              <button
+                class="pf-btn pf-btn--ghost split-file-card__change"
+                type="button"
+                (click)="clearFile()"
+                title="Select a different file"
+              >
+                <i class="fa-solid fa-arrow-rotate-left"></i>
+                <span>Change File</span>
+              </button>
+            </div>
           </div>
 
-          <!-- Mode Selector Tiles -->
-          <div class="split-mode-grid">
-            <button
-              type="button"
-              class="split-mode-card"
-              [class.split-mode-card--active]="mode() === 'every'"
-              (click)="setMode('every')"
-            >
-              <div class="split-mode-card__icon">
-                <i class="fa-solid fa-table-cells"></i>
-              </div>
-              <div class="split-mode-card__body">
-                <h3 class="split-mode-card__title">Split Every Page</h3>
-                <p class="split-mode-card__desc">
-                  Generates <strong>{{ pageCount() }}</strong> individual single-page PDF files, one for each page in the document.
-                </p>
-              </div>
-              <div class="split-mode-card__check">
-                <i class="fa-solid fa-circle-check"></i>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              class="split-mode-card"
-              [class.split-mode-card--active]="mode() === 'range'"
-              (click)="setMode('range')"
-            >
-              <div class="split-mode-card__icon">
-                <i class="fa-solid fa-list-ol"></i>
-              </div>
-              <div class="split-mode-card__body">
-                <h3 class="split-mode-card__title">Custom Page Ranges</h3>
-                <p class="split-mode-card__desc">
-                  Extract specific pages or page intervals (e.g. 1-3, 5, 8-{{ pageCount() }}).
-                </p>
-              </div>
-              <div class="split-mode-card__check">
-                <i class="fa-solid fa-circle-check"></i>
-              </div>
-            </button>
-          </div>
-
-          <!-- Range Input Configuration -->
-          @if (mode() === 'range') {
-            <div class="split-range-config">
-              <label class="split-range-config__label" for="splitRangeInput">
-                <span class="pf-label-caps">Target Page Ranges</span>
-                <span class="split-range-config__helper">Document has {{ pageCount() }} pages</span>
-              </label>
-
-              <div class="split-range-config__input-wrap">
-                <i class="fa-solid fa-scissors split-range-config__field-icon"></i>
-                <input
-                  id="splitRangeInput"
-                  class="pf-input split-range-config__input"
-                  type="text"
-                  [value]="range()"
-                  (input)="range.set($any($event.target).value)"
-                  placeholder="e.g. 1-3, 5, 7-10"
-                />
-              </div>
-
-              <!-- Quick Range Preset Chips -->
-              <div class="split-presets">
-                <span class="split-presets__label">Quick Presets:</span>
-                <button type="button" class="pf-chip" (click)="applyPreset('all')">
-                  All (1-{{ pageCount() }})
+          <!-- 2-Column Split Workbench (Controls on Left, Live PDF Preview on Right) -->
+          <div class="split-workbench" [class.split-workbench--full]="!showLivePreview()">
+            <!-- Left Controls Column -->
+            <div class="split-workbench__controls">
+              <!-- 2-Mode Selector Grid (Combined Extract Pages & Custom Range + Split Every Page) -->
+              <div class="split-mode-grid">
+                <button
+                  type="button"
+                  class="split-mode-card"
+                  [class.split-mode-card--active]="mode() === 'extract'"
+                  (click)="setMode('extract')"
+                >
+                  <div class="split-mode-card__icon">
+                    <i class="fa-solid fa-file-export"></i>
+                  </div>
+                  <div class="split-mode-card__body">
+                    <h3 class="split-mode-card__title">Extract Pages & Custom Range</h3>
+                    <p class="split-mode-card__desc">
+                      Select specific pages or enter custom intervals (e.g. 1-3, 5) to compile into a new PDF.
+                    </p>
+                  </div>
+                  <div class="split-mode-card__check">
+                    <i class="fa-solid fa-circle-check"></i>
+                  </div>
                 </button>
-                <button type="button" class="pf-chip" (click)="applyPreset('first-half')">
-                  First Half (1-{{ pageCount() > 1 ? (pageCount() / 2 | number: '1.0-0') : 1 }})
-                </button>
-                <button type="button" class="pf-chip" (click)="applyPreset('odd')">
-                  Odd Pages
-                </button>
-                <button type="button" class="pf-chip" (click)="applyPreset('even')">
-                  Even Pages
+
+                <button
+                  type="button"
+                  class="split-mode-card"
+                  [class.split-mode-card--active]="mode() === 'every'"
+                  (click)="setMode('every')"
+                >
+                  <div class="split-mode-card__icon">
+                    <i class="fa-solid fa-table-cells"></i>
+                  </div>
+                  <div class="split-mode-card__body">
+                    <h3 class="split-mode-card__title">Split Every Page</h3>
+                    <p class="split-mode-card__desc">
+                      Separate every page into its own individual PDF file ({{ pageCount() }} files total).
+                    </p>
+                  </div>
+                  <div class="split-mode-card__check">
+                    <i class="fa-solid fa-circle-check"></i>
+                  </div>
                 </button>
               </div>
 
-              <div class="split-range-config__hint pf-text-muted">
-                <i class="fa-solid fa-circle-info"></i>
-                <span>Separate multiple groups with commas. Each range will be exported as its own file.</span>
+              <!-- Interactive Visual Page Selector Matrix (For Extract & Custom Range) -->
+              @if (mode() === 'extract') {
+                <div class="split-selector-section">
+                  <div class="split-selector-header">
+                    <div class="split-selector-title-wrap">
+                      <span class="pf-label-caps">
+                        Select Pages ({{ selectedPages().length }} of {{ pageCount() }} selected)
+                      </span>
+                      <span class="pf-text-muted">Click a page to select and preview its content:</span>
+                    </div>
+
+                    <!-- Presets Bar -->
+                    <div class="split-presets">
+                      <button type="button" class="pf-chip" (click)="selectAllPages()">All</button>
+                      <button type="button" class="pf-chip" (click)="deselectAllPages()">Clear</button>
+                      <button type="button" class="pf-chip" (click)="invertPageSelection()">Invert</button>
+                      <button type="button" class="pf-chip" (click)="selectOddPages()">Odd</button>
+                      <button type="button" class="pf-chip" (click)="selectEvenPages()">Even</button>
+                    </div>
+                  </div>
+
+                  <!-- Interactive Visual Page Chips Grid -->
+                  <div class="split-page-grid">
+                    @for (pageNum of pagesList(); track pageNum) {
+                      <div
+                        class="split-page-chip"
+                        [class.split-page-chip--selected]="isPageSelected(pageNum)"
+                        [class.split-page-chip--viewing]="pageNum === currentPreviewPage()"
+                        (click)="togglePageSelection(pageNum)"
+                        [attr.role]="'button'"
+                        [attr.tabindex]="0"
+                        (keydown.enter)="togglePageSelection(pageNum)"
+                        (keydown.space)="togglePageSelection(pageNum); $event.preventDefault()"
+                        [title]="(isPageSelected(pageNum) ? 'Click to deselect Page ' : 'Click to select Page ') + pageNum"
+                      >
+                        <span class="split-page-chip__num">Page {{ pageNum }}</span>
+                        <div class="split-page-chip__actions">
+                          <button
+                            type="button"
+                            class="split-page-chip__btn split-page-chip__btn--eye"
+                            [class.split-page-chip__btn--active]="pageNum === currentPreviewPage()"
+                            (click)="scrollToPage(pageNum, $event)"
+                            [title]="'Scroll to view Page ' + pageNum + ' in preview'"
+                            [attr.aria-label]="'Scroll to view Page ' + pageNum"
+                          >
+                            <i class="fa-solid fa-eye"></i>
+                          </button>
+                          @if (isPageSelected(pageNum)) {
+                            <button
+                              type="button"
+                              class="split-page-chip__btn split-page-chip__btn--tick split-page-chip__btn--checked"
+                              (click)="togglePageSelectionFromChip(pageNum, $event)"
+                              [title]="'Deselect Page ' + pageNum"
+                              [attr.aria-label]="'Deselect Page ' + pageNum"
+                            >
+                              <i class="fa-solid fa-check"></i>
+                            </button>
+                          }
+                        </div>
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Text range input fallback & preview -->
+                  <div class="split-range-config">
+                    <label class="split-range-config__label" for="splitRangeInput">
+                      <span class="pf-label-caps">Range Expression</span>
+                    </label>
+                    <div class="split-range-config__input-wrap">
+                      <i class="fa-solid fa-scissors split-range-config__field-icon"></i>
+                      <input
+                        id="splitRangeInput"
+                        class="pf-input split-range-config__input"
+                        type="text"
+                        [value]="range()"
+                        (input)="onRangeInput($any($event.target).value)"
+                        placeholder="e.g. 1-3, 5, 7-10"
+                      />
+                    </div>
+                    <div class="split-range-config__hint pf-text-muted">
+                      <i class="fa-solid fa-circle-info"></i>
+                      <span>Selected pages and custom intervals will be compiled in order into a single extracted PDF document.</span>
+                    </div>
+                  </div>
+                </div>
+              }
+
+              <!-- ZIP Packaging Toggle (Only visible for Split Every Page) -->
+              @if (mode() === 'every') {
+                <div class="split-packaging-opt pf-card">
+                  <label class="split-pack-checkbox">
+                    <input
+                      type="checkbox"
+                      [checked]="downloadAsZip()"
+                      (change)="downloadAsZip.set($any($event.target).checked)"
+                    />
+                    <span class="split-pack-checkbox__box">
+                      <i class="fa-solid fa-check"></i>
+                    </span>
+                    <span class="split-pack-checkbox__label">
+                      <strong>Package files into a single ZIP archive (.zip)</strong>
+                      <small>Bundles all {{ pageCount() }} split pages into one archive, avoiding multiple browser download prompts.</small>
+                    </span>
+                  </label>
+                </div>
+              }
+
+              <!-- Action Button -->
+              <div class="tool-action-bar">
+                <button
+                  class="pf-btn pf-btn--primary pf-btn--xl w-100"
+                  type="button"
+                  [disabled]="splitting() || (mode() === 'extract' && selectedPages().length === 0)"
+                  (click)="split()"
+                >
+                  @if (splitting()) {
+                    <i class="fa-solid fa-spinner fa-spin"></i>
+                    <span>Processing Document…</span>
+                  } @else {
+                    <i class="fa-solid" [class.fa-file-export]="mode() === 'extract'" [class.fa-scissors]="mode() === 'every'"></i>
+                    <span>
+                      @if (mode() === 'every') {
+                        Split All {{ pageCount() }} Pages {{ downloadAsZip() ? 'into ZIP Archive' : '' }}
+                      } @else {
+                        Extract {{ selectedPages().length }} Selected Page{{ selectedPages().length === 1 ? '' : 's' }} to New PDF
+                      }
+                    </span>
+                  }
+                </button>
               </div>
             </div>
-          }
 
-          <!-- Action Button -->
-          <div class="tool-action-bar">
-            <button
-              class="pf-btn pf-btn--primary pf-btn--xl w-100"
-              type="button"
-              [disabled]="splitting()"
-              (click)="split()"
-            >
-              @if (splitting()) {
-                <i class="fa-solid fa-spinner fa-spin"></i>
-                <span>Splitting Document…</span>
-              } @else {
-                <i class="fa-solid fa-scissors"></i>
-                <span>
-                  @if (mode() === 'every') {
-                    Extract All {{ pageCount() }} Pages
-                  } @else {
-                    Extract Selected Ranges
-                  }
-                </span>
-              }
-            </button>
+            <!-- Right Live Document Viewer Column (Card Grid with 1-5 Pages per Row) -->
+            @if (showLivePreview() && docUrl()) {
+              <div class="split-workbench__preview">
+                <app-pdf-card-grid
+                  #cardGrid
+                  [src]="docUrl()!"
+                  [selectable]="true"
+                  [selectedPages]="selectedPages()"
+                  [initialPagesPerRow]="pagesPerRow()"
+                  [maxHeight]="'660px'"
+                  (pageToggle)="togglePageSelection($event)"
+                  (selectAllPages)="selectAllPages()"
+                  (clearAllPages)="deselectAllPages()"
+                ></app-pdf-card-grid>
+              </div>
+            }
           </div>
         </div>
       }
@@ -202,19 +405,76 @@
         </div>
       </div>
       <div class="tool-trust-item">
-        <i class="fa-solid fa-bolt"></i>
+        <i class="fa-solid fa-eye"></i>
         <div>
-          <strong>Lossless Extraction</strong>
-          <span>Fonts, vector graphics, and images preserved fully</span>
+          <strong>Visual Page Inspection</strong>
+          <span>Inspect text, images, and layout live before extracting</span>
         </div>
       </div>
       <div class="tool-trust-item">
-        <i class="fa-solid fa-infinity"></i>
+        <i class="fa-solid fa-bolt"></i>
         <div>
-          <strong>No Page Limits</strong>
-          <span>Split large multi-hundred-page documents freely</span>
+          <strong>Lossless Extraction</strong>
+          <span>Vector graphics, fonts, and images preserved fully</span>
         </div>
       </div>
     </div>
+
+    <!-- Confirmation Modal for Separate Multi-File Export (when ZIP is not selected on Split Every Page) -->
+    @if (showConfirmExportModal()) {
+      <div class="pf-modal-backdrop" (click)="cancelExport()">
+        <div class="pf-modal pf-modal--confirm pf-card" (click)="$event.stopPropagation()">
+          <div class="pf-modal__header">
+            <div class="pf-modal__title-wrap">
+              <i class="fa-solid fa-triangle-exclamation pf-modal__icon pf-modal__icon--warning"></i>
+              <h3 class="pf-modal__title">Confirm Multiple File Export</h3>
+            </div>
+            <button type="button" class="icon-btn" (click)="cancelExport()" aria-label="Close modal">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <div class="pf-modal__body">
+            <div class="split-confirm-badge">
+              <i class="fa-solid fa-file-pdf"></i>
+              <span>Exporting <strong>{{ pageCount() }}</strong> Separate PDF Files</span>
+            </div>
+
+            <p class="split-confirm-prompt">
+              Do you want to export <strong>{{ pageCount() }} separate PDF files</strong> without packaging them into a ZIP archive?
+            </p>
+
+            <div class="split-confirm-warning">
+              <i class="fa-solid fa-circle-exclamation"></i>
+              <div>
+                <strong>Browser Download Notice</strong>
+                <p>Your browser will attempt to download {{ pageCount() }} individual files simultaneously. Many browsers will block multiple simultaneous downloads unless permitted.</p>
+              </div>
+            </div>
+
+            <div class="split-confirm-suggestion">
+              <i class="fa-solid fa-lightbulb"></i>
+              <div>
+                <strong>Recommended Approach:</strong>
+                <p>We suggest selecting the <strong>ZIP format</strong> to package all {{ pageCount() }} files into a single, convenient archive download.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="pf-modal__footer split-confirm-footer">
+            <button type="button" class="pf-btn pf-btn--ghost" (click)="cancelExport()">
+              Cancel
+            </button>
+            <button type="button" class="pf-btn pf-btn--secondary" (click)="confirmSeparateExport()">
+              Export {{ pageCount() }} Files
+            </button>
+            <button type="button" class="pf-btn pf-btn--primary" (click)="confirmWithZip()">
+              <i class="fa-solid fa-file-zipper"></i>
+              <span>Use ZIP Archive (Recommended)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    }
   </div>
 </section>

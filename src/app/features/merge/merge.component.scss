@@ -38,34 +38,86 @@
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+
+  .pf-btn {
+    height: 40px;
+    min-height: 40px;
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 0 16px;
+    border-radius: 10px;
+  }
 }
 
 .merge-add-more {
-  // Make the file-dropzone inside merge-add-more render compactly
-  ::ng-deep .pf-dropzone {
-    padding: 6px 14px;
-    min-height: unset;
-    border-radius: 8px;
-    border-style: solid;
-    background: var(--pf-surface-container);
-    display: inline-flex;
+  display: inline-flex;
+  align-items: center;
+}
+
+.merge-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--pf-surface-container);
+  border: 1.5px solid var(--pf-outline-variant);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--pf-primary);
+  white-space: nowrap;
+
+  &:hover {
+    background: color-mix(in srgb, var(--pf-primary) 8%, transparent);
+    border-color: var(--pf-primary);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.1);
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &__input {
+    display: none;
+  }
+
+  &__icon {
+    display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--pf-primary) 12%, transparent);
+    color: var(--pf-primary);
+    font-size: 11px;
+    flex-shrink: 0;
+  }
 
-    .pf-dropzone__icon {
-      display: none;
-    }
+  &__label {
+    line-height: 1;
+  }
+}
 
-    .pf-dropzone__label {
-      font-size: 12.5px;
-      font-weight: 600;
-      margin: 0;
-      color: var(--pf-primary);
-    }
+// Landing page dropzone improvements
+.pf-landing-dropzone {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto 16px;
 
-    .pf-dropzone__hint {
-      display: none;
-    }
+  ::ng-deep .pf-dropzone {
+    padding: 28px 24px;
+  }
+
+  ::ng-deep .pf-dropzone__label {
+    font-size: 17px;
+    margin-top: 4px;
+  }
+
+  ::ng-deep .pf-dropzone__action-btn {
+    margin-top: 8px;
   }
 }
 
@@ -159,6 +211,22 @@
   white-space: nowrap;
 }
 
+.merge-list__sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.merge-list__page-tag {
+  color: var(--pf-primary);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .merge-list__size {
   font-size: 12px;
   margin-top: 2px;
@@ -167,10 +235,304 @@
 .merge-list__actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-shrink: 0;
+
+  .icon-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 13px;
+    border-radius: 8px;
+  }
+}
+
+.merge-preview-btn {
+  height: 34px !important;
+  min-height: 34px !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  padding: 0 14px !important;
+  border-radius: 8px !important;
 }
 
 .cdk-drop-list-dragging .merge-list__item:not(.cdk-drag-placeholder) {
   transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.pf-badge--pages {
+  background: color-mix(in srgb, var(--pf-primary) 12%, transparent);
+  color: var(--pf-primary);
+  font-weight: 600;
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.merge-quick-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+
+  &__label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--pf-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}
+
+.merge-output-config {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  padding: 14px 16px;
+  background: var(--pf-surface-container-lowest);
+  border: 1px solid var(--pf-outline-variant);
+  border-radius: 12px;
+  flex-wrap: wrap;
+
+  &__label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--pf-on-surface);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    white-space: nowrap;
+
+    i {
+      color: var(--pf-primary);
+    }
+  }
+
+  &__input {
+    flex: 1 1 240px;
+    min-width: 200px;
+  }
+}
+
+// Success Card
+.merge-success-card {
+  text-align: center;
+  padding: 48px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 640px;
+  margin: 0 auto;
+  border-radius: 20px;
+  background: var(--pf-surface-container-lowest);
+  border: 1px solid var(--pf-outline-variant);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+}
+
+.merge-success-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: color-mix(in srgb, #10b981 15%, transparent);
+  color: #10b981;
+  display: grid;
+  place-items: center;
+  font-size: 32px;
+  margin-bottom: 20px;
+}
+
+.merge-success-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--pf-on-surface);
+  margin-bottom: 8px;
+}
+
+.merge-success-subtitle {
+  font-size: 15px;
+  color: var(--pf-on-surface-variant);
+  max-width: 480px;
+  line-height: 1.5;
+  margin-bottom: 32px;
+}
+
+.merge-success-actions {
+  display: flex;
+  gap: 16px;
+  width: 100%;
+  justify-content: center;
+  flex-wrap: wrap;
+
+  .pf-btn {
+    min-width: 240px;
+    height: 52px;
+    min-height: 52px;
+    font-size: 15.5px;
+    font-weight: 700;
+    border-radius: 12px;
+    gap: 10px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+
+    i {
+      font-size: 16px;
+    }
+  }
+}
+
+.merge-success-footer {
+  display: flex;
+  gap: 16px;
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid var(--pf-outline-variant);
+  width: 100%;
+  justify-content: center;
+  flex-wrap: wrap;
+
+  .pf-btn {
+    height: 44px;
+    min-height: 44px;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 0 22px;
+    border-radius: 10px;
+    gap: 8px;
+  }
+}
+
+// Preview Modal
+.pf-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  z-index: 1050;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  animation: pf-fade-in 0.2s ease;
+}
+
+.pf-modal {
+  width: 100%;
+  max-width: 480px;
+  background: var(--pf-surface-container-lowest);
+  border: 1px solid var(--pf-outline-variant);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--pf-outline-variant);
+  }
+
+  &__title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__icon {
+    color: #e11d48;
+    font-size: 18px;
+  }
+
+  &__title {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  &__body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 14px 20px;
+    background: var(--pf-surface-container-low);
+    border-top: 1px solid var(--pf-outline-variant);
+  }
+}
+
+.merge-preview-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 8px;
+  color: var(--pf-primary);
+  background: color-mix(in srgb, var(--pf-primary) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pf-primary) 20%, transparent);
+
+  &:hover {
+    background: color-mix(in srgb, var(--pf-primary) 15%, transparent);
+    color: var(--pf-primary);
+  }
+}
+
+.pf-modal--pdf-preview {
+  max-width: 980px;
+  width: 95vw;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+
+  .pf-modal__header {
+    flex-shrink: 0;
+  }
+
+  .pf-modal__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .pf-modal__subtitle {
+    font-size: 12px;
+  }
+
+  .pf-modal__pdf-body {
+    flex: 1 1 auto;
+    overflow: hidden;
+    padding: 0;
+    min-height: 380px;
+  }
+
+  .pf-modal__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .pf-modal__footer-hint {
+    font-size: 12.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+}
+
+@keyframes pf-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }

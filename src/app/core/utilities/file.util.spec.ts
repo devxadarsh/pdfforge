@@ -94,5 +94,11 @@ describe('file.util', () => {
     it('honours a custom fallback extension', () => {
       expect(safeFileName('image', 'png')).toBe('image.png');
     });
+
+    it('preserves existing file extension such as .zip or .docx', () => {
+      expect(safeFileName('my-archive.zip')).toBe('my-archive.zip');
+      expect(safeFileName('document-split.ZIP')).toBe('document-split.zip');
+      expect(safeFileName('contract-final.docx')).toBe('contract-final.docx');
+    });
   });
 });

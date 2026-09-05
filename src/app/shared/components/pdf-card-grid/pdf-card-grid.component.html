@@ -1,0 +1,137 @@
+<!-- Off-screen PDF Loader (Initializes PDF.js worker & document safely) -->
+<ngx-extended-pdf-viewer
+  class="pf-offscreen-pdf-loader"
+  [src]="src()"
+  [showToolbar]="false"
+  [showSidebarButton]="false"
+  [sidebarVisible]="false"
+  [textLayer]="false"
+  [showFindButton]="false"
+  (pagesLoaded)="onPdfLoaded($event)"
+></ngx-extended-pdf-viewer>
+
+<div class="pdf-card-grid-wrapper">
+  <!-- Top Toolbar -->
+  @if (showToolbar()) {
+    <div class="pdf-card-grid-toolbar">
+      <div class="pdf-card-grid-toolbar__left">
+        <span class="pdf-card-grid-doc-badge">
+          <i class="fa-solid fa-file-pdf"></i>
+          <strong>{{ totalCount() }}</strong> Pages
+        </span>
+
+        @if (selectable()) {
+          <span class="pdf-card-grid-selected-badge" [class.pdf-card-grid-selected-badge--active]="selectedPages().length > 0">
+            <i class="fa-solid fa-circle-check"></i>
+            {{ selectedPages().length }} selected
+          </span>
+          <button
+            type="button"
+            class="pf-chip pf-chip--ghost"
+            (click)="selectAllPages.emit()"
+            title="Select all pages in document"
+          >
+            Select All
+          </button>
+          <button
+            type="button"
+            class="pf-chip pf-chip--ghost"
+            (click)="clearAllPages.emit()"
+            title="Deselect all pages"
+          >
+            Clear
+          </button>
+        }
+      </div>
+
+      <div class="pdf-card-grid-toolbar__right">
+        <div class="pdf-card-grid-dropdown-wrap">
+          <label class="pdf-card-grid-dropdown-label" for="pagesPerRowSelect">
+            <i class="fa-solid fa-table-cells"></i>
+            <span>Pages in row:</span>
+          </label>
+          <select
+            id="pagesPerRowSelect"
+            class="pf-select pf-select--sm pdf-card-grid-select"
+            [ngModel]="pagesPerRow()"
+            (ngModelChange)="setPagesPerRow($event)"
+            aria-label="Number of pages per row in preview"
+          >
+            <option [ngValue]="1">1 Page in a row</option>
+            <option [ngValue]="2">2 Pages in a row</option>
+            <option [ngValue]="3">3 Pages in a row</option>
+            <option [ngValue]="4">4 Pages in a row</option>
+            <option [ngValue]="5">5 Pages in a row</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="pdf-card-grid-loading">
+      <i class="fa-solid fa-spinner fa-spin"></i>
+      <span>Loading document pages…</span>
+    </div>
+  }
+
+  <!-- Scrollable Card Grid -->
+  <div
+    class="pdf-card-grid-scroll"
+    #scrollContainer
+    [style.max-height]="maxHeight()"
+  >
+    <div
+      class="pdf-card-grid-container"
+      [style.--pages-per-row]="pagesPerRow()"
+    >
+      @for (item of pages(); track item.pageNumber) {
+        <div
+          class="page-card"
+          [attr.data-page-card]="item.pageNumber"
+          [class.page-card--selected]="selectable() && isPageSelected(item.pageNumber)"
+          [class.page-card--highlighted]="highlightedPage() === item.pageNumber"
+          [class.page-card--selectable]="selectable()"
+          (click)="onCardClick(item.pageNumber)"
+          [attr.role]="selectable() ? 'button' : null"
+          [attr.tabindex]="selectable() ? 0 : null"
+          [attr.aria-label]="'Page ' + item.pageNumber + (selectable() && isPageSelected(item.pageNumber) ? ' selected' : '')"
+        >
+          <!-- Card Header: Page Number Badge & Selection Checkbox -->
+          <div class="page-card__header">
+            <span class="page-card__badge">Page {{ item.pageNumber }}</span>
+
+            @if (selectable() && isPageSelected(item.pageNumber)) {
+              <div
+                class="page-card__checkbox page-card__checkbox--checked"
+              >
+                <i class="fa-solid fa-check"></i>
+              </div>
+            }
+          </div>
+
+          <!-- Card Body: White PDF Page Surface with Canvas -->
+          <div
+            class="page-card__surface"
+            [style.aspect-ratio]="item.aspectRatio"
+          >
+            <canvas
+              #pageCanvas
+              [attr.data-page]="item.pageNumber"
+              class="page-card__canvas"
+              [class.page-card__canvas--visible]="item.rendered"
+            ></canvas>
+
+            @if (!item.rendered) {
+              <div class="page-card__skeleton">
+                <i class="fa-solid fa-circle-notch fa-spin"></i>
+                <span class="page-card__skeleton-text">{{ item.pageNumber }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+</div>

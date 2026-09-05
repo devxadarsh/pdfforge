@@ -53,6 +53,8 @@ export async function verifyPdfMagic(
 }
 
 export function safeFileName(name: string, fallbackExt = 'pdf'): string {
+  const match = name.match(/\.([^.]+)$/);
+  const ext = match ? match[1].toLowerCase() : fallbackExt;
   const base = name.replace(/\.[^.]+$/, '');
   const cleaned = base
     .replace(/[^\w\-\s]/g, ' ')
@@ -60,7 +62,7 @@ export function safeFileName(name: string, fallbackExt = 'pdf'): string {
     .replace(/[\s\-_]+/g, '-')
     .toLowerCase();
   const final = cleaned || 'document';
-  return `${final}.${fallbackExt}`;
+  return `${final}.${ext}`;
 }
 
 export function formatBytes(bytes: number): string {

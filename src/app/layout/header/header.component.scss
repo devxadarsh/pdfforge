@@ -61,11 +61,15 @@
 .pf-nav__link {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
-  padding: 4px 8px;
-  border-radius: 6px;
+  height: 26px;
+  min-height: 26px;
+  max-height: 26px;
+  padding: 0 9px;
+  border-radius: var(--pf-radius, 6px);
   color: var(--pf-on-surface-variant);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
   white-space: nowrap;
   text-decoration: none;
@@ -84,8 +88,8 @@
 }
 
 .pf-nav__icon {
-  font-size: 12.5px;
-  width: 15px;
+  font-size: 12px;
+  width: 14px;
   text-align: center;
 }
 
@@ -99,14 +103,18 @@
 .pf-nav-dropdown__btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
-  padding: 4px 8px;
+  height: 26px;
+  min-height: 26px;
+  max-height: 26px;
+  padding: 0 9px;
   border: none;
   background: transparent;
-  border-radius: 6px;
+  border-radius: var(--pf-radius, 6px);
   color: var(--pf-on-surface-variant);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
@@ -284,9 +292,52 @@
 .pf-header__actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   flex-shrink: 0;
   white-space: nowrap;
+
+  .pf-privacy-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 26px;
+    min-height: 26px;
+    max-height: 26px;
+    padding: 0 8px;
+    border-radius: var(--pf-radius-full);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .pf-icon-btn {
+    width: 26px !important;
+    height: 26px !important;
+    min-height: 26px !important;
+    max-height: 26px !important;
+    min-width: 26px !important;
+    max-width: 26px !important;
+    font-size: 11.5px !important;
+    border-radius: var(--pf-radius, 6px) !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .pf-header__open-btn {
+    height: 26px !important;
+    min-height: 26px !important;
+    max-height: 26px !important;
+    padding: 0 10px !important;
+    font-size: 11.5px !important;
+    font-weight: 600 !important;
+    border-radius: var(--pf-radius, 6px) !important;
+    gap: 5px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+  }
 }
 
 .pf-dropdown-backdrop {
@@ -300,14 +351,19 @@
 .pf-mobile-toggle {
   display: none;
   place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
+  width: 26px;
+  height: 26px;
+  min-height: 26px;
+  max-height: 26px;
+  min-width: 26px;
+  max-width: 26px;
+  border-radius: var(--pf-radius, 6px);
   border: 1px solid var(--pf-outline-variant);
   background: var(--pf-surface-container-lowest);
   color: var(--pf-on-surface);
-  font-size: 15px;
+  font-size: 12px;
   cursor: pointer;
+  padding: 0;
   transition: background-color 0.15s ease;
 
   &:hover {

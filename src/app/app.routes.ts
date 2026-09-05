@@ -38,6 +38,11 @@ export const routes: Routes = [
         title: 'Split PDF — PDFForge',
       },
       {
+        path: 'extract',
+        redirectTo: 'split',
+        pathMatch: 'full',
+      },
+      {
         path: 'compress',
         loadComponent: () =>
           import('./features/compress/compress.component').then(

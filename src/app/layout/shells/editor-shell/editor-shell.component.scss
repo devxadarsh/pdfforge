@@ -83,10 +83,13 @@
 .editor-shell__nav-link {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   height: 26px;
-  padding: 0 12px;
+  min-height: 26px;
+  max-height: 26px;
+  padding: 0 10px;
   border-radius: var(--pf-radius);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--pf-on-surface-variant);
   text-decoration: none;
@@ -118,12 +121,53 @@
   display: inline-flex;
   align-items: center;
   position: relative;
-  gap: 1px;
+  gap: 0;
+}
+
+.editor-shell__open-btn {
+  height: 26px !important;
+  min-height: 26px !important;
+  max-height: 26px !important;
+  padding: 0 8px !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  border-right: none !important;
+  gap: 5px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .editor-shell__recent-chevron {
-  padding: 4px 6px !important;
-  font-size: 11px;
+  height: 26px !important;
+  min-height: 26px !important;
+  max-height: 26px !important;
+  padding: 0 6px !important;
+  font-size: 10px !important;
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.editor-shell__header {
+  .pf-icon-btn {
+    width: 26px !important;
+    height: 26px !important;
+    min-height: 26px !important;
+    max-height: 26px !important;
+    min-width: 26px !important;
+    max-width: 26px !important;
+    font-size: 11.5px !important;
+    border-radius: var(--pf-radius, 6px) !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
 }
 
 .editor-shell__recent-dropdown {
@@ -410,17 +454,24 @@
     margin-left: auto;
 
     .pf-icon-btn {
-      width: 30px;
-      height: 30px;
-      font-size: 13px;
+      width: 26px !important;
+      height: 26px !important;
+      min-height: 26px !important;
+      max-height: 26px !important;
+      min-width: 26px !important;
+      max-width: 26px !important;
+      font-size: 11.5px !important;
+      padding: 0 !important;
     }
   }
 
   .editor-shell__open-btn,
   .editor-shell__download-btn {
-    padding: 4px 8px;
-    font-size: 12px;
-    height: 30px;
+    padding: 0 6px !important;
+    font-size: 11px !important;
+    height: 26px !important;
+    min-height: 26px !important;
+    max-height: 26px !important;
   }
 
   .editor-shell__btn-text {

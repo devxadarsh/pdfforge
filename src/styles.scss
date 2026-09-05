@@ -290,62 +290,134 @@ code,
 .pf-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 26px;
-  padding: 0 12px;
-  border-radius: var(--pf-radius);
-  font-size: 12px;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-size: 13.5px;
   font-weight: 600;
   border: 1px solid transparent;
   cursor: pointer;
   text-decoration: none;
   white-space: nowrap;
-  transition: background-color 0.15s ease, filter 0.15s ease;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none !important;
+  }
+}
+
+.pf-btn--sm {
+  min-height: 32px;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 12px;
+  border-radius: 7px;
+  gap: 6px;
+}
+
+.pf-btn--lg {
+  min-height: 46px;
+  height: 46px;
+  padding: 0 22px;
+  font-size: 14.5px;
+  border-radius: 11px;
+  gap: 8px;
+}
+
+.pf-btn--xl {
+  min-height: 52px;
+  height: 52px;
+  padding: 0 28px;
+  font-size: 15.5px;
+  font-weight: 700;
+  border-radius: 12px;
+  gap: 10px;
 }
 
 .pf-btn--primary {
   background-color: var(--pf-primary);
   color: var(--pf-on-primary);
+  border-color: var(--pf-primary);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--pf-primary) 28%, transparent);
+
+  &:hover:not(:disabled) {
+    filter: brightness(1.06);
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--pf-primary) 40%, transparent);
+    text-decoration: none;
+  }
 }
 
-.pf-btn--primary:hover {
-  filter: brightness(0.92);
-  text-decoration: none;
+.pf-btn--secondary {
+  background-color: var(--pf-surface-container-high);
+  color: var(--pf-on-surface);
+  border-color: var(--pf-outline-variant);
+
+  &:hover:not(:disabled) {
+    background-color: var(--pf-surface-container-highest);
+    border-color: var(--pf-outline);
+    color: var(--pf-primary);
+    text-decoration: none;
+  }
 }
 
 .pf-btn--ghost {
   background-color: transparent;
   border-color: var(--pf-outline-variant);
   color: var(--pf-on-surface);
+
+  &:hover:not(:disabled) {
+    background-color: var(--pf-surface-container);
+    border-color: var(--pf-outline);
+    text-decoration: none;
+  }
 }
 
-.pf-btn--ghost:hover {
-  background-color: var(--pf-surface-container);
-  text-decoration: none;
+.pf-btn--outline {
+  background-color: transparent;
+  border: 1.5px solid var(--pf-primary);
+  color: var(--pf-primary);
+
+  &:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--pf-primary) 10%, transparent);
+    text-decoration: none;
+  }
 }
 
 .pf-btn--danger {
   background-color: var(--pf-error);
   color: var(--pf-on-error);
-}
 
-.pf-btn--danger:hover {
-  filter: brightness(0.94);
-  text-decoration: none;
+  &:hover:not(:disabled) {
+    filter: brightness(0.94);
+    text-decoration: none;
+  }
 }
 
 .pf-icon-btn {
   display: inline-grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
   border: 1px solid var(--pf-outline-variant);
   border-radius: var(--pf-radius);
   background: var(--pf-surface-container-lowest);
   color: var(--pf-on-surface);
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: all 0.15s ease;
 }
 
 .pf-icon-btn:hover:not(:disabled) {
@@ -355,6 +427,76 @@ code,
 .pf-icon-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* ---- Header & Editor Scoped Buttons (Preserve exact compact 26px button sizing matching toolbar tools) ---- */
+app-header,
+.pf-header,
+app-editor-shell,
+.editor-shell,
+.editor-shell__header,
+app-editor,
+.editor,
+.export-modal-backdrop,
+.stamp-modal-backdrop,
+.signature-modal-backdrop,
+.pf-dialog-backdrop,
+.pf-dialog {
+  .pf-btn {
+    min-height: 26px !important;
+    height: 26px !important;
+    max-height: 26px !important;
+    padding: 0 10px !important;
+    font-size: 11.5px !important;
+    font-weight: 600 !important;
+    border-radius: var(--pf-radius, 6px) !important;
+    gap: 5px !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .pf-btn--sm {
+    min-height: 26px !important;
+    height: 26px !important;
+    max-height: 26px !important;
+    padding: 0 8px !important;
+    font-size: 11px !important;
+    border-radius: var(--pf-radius, 6px) !important;
+    gap: 4px !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .pf-btn--xl,
+  .pf-btn--lg {
+    min-height: 28px !important;
+    height: 28px !important;
+    padding: 0 12px !important;
+    font-size: 12px !important;
+    border-radius: var(--pf-radius, 6px) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .pf-icon-btn {
+    width: 26px !important;
+    height: 26px !important;
+    min-height: 26px !important;
+    max-height: 26px !important;
+    min-width: 26px !important;
+    max-width: 26px !important;
+    font-size: 11.5px !important;
+    border-radius: var(--pf-radius, 6px) !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
 }
 
 .pf-privacy-pill {
@@ -713,6 +855,16 @@ code,
   flex-direction: column;
   align-items: center;
   gap: 10px;
+
+  .pf-btn {
+    min-height: 52px;
+    height: 52px;
+    font-size: 15.5px;
+    font-weight: 700;
+    border-radius: 12px;
+    gap: 10px;
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--pf-primary) 28%, transparent);
+  }
 
   .tool-action-bar__hint {
     font-size: 12.5px;
