@@ -5,6 +5,7 @@
   [attr.height]="height()"
   [attr.viewBox]="'0 0 ' + width() + ' ' + height()"
   [class.overlay--interactive]="interactive()"
+  [class.overlay--select]="tool() === 'select'"
   [class.overlay--drawing]="isDrawingTool()"
   [style.pointerEvents]="interactive() ? 'auto' : 'none'"
   [style.touchAction]="touchAction()"
@@ -36,7 +37,7 @@
     @switch (a.type) {
       @case ('shape') {
         @if (a.renderMode === 'icon') {
-          <g [attr.transform]="rotateTransform(a)">
+          <g [attr.transform]="rotateTransform(a)" class="ann-item" [class.ann-item--locked]="a.locked">
             <foreignObject
               [attr.x]="a.rect.x"
               [attr.y]="a.rect.y"
@@ -58,6 +59,8 @@
           </g>
         } @else if (a.kind === 'line') {
           <line
+            class="ann-item"
+            [class.ann-item--locked]="a.locked"
             [attr.x1]="a.rect.x"
             [attr.y1]="a.rect.y"
             [attr.x2]="a.rect.x + a.rect.width"
@@ -69,7 +72,7 @@
             [attr.transform]="rotateTransform(a)"
           />
         } @else {
-          <g [attr.transform]="getShapeTransform(a)">
+          <g [attr.transform]="getShapeTransform(a)" class="ann-item" [class.ann-item--locked]="a.locked">
             <path
               [attr.d]="getShapePath(a)"
               [attr.fill]="a.fillColor"
@@ -83,6 +86,8 @@
       }
       @case ('drawing') {
         <path
+          class="ann-item"
+          [class.ann-item--locked]="a.locked"
           [attr.d]="pointsToSvgPath(a.points)"
           [attr.stroke]="a.color"
           [attr.stroke-width]="a.strokeWidth"
@@ -94,47 +99,51 @@
         />
       }
       @case ('text') {
-        @if (a.backgroundColor && a.backgroundColor !== 'transparent') {
-          <rect
-            [attr.x]="a.rect.x - textBackgroundPadding(a)"
-            [attr.y]="a.rect.y - textBackgroundPadding(a)"
-            [attr.width]="a.rect.width + textBackgroundPadding(a) * 2"
-            [attr.height]="a.rect.height + textBackgroundPadding(a) * 2"
-            [attr.fill]="a.backgroundColor"
-            rx="4"
-            [attr.opacity]="a.opacity"
-            [attr.transform]="rotateTransform(a)"
-          />
-        }
-        <text
-          [attr.font-size]="a.fontSize"
-          [attr.font-family]="a.fontFamily"
-          [attr.font-weight]="a.fontWeight"
-          [attr.font-style]="a.italic ? 'italic' : 'normal'"
-          [attr.text-decoration]="a.underline ? 'underline' : 'none'"
-          [attr.letter-spacing]="a.letterSpacing ? a.letterSpacing + 'px' : null"
-          [attr.fill]="a.color"
-          [attr.opacity]="a.opacity"
-          [attr.text-anchor]="
-            a.align === 'center'
-              ? 'middle'
-              : a.align === 'right'
-                ? 'end'
-                : 'start'
-          "
-          [attr.transform]="rotateTransform(a)"
-        >
-          @for (line of textLines(transformText(a.text, a.transform)); track $index) {
-            <tspan
-              [attr.x]="textAnchorX(a)"
-              [attr.y]="lineBaselineY(a, $index)"
-              >{{ line }}</tspan
-            >
+        <g class="ann-item" [class.ann-item--locked]="a.locked">
+          @if (a.backgroundColor && a.backgroundColor !== 'transparent') {
+            <rect
+              [attr.x]="a.rect.x - textBackgroundPadding(a)"
+              [attr.y]="a.rect.y - textBackgroundPadding(a)"
+              [attr.width]="a.rect.width + textBackgroundPadding(a) * 2"
+              [attr.height]="a.rect.height + textBackgroundPadding(a) * 2"
+              [attr.fill]="a.backgroundColor"
+              rx="4"
+              [attr.opacity]="a.opacity"
+              [attr.transform]="rotateTransform(a)"
+            />
           }
-        </text>
+          <text
+            [attr.font-size]="a.fontSize"
+            [attr.font-family]="a.fontFamily"
+            [attr.font-weight]="a.fontWeight"
+            [attr.font-style]="a.italic ? 'italic' : 'normal'"
+            [attr.text-decoration]="a.underline ? 'underline' : 'none'"
+            [attr.letter-spacing]="a.letterSpacing ? a.letterSpacing + 'px' : null"
+            [attr.fill]="a.color"
+            [attr.opacity]="a.opacity"
+            [attr.text-anchor]="
+              a.align === 'center'
+                ? 'middle'
+                : a.align === 'right'
+                  ? 'end'
+                  : 'start'
+            "
+            [attr.transform]="rotateTransform(a)"
+          >
+            @for (line of textLines(transformText(a.text, a.transform)); track $index) {
+              <tspan
+                [attr.x]="textAnchorX(a)"
+                [attr.y]="lineBaselineY(a, $index)"
+                >{{ line }}</tspan
+              >
+            }
+          </text>
+        </g>
       }
       @case ('highlight') {
         <rect
+          class="ann-item"
+          [class.ann-item--locked]="a.locked"
           [attr.x]="a.rect.x"
           [attr.y]="a.rect.y"
           [attr.width]="a.rect.width"
@@ -147,6 +156,8 @@
       }
       @case ('underline') {
         <line
+          class="ann-item"
+          [class.ann-item--locked]="a.locked"
           [attr.x1]="a.rect.x"
           [attr.y1]="a.rect.y + a.rect.height - 2"
           [attr.x2]="a.rect.x + a.rect.width"
@@ -159,6 +170,8 @@
       }
       @case ('strikethrough') {
         <line
+          class="ann-item"
+          [class.ann-item--locked]="a.locked"
           [attr.x1]="a.rect.x"
           [attr.y1]="a.rect.y + a.rect.height / 2"
           [attr.x2]="a.rect.x + a.rect.width"
@@ -170,7 +183,7 @@
         />
       }
       @case ('comment') {
-        <g class="comment" (dblclick)="startEditingComment(a, $event)" [attr.transform]="rotateTransform(a)">
+        <g class="comment ann-item" [class.ann-item--locked]="a.locked" (dblclick)="startEditingComment(a, $event)" [attr.transform]="rotateTransform(a)">
           <circle
             [attr.cx]="a.rect.x + a.rect.width / 2"
             [attr.cy]="a.rect.y + a.rect.height / 2"
@@ -220,6 +233,8 @@
       }
       @case ('image') {
         <image
+          class="ann-item"
+          [class.ann-item--locked]="a.locked"
           [attr.href]="a.dataUrl"
           [attr.x]="a.rect.x"
           [attr.y]="a.rect.y"
@@ -233,6 +248,8 @@
       }
       @case ('signature') {
         <image
+          class="ann-item"
+          [class.ann-item--locked]="a.locked"
           [attr.href]="a.dataUrl"
           [attr.x]="a.rect.x"
           [attr.y]="a.rect.y"
@@ -245,7 +262,7 @@
         />
       }
       @case ('stamp') {
-        <g [attr.transform]="rotateTransform(a)">
+        <g [attr.transform]="rotateTransform(a)" class="ann-item" [class.ann-item--locked]="a.locked">
           <rect
             [attr.x]="a.rect.x"
             [attr.y]="a.rect.y"

@@ -445,13 +445,19 @@ export class EditorOverlayComponent implements OnDestroy {
       t === 'circle' ||
       t === 'arrow' ||
       t === 'line' ||
+      t === 'shape' ||
+      t === 'icon' ||
       t === 'highlight' ||
       t === 'underline' ||
-      t === 'strikethrough'
+      t === 'strikethrough' ||
+      t === 'text' ||
+      t === 'comment'
     );
   });
 
-  readonly cursor = computed<'crosshair' | 'default' | 'none'>(() => {
+  readonly hoveredAnnotationId = signal<string | null>(null);
+
+  readonly cursor = computed<'crosshair' | 'default' | 'none' | 'grab' | 'move'>(() => {
     if (this.state.pendingPlacement()) {
       return 'crosshair';
     }
@@ -459,7 +465,19 @@ export class EditorOverlayComponent implements OnDestroy {
     if (t === 'eraser') {
       return 'none'; // custom circular SVG eraser cursor is drawn
     }
-    return t !== 'select' && t !== 'hand' ? 'crosshair' : 'default';
+    if (t === 'hand') {
+      return 'grab';
+    }
+    if (t === 'select') {
+      if (this.multiDragStart !== null) {
+        return 'move';
+      }
+      if (this.hoveredAnnotationId() !== null) {
+        return 'move';
+      }
+      return 'default';
+    }
+    return 'crosshair';
   });
 
   private localPoint(event: PointerEvent): { x: number; y: number } {
@@ -723,7 +741,7 @@ export class EditorOverlayComponent implements OnDestroy {
       return;
     }
 
-    if (t === 'select' || t === 'text') {
+    if (t === 'select') {
       const hit = this.hitTest(x, y);
       if (hit) {
         event.preventDefault();
@@ -764,7 +782,7 @@ export class EditorOverlayComponent implements OnDestroy {
         this.dragPivot = { x, y };
         this.svgRef()?.nativeElement.setPointerCapture?.(event.pointerId);
         return;
-      } else if (t === 'select') {
+      } else {
         if (!event.shiftKey && !event.ctrlKey && !event.metaKey) {
           this.state.clearSelection();
         }
@@ -780,10 +798,12 @@ export class EditorOverlayComponent implements OnDestroy {
         }
         this.svgRef()?.nativeElement.setPointerCapture?.(event.pointerId);
         return;
-      } else if (t === 'text') {
-        this.createText(x, y);
-        return;
       }
+    }
+
+    if (t === 'text') {
+      this.createText(x, y);
+      return;
     }
 
     if (
@@ -876,6 +896,7 @@ export class EditorOverlayComponent implements OnDestroy {
     this.stopAutoScroll();
     this.eraserPos.set(null);
     this.pendingPos.set(null);
+    this.hoveredAnnotationId.set(null);
   }
 
   onPointerMove(event: PointerEvent): void {
@@ -1237,6 +1258,26 @@ export class EditorOverlayComponent implements OnDestroy {
         height: h,
       });
     }
+
+    if (this.tool() === 'select') {
+      if (
+        !this.isDrawing &&
+        !this.isErasing &&
+        !this.resizeId &&
+        !this.multiDragStart &&
+        !this.draftBox() &&
+        !this.draftLasso()
+      ) {
+        const { x, y } = this.localPoint(event);
+        const hit = this.hitTest(x, y);
+        const nextId = hit && !hit.locked ? hit.id : null;
+        if (this.hoveredAnnotationId() !== nextId) {
+          this.hoveredAnnotationId.set(nextId);
+        }
+      }
+    } else if (this.hoveredAnnotationId()) {
+      this.hoveredAnnotationId.set(null);
+    }
   }
 
   onPointerUp(event: PointerEvent): void {
@@ -1307,6 +1348,11 @@ export class EditorOverlayComponent implements OnDestroy {
         this.state.triggerAutoSave();
       }
       this.hasMovedDuringDrag = false;
+      if (this.tool() === 'select') {
+        const { x, y } = this.localPoint(event);
+        const hit = this.hitTest(x, y);
+        this.hoveredAnnotationId.set(hit && !hit.locked ? hit.id : null);
+      }
     }
     if (this.draftBox()) {
       const box = this.draftBox()!;

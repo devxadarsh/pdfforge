@@ -26,12 +26,38 @@
   stroke-dasharray: 4 3;
   stroke-width: 1.5;
   touch-action: none;
+  cursor: move;
+  pointer-events: all;
 }
 
 .sel--locked {
   stroke: #f59e0b;
   stroke-dasharray: 2 2;
   touch-action: none;
+  cursor: default;
+}
+
+// When not in select mode, annotations do not intercept pointer events and do not show a drag cursor.
+// This allows creation/drawing tools to seamlessly create new items directly on top of existing ones.
+.ann-item {
+  pointer-events: none;
+  user-select: none;
+}
+
+.overlay--select {
+  .ann-item {
+    pointer-events: all;
+    cursor: move;
+
+    &--locked {
+      cursor: default;
+    }
+  }
+
+  .sel {
+    cursor: move;
+    pointer-events: all;
+  }
 }
 
 .sel-touch-border {
