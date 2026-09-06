@@ -2,6 +2,7 @@
   @if (docSrc(); as pdfSrc) {
   <ngx-extended-pdf-viewer class="editor__pdf-loader" [src]="pdfSrc" [showToolbar]="false" [showSidebarButton]="false"
     [sidebarVisible]="false" [textLayer]="false" [showFindButton]="false"
+    [supportsDownloading]="false" [showDownloadButton]="false" [ignoreKeyboard]="true"
     (pagesLoaded)="onPagesLoaded($event)"></ngx-extended-pdf-viewer>
   }
 
@@ -458,13 +459,13 @@
                 type="button"
                 class="editor__dp-pill"
                 [disabled]="selAnn.locked"
-                [class.editor__dp-pill--active]="(selAnn.resizeMode || state.resizeMode()) === 'fixed'"
+                [class.editor__dp-pill--active]="(selAnn.resizeMode || state.resizeMode()) !== 'free'"
                 (click)="toggleAnnotationResizeMode(selAnn)"
-                [title]="'Resize: ' + ((selAnn.resizeMode || state.resizeMode()) === 'fixed' ? 'Fixed 1:1' : 'Free Hand')"
+                [title]="resizeModePillTitle(selAnn.resizeMode || state.resizeMode())"
                 aria-label="Toggle Resize Ratio"
               >
-                <i [class]="(selAnn.resizeMode || state.resizeMode()) === 'fixed' ? 'fa-solid fa-lock' : 'fa-solid fa-arrows-up-down-left-right'"></i>
-                <span>{{ (selAnn.resizeMode || state.resizeMode()) === 'fixed' ? '1:1' : 'Free' }}</span>
+                <i [class]="resizeModePillIcon(selAnn.resizeMode || state.resizeMode())"></i>
+                <span>{{ resizeModePillLabel(selAnn.resizeMode || state.resizeMode()) }}</span>
               </button>
             } @else {
               <!-- Shape Selected: Row 1 Extra = Change Shape + Resize Mode -->
@@ -486,13 +487,13 @@
                 type="button"
                 class="editor__dp-pill"
                 [disabled]="selAnn.locked"
-                [class.editor__dp-pill--active]="(selAnn.resizeMode || state.resizeMode()) === 'fixed'"
+                [class.editor__dp-pill--active]="(selAnn.resizeMode || state.resizeMode()) !== 'free'"
                 (click)="toggleAnnotationResizeMode(selAnn)"
-                [title]="'Resize: ' + ((selAnn.resizeMode || state.resizeMode()) === 'fixed' ? 'Fixed 1:1' : 'Free Hand')"
+                [title]="resizeModePillTitle(selAnn.resizeMode || state.resizeMode())"
                 aria-label="Toggle Resize Ratio"
               >
-                <i [class]="(selAnn.resizeMode || state.resizeMode()) === 'fixed' ? 'fa-solid fa-lock' : 'fa-solid fa-arrows-up-down-left-right'"></i>
-                <span>{{ (selAnn.resizeMode || state.resizeMode()) === 'fixed' ? '1:1' : 'Free' }}</span>
+                <i [class]="resizeModePillIcon(selAnn.resizeMode || state.resizeMode())"></i>
+                <span>{{ resizeModePillLabel(selAnn.resizeMode || state.resizeMode()) }}</span>
               </button>
             }
           }
@@ -961,13 +962,13 @@
           <button
             type="button"
             class="editor__dp-pill"
-            [class.editor__dp-pill--active]="state.resizeMode() === 'fixed'"
+            [class.editor__dp-pill--active]="state.resizeMode() !== 'free'"
             (click)="state.toggleResizeMode()"
-            [title]="state.resizeMode() === 'fixed' ? 'Resize Ratio: Fixed 1:1 (Tap for Free Hand)' : 'Resize Ratio: Free Hand (Tap for Fixed 1:1)'"
+            [title]="resizeModePillTitle(state.resizeMode())"
             aria-label="Toggle Resize Ratio"
           >
-            <i [class]="state.resizeMode() === 'fixed' ? 'fa-solid fa-lock' : 'fa-solid fa-arrows-up-down-left-right'"></i>
-            <span>{{ state.resizeMode() === 'fixed' ? '1:1' : 'Free' }}</span>
+            <i [class]="resizeModePillIcon(state.resizeMode())"></i>
+            <span>{{ resizeModePillLabel(state.resizeMode()) }}</span>
           </button>
         </div>
       } @else if (state.tool() === 'icon') {
@@ -1062,13 +1063,13 @@
           <button
             type="button"
             class="editor__dp-pill"
-            [class.editor__dp-pill--active]="state.resizeMode() === 'fixed'"
+            [class.editor__dp-pill--active]="state.resizeMode() !== 'free'"
             (click)="state.toggleResizeMode()"
-            [title]="state.resizeMode() === 'fixed' ? 'Resize Ratio: Fixed 1:1 (Tap for Free Hand)' : 'Resize Ratio: Free Hand (Tap for Fixed 1:1)'"
+            [title]="resizeModePillTitle(state.resizeMode())"
             aria-label="Toggle Resize Ratio"
           >
-            <i [class]="state.resizeMode() === 'fixed' ? 'fa-solid fa-lock' : 'fa-solid fa-arrows-up-down-left-right'"></i>
-            <span>{{ state.resizeMode() === 'fixed' ? '1:1' : 'Free' }}</span>
+            <i [class]="resizeModePillIcon(state.resizeMode())"></i>
+            <span>{{ resizeModePillLabel(state.resizeMode()) }}</span>
           </button>
         </div>
       } @else if (state.tool() === 'text') {
@@ -1219,23 +1220,31 @@
         }
       </div>
       <div class="editor__toolbar-actions">
-        <button type="button" class="pf-btn pf-btn--ghost pf-btn--sm" (click)="toggleFullscreen()" [disabled]="!docName()"
+        <button
+          type="button"
+          class="pf-btn pf-btn--primary pf-btn--sm"
+          (click)="onManualSaveClick()"
+          [disabled]="!docName() || saving()"
+          title="Save progress locally (Ctrl+S)"
+          aria-label="Save progress locally"
+        >
+          @if (saving()) {
+            <i class="fa-solid fa-spinner fa-spin"></i> Saving…
+          } @else {
+            <i class="fa-solid fa-floppy-disk"></i> Save
+          }
+        </button>
+        <button
+          type="button"
+          class="pf-btn pf-btn--ghost pf-btn--sm"
+          (click)="toggleFullscreen()"
+          [disabled]="!docName()"
           [title]="isFullscreen() ? 'Exit fullscreen (Esc)' : 'Edit in fullscreen'"
-          [attr.aria-label]="isFullscreen() ? 'Exit fullscreen' : 'Edit in fullscreen'">
+          [attr.aria-label]="isFullscreen() ? 'Exit fullscreen' : 'Edit in fullscreen'"
+        >
           <i [class]="isFullscreen() ? 'fa-solid fa-compress' : 'fa-solid fa-expand'"></i>
           {{ isFullscreen() ? 'Exit fullscreen' : 'Fullscreen' }}
         </button>
-        <button type="button" class="pf-btn pf-btn--primary pf-btn--sm" (click)="exportPdf()"
-          [disabled]="!docName() || exporting()" [attr.aria-label]="'Export edited PDF'" title="Export edited PDF (Ctrl+S)">
-          @if (exporting()) {
-          <i class="fa-solid fa-spinner fa-spin"></i> Exporting…
-          } @else {
-          <i class="fa-solid fa-file-arrow-down"></i> Export PDF
-          }
-        </button>
-        <a class="pf-btn pf-btn--ghost pf-btn--sm" routerLink="/tools" (click)="onToolsClick($event)" title="All Tools">
-          <i class="fa-solid fa-arrow-left"></i> Tools
-        </a>
       </div>
     </div>
   }
@@ -1445,7 +1454,7 @@
         <i class="fa-solid fa-spinner fa-spin"></i> Loading document…
       </div>
       } @else if (!docName()) {
-      <div class="editor__landing">
+      <div class="editor__landing" [class.editor__landing--centered]="recentEntries().length === 0">
         <div class="editor__landing-card">
           <div class="editor__landing-badge">
             <i class="fa-solid fa-file-pdf"></i>
@@ -1472,52 +1481,103 @@
             <span class="editor__feat-pill"><i class="fa-solid fa-shapes"></i> Shapes</span>
             <span class="editor__feat-pill"><i class="fa-solid fa-layer-group"></i> Organize Pages</span>
           </div>
+        </div>
 
-          @if (recentEntries().length > 0) {
-            <div class="editor__recent-section">
-              <div class="editor__recent-section-header">
-                <h3 class="editor__recent-section-title">
-                  <i class="fa-solid fa-clock-rotate-left"></i> Recent Files
-                </h3>
-                <div class="editor__recent-header-right">
-                  <a class="editor__recent-view-all" routerLink="/recent">View all</a>
-                  <button type="button" class="editor__recent-clear-link" (click)="clearRecentEntries()">
-                    Clear all
-                  </button>
+        @if (recentEntries().length > 0) {
+          <div class="editor__recent-panel">
+            <div class="editor__recent-panel-header">
+              <div class="editor__recent-panel-title-group">
+                <div class="editor__recent-panel-icon">
+                  <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <div>
+                  <div class="editor__recent-panel-title-row">
+                    <h2 class="editor__recent-panel-title">Recent Documents</h2>
+                    <span class="editor__recent-count-badge">{{ filteredRecentEntries().length }}</span>
+                  </div>
+                  <p class="editor__recent-panel-subtitle">
+                    Stored locally on this device. Re-open anytime with all edits preserved.
+                  </p>
                 </div>
               </div>
 
-              @if (recentEntries().length > 3) {
-                <div class="editor__recent-search-bar">
-                  <i class="fa-solid fa-magnifying-glass"></i>
-                  <input
-                    type="text"
-                    placeholder="Search recent files..."
-                    [value]="recentSearch()"
-                    (input)="onRecentSearchInput($any($event.target).value)"
-                  />
-                </div>
-              }
+              <div class="editor__recent-panel-actions">
+                @if (recentEntries().length > 2) {
+                  <div class="editor__recent-search-wrap">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input
+                      type="text"
+                      placeholder="Search recent files..."
+                      [value]="recentSearch()"
+                      (input)="onRecentSearchInput($any($event.target).value)"
+                    />
+                    @if (recentSearch()) {
+                      <button
+                        type="button"
+                        class="editor__recent-search-clear"
+                        (click)="onRecentSearchInput('')"
+                        title="Clear search"
+                        aria-label="Clear search"
+                      >
+                        <i class="fa-solid fa-xmark"></i>
+                      </button>
+                    }
+                  </div>
+                }
+                <a class="pf-btn pf-btn--ghost pf-btn--sm editor__recent-action-btn" routerLink="/recent" title="View all in history">
+                  <i class="fa-solid fa-list-check"></i>
+                  <span>View all</span>
+                </a>
+                <button
+                  type="button"
+                  class="pf-btn pf-btn--ghost pf-btn--sm editor__recent-action-btn pf-text-danger"
+                  (click)="clearRecentEntries()"
+                  title="Clear all recent history"
+                  aria-label="Clear all recent history"
+                >
+                  <i class="fa-solid fa-trash-can"></i>
+                  <span>Clear</span>
+                </button>
+              </div>
+            </div>
 
+            @if (filteredRecentEntries().length === 0) {
+              <div class="editor__recent-empty">
+                <i class="fa-solid fa-magnifying-glass editor__recent-empty-icon"></i>
+                <p class="editor__recent-empty-text">No recent files match "<strong>{{ recentSearch() }}</strong>"</p>
+                <button type="button" class="pf-btn pf-btn--ghost pf-btn--sm" (click)="onRecentSearchInput('')">
+                  Clear search
+                </button>
+              </div>
+            } @else {
               <div class="editor__recent-grid">
                 @for (entry of filteredRecentEntries(); track entry.id) {
-                  <div class="editor__recent-card"
+                  <div
+                    class="editor__recent-card"
+                    [class.editor__recent-card--pinned]="entry.pinned"
                     (click)="openRecentFile(entry)"
                     (keydown.enter)="openRecentFile(entry)"
                     role="button"
                     tabindex="0"
-                    title="Open {{ entry.name }}">
+                    title="Open {{ entry.name }}"
+                  >
                     <div class="editor__recent-card-icon">
                       <i class="fa-solid fa-file-pdf"></i>
                     </div>
                     <div class="editor__recent-card-info">
                       <div class="editor__recent-card-title-row">
-                        <span class="editor__recent-card-name">{{ entry.name }}</span>
+                        <span class="editor__recent-card-name" [title]="entry.name">{{ entry.name }}</span>
                         @if (entry.pinned) {
-                          <i class="fa-solid fa-thumbtack editor__recent-card-pinned" title="Pinned"></i>
+                          <i class="fa-solid fa-thumbtack editor__recent-card-pinned" title="Pinned to top"></i>
                         }
                       </div>
                       <div class="editor__recent-card-meta-row">
+                        @if (entry.pageCount) {
+                          <span class="editor__recent-card-meta">{{ entry.pageCount }} {{ entry.pageCount === 1 ? 'page' : 'pages' }}</span>
+                          <span class="editor__recent-dot">•</span>
+                        }
+                        <span class="editor__recent-card-meta">{{ formatBytes(entry.sizeBytes) }}</span>
+                        <span class="editor__recent-dot">•</span>
                         <span class="editor__recent-card-meta">{{ getRelativeTime(entry.lastOpenedAt) }}</span>
                         @if (entry.name === docName() && state.modified()) {
                           <span class="editor__recent-card-unsaved">
@@ -1526,26 +1586,33 @@
                         }
                       </div>
                     </div>
-                    <div class="editor__recent-card-actions">
-                      <button type="button" class="editor__recent-card-pin"
-                        [class.editor__recent-card-pin--active]="entry.pinned"
+                    <div class="editor__recent-card-actions" (click)="$event.stopPropagation()">
+                      <button
+                        type="button"
+                        class="editor__recent-card-btn"
+                        [class.editor__recent-card-btn--active]="entry.pinned"
                         (click)="togglePin(entry.id, $event)"
-                        [title]="entry.pinned ? 'Unpin file' : 'Pin file'"
-                        aria-label="Pin file">
+                        [title]="entry.pinned ? 'Unpin' : 'Pin to top'"
+                        aria-label="Pin file"
+                      >
                         <i class="fa-solid fa-thumbtack"></i>
                       </button>
-                      <button type="button" class="editor__recent-card-remove"
+                      <button
+                        type="button"
+                        class="editor__recent-card-btn editor__recent-card-btn--remove"
                         (click)="removeRecentEntry(entry.id); $event.stopPropagation()"
-                        title="Remove from recent" aria-label="Remove from recent">
-                        <i class="fa-solid fa-xmark"></i>
+                        title="Remove from recent"
+                        aria-label="Remove from recent"
+                      >
+                        <i class="fa-solid fa-trash-can"></i>
                       </button>
                     </div>
                   </div>
                 }
               </div>
-            </div>
-          }
-        </div>
+            }
+          </div>
+        }
       </div>
       } @else {
       <div
@@ -1557,6 +1624,7 @@
         (pointermove)="onStagePointerMove($event)"
         (pointerup)="onStagePointerUp($event)"
         (pointercancel)="onStagePointerUp($event)"
+        (pointerleave)="onStagePointerLeave($event)"
         (wheel)="onWorkspaceWheel($event)"
         (scroll)="onStageScroll($event)"
       >

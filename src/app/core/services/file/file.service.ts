@@ -53,8 +53,14 @@ export class FileService {
     }
     if (loaded.length) {
       this.currentFiles.set(loaded);
-      // Persist the first file so it survives a page reload and recent files
-      void this.storage.saveDocument(loaded[0].name, loaded[0].data);
+      // Persist the first file so it survives a page reload if auto-save is enabled
+      const autoSaveEnabled =
+        typeof localStorage !== 'undefined'
+          ? localStorage.getItem('ipdfeditor.auto-save') !== 'false'
+          : true;
+      if (autoSaveEnabled) {
+        void this.storage.saveDocument(loaded[0].name, loaded[0].data);
+      }
       void this.recentFiles.addOrUpdate(
         loaded[0].name,
         loaded[0].data,

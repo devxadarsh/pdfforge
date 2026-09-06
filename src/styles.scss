@@ -952,12 +952,33 @@ html[data-high-contrast="true"] {
   .tool-trust-item,
   .theme-card,
   .settings-section,
-  .storage-meter {
+  .storage-meter,
+  .storage-card,
+  .backup-card,
+  .shortcut-group-card,
+  .editor-shell__header,
+  .editor__toolbar,
+  .editor__viewbar,
+  .editor__sidebar,
+  .editor__page-frame,
+  .page-thumbnail,
+  .properties-panel {
     border-color: #000000 !important;
   }
 
+  .editor__tool,
+  .editor__chip,
+  .zoom-btn,
   .pf-btn {
     border: 2px solid currentColor !important;
+  }
+
+  .editor__page-frame {
+    box-shadow: 0 0 0 2px #000000 !important;
+  }
+
+  .page-thumbnail--selected {
+    box-shadow: 0 0 0 3px #000000 !important;
   }
 
   :focus-visible {
@@ -975,8 +996,33 @@ html[data-theme="dark"][data-high-contrast="true"] {
   .tool-trust-item,
   .theme-card,
   .settings-section,
-  .storage-meter {
+  .storage-meter,
+  .storage-card,
+  .backup-card,
+  .shortcut-group-card,
+  .editor-shell__header,
+  .editor__toolbar,
+  .editor__viewbar,
+  .editor__sidebar,
+  .editor__page-frame,
+  .page-thumbnail,
+  .properties-panel {
     border-color: #ffffff !important;
+  }
+
+  .editor__tool,
+  .editor__chip,
+  .zoom-btn,
+  .pf-btn {
+    border: 2px solid currentColor !important;
+  }
+
+  .editor__page-frame {
+    box-shadow: 0 0 0 2px #ffffff !important;
+  }
+
+  .page-thumbnail--selected {
+    box-shadow: 0 0 0 3px #ffffff !important;
   }
 
   :focus-visible {

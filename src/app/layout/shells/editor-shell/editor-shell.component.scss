@@ -70,6 +70,14 @@
       font-size: 6px;
     }
   }
+
+  &--saving {
+    color: var(--pf-primary, #2563eb);
+
+    i {
+      font-size: 10px;
+    }
+  }
 }
 
 .editor-shell__nav {

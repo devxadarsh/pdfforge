@@ -29,9 +29,17 @@ import {
   Rect,
   EraserTarget,
   TextTransform,
+  ResizeMode,
 } from '../../../../core/models/pdf.models';
 import { generateShapeSvgPath } from '../../../../core/utilities/shape-paths.util';
 import { ALL_SHAPE_DEFINITIONS, getIconBoxStyles, getIconGlyphStyles } from '../../../../core/constants/shapes';
+import {
+  TEXT_PAD_X,
+  TEXT_PAD_Y,
+  TEXT_LINE_HEIGHT,
+  TEXT_BACKGROUND_PADDING,
+  measureTextBounds,
+} from '../../../../core/utilities/text-measure.util';
 import { EditorStateService } from '../../state/editor-state.service';
 
 type MarkType =
@@ -51,11 +59,6 @@ interface DraftMark {
   height: number;
 }
 
-/** Padding (in overlay/SVG units == CSS px) around text annotations. */
-const TEXT_PAD_X = 10;
-const TEXT_PAD_Y = 8;
-const TEXT_LINE_HEIGHT = 1.35;
-const TEXT_BACKGROUND_PADDING = 6;
 
 function isRectIntersecting(r1: Rect, r2: Rect): boolean {
   return !(
@@ -935,14 +938,14 @@ export class EditorOverlayComponent implements OnDestroy {
       const orig = this.resizeStart.rect;
 
       let targetRatio: number | null = null;
-      const annResizeMode = (a as any).resizeMode || this.state.resizeMode();
-      const isFixed1to1 = annResizeMode === 'fixed' ? !event.shiftKey : event.shiftKey;
+      const annResizeMode: ResizeMode = (a as any).resizeMode || this.state.resizeMode();
+      const itemRatio = orig.width / Math.max(1, orig.height);
 
       if (a.type === 'image') {
         const imgAnn = a as ImageAnnotation;
         const mode = imgAnn.aspectRatioMode;
         if (mode === 'free') {
-          targetRatio = isFixed1to1 ? 1 : null;
+          targetRatio = event.shiftKey ? itemRatio : null;
         } else if (mode === '1:1') {
           targetRatio = 1;
         } else if (mode === '4:3') {
@@ -955,22 +958,39 @@ export class EditorOverlayComponent implements OnDestroy {
           targetRatio =
             imgAnn.naturalWidth && imgAnn.naturalHeight
               ? imgAnn.naturalWidth / imgAnn.naturalHeight
-              : orig.width / Math.max(1, orig.height);
+              : itemRatio;
         } else {
-          targetRatio = isFixed1to1 ? 1 : null;
+          if (annResizeMode === 'fixed') {
+            targetRatio = event.shiftKey ? null : 1;
+          } else if (annResizeMode === 'item') {
+            targetRatio = event.shiftKey ? null : (imgAnn.naturalWidth && imgAnn.naturalHeight ? imgAnn.naturalWidth / imgAnn.naturalHeight : itemRatio);
+          } else {
+            targetRatio = event.shiftKey ? itemRatio : null;
+          }
         }
       } else if (a.type === 'signature') {
         const sigAnn = a as SignatureAnnotation;
-        targetRatio = isFixed1to1
-          ? 1
-          : (sigAnn.naturalWidth && sigAnn.naturalHeight
-              ? sigAnn.naturalWidth / sigAnn.naturalHeight
-              : orig.width / Math.max(1, orig.height));
+        const naturalRatio = sigAnn.naturalWidth && sigAnn.naturalHeight
+          ? sigAnn.naturalWidth / sigAnn.naturalHeight
+          : itemRatio;
+        if (annResizeMode === 'fixed') {
+          targetRatio = event.shiftKey ? null : 1;
+        } else if (annResizeMode === 'item') {
+          targetRatio = event.shiftKey ? null : naturalRatio;
+        } else {
+          targetRatio = event.shiftKey ? naturalRatio : null;
+        }
       } else if (a.type === 'comment') {
         targetRatio = 1;
       } else {
         // Shapes, icons, text, stamps, drawings
-        targetRatio = isFixed1to1 ? 1 : null;
+        if (annResizeMode === 'fixed') {
+          targetRatio = event.shiftKey ? null : 1;
+        } else if (annResizeMode === 'item') {
+          targetRatio = event.shiftKey ? null : itemRatio;
+        } else {
+          targetRatio = event.shiftKey ? itemRatio : null;
+        }
       }
 
       let rx = orig.x;
@@ -1104,7 +1124,7 @@ export class EditorOverlayComponent implements OnDestroy {
             rect: {
               x: rx,
               y: ry,
-              width: Math.max(rw, m.width),
+              width: m.width,
               height: m.height,
             },
           },
@@ -1270,6 +1290,7 @@ export class EditorOverlayComponent implements OnDestroy {
           this.state.addAnnotation(this.pageId(), ann, false);
           this.state.selectAnnotation(null);
         }
+        this.state.triggerAutoSave();
       }
       return;
     }
@@ -1277,10 +1298,14 @@ export class EditorOverlayComponent implements OnDestroy {
       this.resizeId = null;
       this.resizeHandle = null;
       this.resizeStart = null;
+      this.state.triggerAutoSave();
       return;
     }
     if (this.multiDragStart) {
       this.multiDragStart = null;
+      if (this.hasMovedDuringDrag) {
+        this.state.triggerAutoSave();
+      }
       this.hasMovedDuringDrag = false;
     }
     if (this.draftBox()) {
@@ -1329,6 +1354,7 @@ export class EditorOverlayComponent implements OnDestroy {
       } else {
         this.commitShape(d);
       }
+      this.state.triggerAutoSave();
     }
   }
 
@@ -1404,6 +1430,7 @@ export class EditorOverlayComponent implements OnDestroy {
 
   stopEditing(): void {
     this.editingId.set(null);
+    this.state.triggerAutoSave();
   }
 
   onEditKeydown(event: KeyboardEvent): void {
@@ -1439,6 +1466,7 @@ export class EditorOverlayComponent implements OnDestroy {
   stopEditingComment(a: CommentAnnotation): void {
     if (this.editingCommentId() === a.id) {
       this.editingCommentId.set(null);
+      this.state.triggerAutoSave();
     }
   }
 
@@ -1506,35 +1534,16 @@ export class EditorOverlayComponent implements OnDestroy {
     lineHeight = TEXT_LINE_HEIGHT,
     letterSpacing = 0,
   ): { width: number; height: number } {
-    const transformed = this.transformText(text, transform);
-    const lines = transformed.split('\n');
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (ctx) {
-      ctx.font = `${italic ? 'italic ' : ''}${bold ? 'bold ' : ''}${fontSize}px ${fontFamily}`;
-      let maxW = 0;
-      for (const line of lines) {
-        const baseW = ctx.measureText(line || ' ').width;
-        const spacingExtra = letterSpacing * Math.max(0, line.length - 1);
-        const w = baseW + spacingExtra;
-        if (w > maxW) {
-          maxW = w;
-        }
-      }
-      return {
-        width: Math.max(20, Math.ceil(maxW) + TEXT_PAD_X * 2),
-        height: Math.ceil(
-          lines.length * fontSize * lineHeight + TEXT_PAD_Y * 2,
-        ),
-      };
-    }
-    const approx = Math.max(...lines.map((l) => l.length)) * (fontSize * 0.6 + letterSpacing);
-    return {
-      width: Math.max(20, Math.ceil(approx) + TEXT_PAD_X * 2),
-      height: Math.ceil(
-        lines.length * fontSize * lineHeight + TEXT_PAD_Y * 2,
-      ),
-    };
+    return measureTextBounds(
+      text,
+      fontSize,
+      bold,
+      fontFamily,
+      italic,
+      transform,
+      lineHeight,
+      letterSpacing,
+    );
   }
 
   /** Split a text annotation's content into rendered lines. */
@@ -1704,6 +1713,7 @@ export class EditorOverlayComponent implements OnDestroy {
     this.state.setTool('select');
     this.state.selectAnnotation(ann.id);
     this.pendingPos.set(null);
+    this.state.triggerAutoSave();
   }
 
   private placePendingStamp(
@@ -1742,6 +1752,7 @@ export class EditorOverlayComponent implements OnDestroy {
     this.state.setTool('select');
     this.state.selectAnnotation(ann.id);
     this.pendingPos.set(null);
+    this.state.triggerAutoSave();
   }
 
   pointsToSvgPath(points: readonly Point[]): string {

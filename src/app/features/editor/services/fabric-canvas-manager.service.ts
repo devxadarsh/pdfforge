@@ -318,6 +318,7 @@ export class FabricCanvasManagerService {
       };
 
       this.state.addAnnotation(pageId, drawingAnn);
+      this.state.triggerAutoSave();
     });
   }
 }

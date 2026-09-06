@@ -47,6 +47,7 @@ export class EditorShellComponent implements OnInit {
     () => this.files.currentFiles().length > 0,
   );
   readonly isExporting = this.state.isExporting;
+  readonly isSaving = this.state.isSaving;
   readonly modified = this.state.modified;
 
   readonly documentName = computed(
@@ -78,11 +79,10 @@ export class EditorShellComponent implements OnInit {
   });
 
   readonly editorNav: EditorNavItem[] = [
+    { label: 'Home', path: '/' },
     { label: 'Edit', path: '/editor' },
-    { label: 'Merge', path: '/merge' },
-    { label: 'Split', path: '/split' },
-    { label: 'Convert', path: '/convert' },
-    { label: 'Compress', path: '/compress' },
+    { label: 'Tools', path: '/tools' },
+    { label: 'Setting', path: '/settings' },
   ];
 
   readonly themeIcon = () => {

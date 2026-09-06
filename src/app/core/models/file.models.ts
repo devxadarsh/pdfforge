@@ -10,6 +10,7 @@ export interface StoredEditorState {
   readonly pages?: StoredPageLayout[];
   readonly annotations?: Record<string, PdfAnnotation[]>;
   readonly currentId?: string | null;
+  readonly viewports?: Record<string, { width: number; height: number }>;
 }
 
 export interface LoadedFile {

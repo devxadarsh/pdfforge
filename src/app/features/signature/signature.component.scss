@@ -2,6 +2,12 @@
   display: block;
 }
 
+.tool-page__body {
+  width: 100%;
+  max-width: 880px;
+  margin-inline: auto;
+}
+
 .sig-tabs {
   display: inline-flex;
   gap: 0.25rem;

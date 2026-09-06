@@ -295,6 +295,7 @@
           [attr.y]="a.rect.y"
           [attr.width]="a.rect.width"
           [attr.height]="a.rect.height"
+          [attr.rx]="a.type === 'text' ? 4 : 0"
         />
         <!-- Expanded border drag touch target for mobile devices -->
         @if (isMobile() && !a.locked) {
@@ -595,10 +596,9 @@
     spellcheck="false"
     [style.left.px]="t.rect.x"
     [style.top.px]="t.rect.y"
-    [style.width.px]="Math.max(t.rect.width, 70)"
-    [style.min-width.px]="70"
-    [style.height.px]="Math.max(t.rect.height, 28)"
-    [style.font-size.px]="Math.max(t.fontSize, 13)"
+    [style.width.px]="t.rect.width"
+    [style.height.px]="t.rect.height"
+    [style.font-size.px]="t.fontSize"
     [style.font-family]="t.fontFamily"
     [style.font-weight]="t.fontWeight"
     [style.font-style]="t.italic ? 'italic' : 'normal'"

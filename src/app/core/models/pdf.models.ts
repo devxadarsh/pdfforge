@@ -269,6 +269,8 @@ export interface PageSelection {
   readonly pageIndexes: ReadonlyArray<number>;
 }
 
+export type ResizeMode = 'fixed' | 'item' | 'free';
+
 export interface BaseAnnotation {
   readonly id: string;
   readonly type: AnnotationType;
@@ -279,7 +281,7 @@ export interface BaseAnnotation {
   createdAt: number;
   locked?: boolean;
   groupId?: string;
-  resizeMode?: 'fixed' | 'free';
+  resizeMode?: ResizeMode;
 }
 
 export type TextTransform = 'none' | 'uppercase' | 'lowercase' | 'capitalize';

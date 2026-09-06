@@ -1133,7 +1133,7 @@
       <div class="props__group">
         <div class="props__row props__row--between">
           <label class="props__label">Resize Ratio</label>
-          <span class="props__hint-inline">{{ resizeModeOf(ann) === 'fixed' ? 'Fixed 1:1' : 'Free Hand' }}</span>
+          <span class="props__hint-inline">{{ resizeModeLabel(resizeModeOf(ann)) }}</span>
         </div>
         <div class="props__seg-group props__seg-group--full">
           <button
@@ -1144,7 +1144,17 @@
             title="Fixed 1:1 Aspect Ratio when dragging border handles"
             aria-label="Fixed 1:1 Ratio"
           >
-            <i class="fa-solid fa-lock"></i> Fixed 1:1
+            <i class="fa-solid fa-square"></i> Fixed 1:1
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            [class.props__seg-btn--on]="resizeModeOf(ann) === 'item'"
+            (click)="setAnnotationResizeMode(ann, 'item')"
+            title="Fixed ratio of the item when dragging border handles"
+            aria-label="Fixed Item Ratio"
+          >
+            <i class="fa-solid fa-lock"></i> Item Ratio
           </button>
           <button
             type="button"
@@ -1545,7 +1555,7 @@
       <div class="props__group">
         <div class="props__row props__row--between">
           <label class="props__label">Resize Ratio</label>
-          <span class="props__hint-inline">{{ state.resizeMode() === 'fixed' ? 'Fixed 1:1' : 'Free Hand' }}</span>
+          <span class="props__hint-inline">{{ resizeModeLabel(state.resizeMode()) }}</span>
         </div>
         <div class="props__seg-group props__seg-group--full">
           <button
@@ -1556,7 +1566,17 @@
             title="Fixed 1:1 Aspect Ratio when dragging border handles"
             aria-label="Fixed 1:1 Ratio"
           >
-            <i class="fa-solid fa-lock"></i> Fixed 1:1
+            <i class="fa-solid fa-square"></i> Fixed 1:1
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            [class.props__seg-btn--on]="state.resizeMode() === 'item'"
+            (click)="state.setResizeMode('item')"
+            title="Fixed ratio of the item when dragging border handles"
+            aria-label="Fixed Item Ratio"
+          >
+            <i class="fa-solid fa-lock"></i> Item Ratio
           </button>
           <button
             type="button"
@@ -1724,7 +1744,7 @@
       <div class="props__group">
         <div class="props__row props__row--between">
           <label class="props__label">Resize Ratio</label>
-          <span class="props__hint-inline">{{ state.resizeMode() === 'fixed' ? 'Fixed 1:1' : 'Free Hand' }}</span>
+          <span class="props__hint-inline">{{ resizeModeLabel(state.resizeMode()) }}</span>
         </div>
         <div class="props__seg-group props__seg-group--full">
           <button
@@ -1735,7 +1755,17 @@
             title="Fixed 1:1 Aspect Ratio when dragging border handles"
             aria-label="Fixed 1:1 Ratio"
           >
-            <i class="fa-solid fa-lock"></i> Fixed 1:1
+            <i class="fa-solid fa-square"></i> Fixed 1:1
+          </button>
+          <button
+            type="button"
+            class="props__seg-btn props__field--grow"
+            [class.props__seg-btn--on]="state.resizeMode() === 'item'"
+            (click)="state.setResizeMode('item')"
+            title="Fixed ratio of the item when dragging border handles"
+            aria-label="Fixed Item Ratio"
+          >
+            <i class="fa-solid fa-lock"></i> Item Ratio
           </button>
           <button
             type="button"

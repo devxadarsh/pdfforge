@@ -11,6 +11,7 @@ import {
   EraserTarget,
   PendingPlacement,
   IconStyleType,
+  ResizeMode,
 } from '../../../core/models/pdf.models';
 import { EditorPage } from '../models/editor-page.model';
 import { EditorPagesService } from './editor-pages.service';
@@ -29,6 +30,30 @@ export interface HistorySnapshot {
   readonly revisionId: number;
 }
 
+function getDefaultColor(): string {
+  if (typeof localStorage === 'undefined') return '#2563eb';
+  return localStorage.getItem('ipdfeditor.default-color') || '#2563eb';
+}
+
+function getDefaultFontSize(): number {
+  if (typeof localStorage === 'undefined') return 16;
+  const val = parseInt(localStorage.getItem('ipdfeditor.default-font-size') || '16', 10);
+  return isNaN(val) ? 16 : val;
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  let clean = hex.replace('#', '');
+  if (clean.length === 3) {
+    clean = clean.split('').map((c) => c + c).join('');
+  }
+  const num = parseInt(clean, 16);
+  if (isNaN(num)) return `rgba(37,99,235,${alpha})`;
+  const r = (num >> 16) & 255;
+  const g = (num >> 8) & 255;
+  const b = num & 255;
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 @Injectable({ providedIn: 'root' })
 export class EditorStateService {
   private readonly pages = inject(EditorPagesService);
@@ -41,23 +66,25 @@ export class EditorStateService {
   );
   private readonly _selectedIds = signal<string[]>([]);
   private readonly _selectedId = computed(() => this._selectedIds()[0] ?? null);
-  private _savedRevision = 0;
+  private readonly _savedRevision = signal<number>(0);
   private readonly _currentRevision = signal(0);
+  private readonly _isSaving = signal<boolean>(false);
+  readonly isSaving = this._isSaving.asReadonly();
 
   // Selection mode options
   private readonly _selectMode = signal<SelectMode>('box');
 
   // Drawing options
   private readonly _drawingMode = signal<DrawingMode>('continuous');
-  private readonly _penColor = signal<string>('#111827');
+  private readonly _penColor = signal<string>(getDefaultColor());
   private readonly _penStrokeWidth = signal<number>(2);
   private readonly _freehandColor = signal<string>('#dc2626');
   private readonly _freehandStrokeWidth = signal<number>(4);
   private readonly _penSmoothing = signal<'none' | 'medium' | 'high'>('medium');
 
   // Text tool options
-  private readonly _textColor = signal<string>('#111111');
-  private readonly _textFontSize = signal<number>(16);
+  private readonly _textColor = signal<string>(getDefaultColor());
+  private readonly _textFontSize = signal<number>(getDefaultFontSize());
   private readonly _textFontFamily = signal<string>('sans-serif');
   private readonly _textBold = signal<boolean>(false);
   private readonly _textItalic = signal<boolean>(false);
@@ -67,12 +94,12 @@ export class EditorStateService {
   private readonly _iconKind = signal<ShapeKind>('ui-browser');
   private readonly _iconStyle = signal<IconStyleType>('outlined');
   private readonly _shapeRenderMode = signal<'shape' | 'icon'>('shape');
-  private readonly _shapeStrokeColor = signal<string>('#2563eb');
-  private readonly _shapeFillColor = signal<string>('rgba(37,99,235,0.12)');
+  private readonly _shapeStrokeColor = signal<string>(getDefaultColor());
+  private readonly _shapeFillColor = signal<string>(hexToRgba(getDefaultColor(), 0.12));
   private readonly _shapeStrokeWidth = signal<number>(2);
   private readonly _shapeFillEnabled = signal<boolean>(true);
-  // Resize Mode: 'fixed' (1:1 ratio, default) or 'free' (freehand)
-  private readonly _resizeMode = signal<'fixed' | 'free'>('fixed');
+  // Resize Mode: 'fixed' (1:1 ratio), 'item' (item aspect ratio), or 'free' (freehand)
+  private readonly _resizeMode = signal<ResizeMode>('fixed');
 
   // Markup options
   private readonly _highlightColor = signal<string>('#fde047');
@@ -112,7 +139,7 @@ export class EditorStateService {
   readonly selectedIds = this._selectedIds.asReadonly();
   readonly selectedId = this._selectedId;
   readonly selectMode = this._selectMode.asReadonly();
-  readonly modified = computed(() => this._currentRevision() !== this._savedRevision);
+  readonly modified = computed(() => this._currentRevision() !== this._savedRevision());
   readonly annotationsByPage = this._annotations.asReadonly();
 
   readonly canUndo = this._canUndo.asReadonly();
@@ -161,12 +188,16 @@ export class EditorStateService {
     this._iconStyle.set(next);
   }
 
-  setResizeMode(mode: 'fixed' | 'free'): void {
+  setResizeMode(mode: ResizeMode): void {
     this._resizeMode.set(mode);
   }
 
   toggleResizeMode(): void {
-    this._resizeMode.update((m) => (m === 'fixed' ? 'free' : 'fixed'));
+    const modes: ResizeMode[] = ['fixed', 'item', 'free'];
+    const curr = this._resizeMode();
+    const idx = modes.indexOf(curr);
+    const next = modes[(idx + 1) % modes.length];
+    this._resizeMode.set(next);
   }
 
   readonly highlightColor = this._highlightColor.asReadonly();
@@ -252,9 +283,20 @@ export class EditorStateService {
   }
 
   private _saveLocallyHandler: (() => Promise<boolean>) | null = null;
+  private _autoSaveHandler: (() => Promise<void> | void) | null = null;
 
   setSaveLocallyHandler(handler: () => Promise<boolean>): void {
     this._saveLocallyHandler = handler;
+  }
+
+  setAutoSaveHandler(handler: (() => Promise<void> | void) | null): void {
+    this._autoSaveHandler = handler;
+  }
+
+  triggerAutoSave(): void {
+    if (this._autoSaveHandler) {
+      void this._autoSaveHandler();
+    }
   }
 
   async saveLocally(): Promise<boolean> {
@@ -270,6 +312,10 @@ export class EditorStateService {
 
   setIsExporting(loading: boolean): void {
     this._isExporting.set(loading);
+  }
+
+  setIsSaving(saving: boolean): void {
+    this._isSaving.set(saving);
   }
 
   setMobilePropertiesOpen(open: boolean): void {
@@ -416,9 +462,28 @@ export class EditorStateService {
     this._fitMode.set(mode);
   }
 
+  applyDefaultZoomPreference(): void {
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('ipdfeditor.default-zoom') : null;
+    if (saved === 'fit-page') {
+      this._zoom.set(1);
+      this._fitMode.set('page');
+    } else if (saved === '100%') {
+      this._fitMode.set('none');
+      this._zoom.set(1.0);
+    } else if (saved === '125%') {
+      this._fitMode.set('none');
+      this._zoom.set(1.25);
+    } else if (saved === '150%') {
+      this._fitMode.set('none');
+      this._zoom.set(1.5);
+    } else {
+      this._zoom.set(1);
+      this._fitMode.set('width');
+    }
+  }
+
   resetZoom(): void {
-    this._zoom.set(1);
-    this._fitMode.set('width');
+    this.applyDefaultZoomPreference();
   }
 
   private cloneAnnotationsMap(source: Map<string, PdfAnnotation[]>): Map<string, PdfAnnotation[]> {
@@ -1431,11 +1496,16 @@ export class EditorStateService {
   reset(): void {
     this._annotations.set(new Map());
     this._selectedIds.set([]);
-    this._savedRevision = 0;
+    this._savedRevision.set(0);
     this._currentRevision.set(0);
     this._tool.set('select');
-    this._zoom.set(1);
-    this._fitMode.set('width');
+    this.applyDefaultZoomPreference();
+    const color = getDefaultColor();
+    this._penColor.set(color);
+    this._textColor.set(color);
+    this._textFontSize.set(getDefaultFontSize());
+    this._shapeStrokeColor.set(color);
+    this._shapeFillColor.set(hexToRgba(color, 0.12));
     this.undoStack = [];
     this.redoStack = [];
     this._canUndo.set(false);
@@ -1445,7 +1515,7 @@ export class EditorStateService {
 
   /** Mark the current state as "saved" so modified() returns false. */
   markSaved(): void {
-    this._savedRevision = this._currentRevision();
+    this._savedRevision.set(this._currentRevision());
   }
 
   get pageService(): EditorPagesService {

@@ -664,17 +664,19 @@
 }
 
 .quickstart-card {
-  max-width: 780px;
+  width: 100%;
+  max-width: 880px;
   margin: 0 auto;
   background: var(--pf-surface-container-lowest);
   border: 1px solid var(--pf-outline-variant);
   border-radius: 20px;
-  padding: 36px 32px;
+  padding: 38px 40px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
   text-align: center;
+  box-sizing: border-box;
 
   @media (max-width: 768px) {
-    padding: 24px 18px;
+    padding: 22px 16px;
     border-radius: 16px;
   }
 }
@@ -715,6 +717,11 @@
 
 .quickstart-card__dropzone {
   margin-bottom: 20px;
+
+  .pf-dropzone {
+    padding: 38px 24px;
+    border-radius: 16px;
+  }
 }
 
 .quickstart-card__badges {

@@ -32,6 +32,7 @@ import {
   BlendMode,
   AspectRatioMode,
   IconStyleType,
+  ResizeMode,
 } from '../../core/models/pdf.models';
 import {
   SHAPE_CATEGORIES,
@@ -41,7 +42,7 @@ import {
   ALL_SHAPE_DEFINITIONS,
   ICON_STYLE_OPTIONS,
 } from '../../core/constants/shapes';
-import { LoadedFile } from '../../core/models/file.models';
+import { LoadedFile, StoredEditorState } from '../../core/models/file.models';
 import { FileDropzoneComponent } from '../../shared/components/dropzone/file-dropzone.component';
 import { SignatureModalComponent, SignatureResult } from '../../shared/components/signature-modal/signature-modal.component';
 import { StampModalComponent, StampResult } from '../../shared/components/stamp-modal/stamp-modal.component';
@@ -56,6 +57,7 @@ import { DialogService } from '../../core/services/dialog.service';
 import { DocumentStorageService } from '../../core/services/storage/document-storage.service';
 import { RecentFilesService, RecentFileEntry } from '../../core/services/storage/recent-files.service';
 import { formatRelativeTime } from '../../core/utilities/time.util';
+import { formatBytes } from '../../core/utilities/file.util';
 import { PdfPageComponent } from './components/pdf-page/pdf-page.component';
 import { EditorOverlayComponent } from './components/editor-overlay/editor-overlay.component';
 import { PropertiesPanelComponent } from './components/properties-panel/properties-panel.component';
@@ -108,7 +110,10 @@ export class EditorComponent implements OnDestroy {
   readonly exporting = signal(false);
   readonly isFullscreen = signal(false);
   /** Session-level workspace preferences; collapsed panels remain as icon rails. */
-  readonly pagesPanelCollapsed = signal(false);
+  readonly pagesPanelCollapsed = signal(
+    typeof localStorage !== 'undefined' &&
+      localStorage.getItem('ipdfeditor.show-thumbnails') === 'false',
+  );
   readonly propertiesPanelCollapsed = signal(false);
 
   /** Recent file entries for landing page and dropdown. */
@@ -121,6 +126,8 @@ export class EditorComponent implements OnDestroy {
     () => this.files.currentFiles()[0]?.name ?? '',
   );
 
+  readonly formatBytes = formatBytes;
+
   readonly filteredRecentEntries = computed(() => {
     const q = this.recentSearch().trim().toLowerCase();
     const currentName = this.currentDocName().trim().toLowerCase();
@@ -131,10 +138,15 @@ export class EditorComponent implements OnDestroy {
       list = list.filter((e) => e.name.toLowerCase() !== currentName);
     }
 
-    if (!q) {
-      return list;
+    if (q) {
+      list = list.filter((e) => e.name.toLowerCase().includes(q));
     }
-    return list.filter((e) => e.name.toLowerCase().includes(q));
+
+    return [...list].sort((a, b) => {
+      if (a.pinned && !b.pinned) return -1;
+      if (!a.pinned && b.pinned) return 1;
+      return b.lastOpenedAt - a.lastOpenedAt;
+    });
   });
 
   /** Blob URL handed to ngx-extended-pdf-viewer to load the document. */
@@ -672,8 +684,28 @@ export class EditorComponent implements OnDestroy {
 
   toggleAnnotationResizeMode(ann: ShapeAnnotation): void {
     const curr = ann.resizeMode || this.state.resizeMode();
-    const next = curr === 'fixed' ? 'free' : 'fixed';
+    const modes: ResizeMode[] = ['fixed', 'item', 'free'];
+    const idx = modes.indexOf(curr as ResizeMode);
+    const next = modes[(idx + 1) % modes.length];
     this.state.updateAnnotation(ann.id, { resizeMode: next });
+  }
+
+  resizeModePillLabel(mode: ResizeMode): string {
+    if (mode === 'fixed') return '1:1';
+    if (mode === 'item') return 'Item';
+    return 'Free';
+  }
+
+  resizeModePillTitle(mode: ResizeMode): string {
+    if (mode === 'fixed') return 'Resize: Fixed 1:1 (Tap for Item Ratio)';
+    if (mode === 'item') return 'Resize: Item Ratio (Tap for Free Hand)';
+    return 'Resize: Free Hand (Tap for Fixed 1:1)';
+  }
+
+  resizeModePillIcon(mode: ResizeMode): string {
+    if (mode === 'fixed') return 'fa-solid fa-square';
+    if (mode === 'item') return 'fa-solid fa-lock';
+    return 'fa-solid fa-arrows-up-down-left-right';
   }
 
   readonly docName = signal<string | null>(null);
@@ -705,10 +737,12 @@ export class EditorComponent implements OnDestroy {
 
   private loadedRef: LoadedFile | null = null;
   private searchTimer?: ReturnType<typeof setTimeout>;
+  private autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
   private ro?: ResizeObserver;
-  private lastAnnotationViewport:
-    | { pageId: string; width: number; height: number }
-    | null = null;
+  private pageAnnotationViewports = new Map<
+    string,
+    { width: number; height: number; rotation?: number }
+  >();
 
   readonly totalPages = this.pagesStore.pagesCount;
   readonly currentPageNumber = computed(() => this.pagesStore.currentIndex() + 1);
@@ -1168,14 +1202,23 @@ export class EditorComponent implements OnDestroy {
     }
 
     // Auto-restore last-opened document from IndexedDB on page reload.
-    // Runs once on init — if no file is currently loaded, attempt to
-    // restore the persisted document so it seamlessly survives a reload.
+    // Runs once on init — if no file is currently loaded and auto-save is enabled,
+    // attempt to restore the persisted document so it seamlessly survives a reload.
     if (this.files.currentFiles().length === 0) {
-      void this.files.restoreLastDocument();
+      const autoSaveEnabled =
+        typeof localStorage !== 'undefined'
+          ? localStorage.getItem('ipdfeditor.auto-save') !== 'false'
+          : true;
+      if (autoSaveEnabled) {
+        void this.files.restoreLastDocument();
+      }
     }
 
     // Load recent files list from IndexedDB for landing page and dropdown
     void this.loadRecentEntries();
+
+    // Connect silent auto-save handler to state service so tool actions trigger immediate saves
+    this.state.setAutoSaveHandler(() => this.autoSaveSilently());
 
     effect(() => {
       this.pagesStore.currentId();
@@ -1183,28 +1226,76 @@ export class EditorComponent implements OnDestroy {
     });
 
     // Annotation rectangles use the same coordinate system as the PDF overlay.
-    // Reproject them whenever fit-width/fit-page changes the rendered page.
+    // Reproject them whenever fit-width/fit-page/zoom or window resize changes the rendered page.
     effect(() => {
-      const pageId = this.currentPageId();
-      const size = this.displaySize();
-      if (!pageId || !size) {
-        this.lastAnnotationViewport = null;
+      // Guard: do not scale while document is loading or stage is unmeasured
+      if (
+        this.loading() ||
+        this.stageSize().width <= 0 ||
+        this.stageSize().height <= 0
+      ) {
         return;
       }
 
-      const previous = this.lastAnnotationViewport;
-      if (previous?.pageId === pageId) {
-        this.state.scaleAnnotations(
-          pageId,
-          size.width / previous.width,
-          size.height / previous.height,
-        );
+      // Track dependencies: zoom, fitMode, stageSize, baseSizes
+      this.state.zoom();
+      this.state.fitMode();
+      this.stageSize();
+      this.baseSizes();
+
+      const pages = this.pagesStore.pages();
+      if (pages.length === 0) {
+        return;
       }
-      this.lastAnnotationViewport = {
-        pageId,
-        width: size.width,
-        height: size.height,
-      };
+
+      for (const page of pages) {
+        const size = this.getPageDisplaySize(page);
+        if (!size || size.width <= 0 || size.height <= 0) {
+          continue;
+        }
+
+        const previous = this.pageAnnotationViewports.get(page.id);
+        if (!previous) {
+          // Baseline established at settled layout size without scaling
+          this.pageAnnotationViewports.set(page.id, {
+            width: size.width,
+            height: size.height,
+            rotation: page.rotation,
+          });
+          continue;
+        }
+
+        // If page rotation changed, update baseline without scaling aspect ratios
+        if (
+          previous.rotation !== undefined &&
+          previous.rotation !== page.rotation
+        ) {
+          this.pageAnnotationViewports.set(page.id, {
+            width: size.width,
+            height: size.height,
+            rotation: page.rotation,
+          });
+          continue;
+        }
+
+        const scaleX = size.width / previous.width;
+        const scaleY = size.height / previous.height;
+
+        if (
+          Number.isFinite(scaleX) &&
+          Number.isFinite(scaleY) &&
+          scaleX > 0 &&
+          scaleY > 0 &&
+          (Math.abs(scaleX - 1) > 0.001 || Math.abs(scaleY - 1) > 0.001)
+        ) {
+          this.state.scaleAnnotations(page.id, scaleX, scaleY);
+          this.pageAnnotationViewports.set(page.id, {
+            width: size.width,
+            height: size.height,
+            rotation: page.rotation,
+          });
+        }
+      }
     });
 
     // The canvas stage is conditionally rendered only once a document is open,
@@ -1388,71 +1479,144 @@ export class EditorComponent implements OnDestroy {
     }
   }
 
+  private readonly globalKeydownCaptureListener = (event: KeyboardEvent): void => {
+    const isModifier = event.ctrlKey || event.metaKey;
+    if (isModifier && event.key && event.key.toLowerCase() === 's' && !event.shiftKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      if (this.docName()) {
+        void this.onManualSaveClick();
+      }
+    }
+  };
+
   async ngOnInit(): Promise<void> {
     this.state.setSaveLocallyHandler(() => this.saveDocumentLocally());
+    if (typeof window !== 'undefined') {
+      window.addEventListener('keydown', this.globalKeydownCaptureListener, { capture: true });
+    }
     await this.loadRecentEntries();
   }
 
+  private getStoredEditorState(): StoredEditorState {
+    const pages = this.pagesStore.pages().map((p) => ({ ...p }));
+    const viewports: Record<string, { width: number; height: number }> = {};
+    for (const p of pages) {
+      const sz = this.getPageDisplaySize(p);
+      if (sz.width > 0 && sz.height > 0) {
+        viewports[p.id] = { width: sz.width, height: sz.height };
+        this.pageAnnotationViewports.set(p.id, {
+          width: sz.width,
+          height: sz.height,
+          rotation: p.rotation,
+        });
+      }
+    }
+    return {
+      pages,
+      annotations: this.state.getSerializedAnnotations(),
+      currentId: this.pagesStore.currentId(),
+      viewports,
+    };
+  }
+
   /**
-   * Saves the current document and all edits locally to IndexedDB & Recent Files.
-   * Resets the dirty/modified state without downloading to disk.
+   * Silently auto-saves changes to IndexedDB when user loses cursor or touch.
+   * Does NOT burn annotations into PDF bytes, does NOT reload the viewer, and does NOT flash toasts.
+   */
+  async autoSaveSilently(): Promise<void> {
+    const file = this.files.currentFiles()[0];
+    if (!file || this.loading() || !this.state.modified()) {
+      return;
+    }
+    const autoSaveEnabled =
+      typeof localStorage !== 'undefined'
+        ? localStorage.getItem('ipdfeditor.auto-save') !== 'false'
+        : true;
+    if (!autoSaveEnabled) {
+      return;
+    }
+
+    this.state.setIsSaving(true);
+    try {
+      const editorState = this.getStoredEditorState();
+      const pages = editorState.pages ?? [];
+
+      await this.storage.saveDocument(file.name, file.data, editorState);
+      await this.recentFiles.addOrUpdate(
+        file.name,
+        file.data,
+        file.sizeBytes,
+        pages.length,
+        editorState,
+      );
+      if (this.loadedRef) {
+        (this.loadedRef as { editorState?: unknown }).editorState = editorState;
+      }
+      this.state.markSaved();
+    } catch (err) {
+      console.warn('[Editor] Auto-save failed silently:', err);
+    } finally {
+      this.state.setIsSaving(false);
+    }
+  }
+
+  readonly saving = signal(false);
+
+  /**
+   * Manual save triggered by the Save toolbar button or Ctrl/Cmd+S.
+   */
+  async onManualSaveClick(): Promise<void> {
+    if (!this.docName() || this.saving()) {
+      return;
+    }
+    this.saving.set(true);
+    try {
+      const saved = await this.saveDocumentLocally();
+      if (saved) {
+        this.toasts.success('Progress saved locally');
+      }
+    } finally {
+      this.saving.set(false);
+    }
+  }
+
+  /**
+   * Saves current document and annotations locally to IndexedDB & Recent Files.
+   * Preserves raw PDF data without re-triggering file loading or duplicating annotations.
    */
   async saveDocumentLocally(): Promise<boolean> {
     const file = this.files.currentFiles()[0];
     if (!file) {
       return false;
     }
+    this.state.setIsSaving(true);
     try {
-      const pages = this.pagesStore.pages().map((p) => ({ ...p }));
-      const pageSpecs = pages.map((p) => {
-        const pageSize = this.baseSizes().get(p.sourceIndex) || { width: 595, height: 842 };
-        const anns = this.state.annotationsFor(p.id);
-        return {
-          sourceIndex: p.sourceIndex,
-          rotation: p.rotation,
-          annotations: anns,
-          baseWidth: pageSize.width,
-          baseHeight: pageSize.height,
-        };
-      });
-      const bytes = await this.exporter.exportDocument(
-        new Uint8Array(file.data.slice(0)),
-        pageSpecs,
-        { title: file.name.replace(/\.pdf$/i, '') },
-      );
+      const editorState = this.getStoredEditorState();
+      const pages = editorState.pages ?? [];
 
-      const editorState = {
-        pages,
-        annotations: this.state.getSerializedAnnotations(),
-        currentId: this.pagesStore.currentId(),
-      };
-
-      // Save into RecentFilesService and DocumentStorageService in IndexedDB
-      const buffer = bytes.slice().buffer;
       await this.recentFiles.addOrUpdate(
         file.name,
-        buffer,
-        bytes.byteLength,
+        file.data,
+        file.sizeBytes,
         pages.length,
         editorState,
       );
-      await this.storage.saveDocument(file.name, buffer, editorState);
 
-      // Update current loaded file in memory so future edits build upon saved state
-      const updatedBlob = new Blob([bytes.slice()], { type: 'application/pdf' });
-      const updatedFile = new File([updatedBlob], file.name, { type: 'application/pdf' });
-      const updatedLoaded: LoadedFile = {
-        file: updatedFile,
-        name: file.name,
-        sizeBytes: bytes.byteLength,
-        data: buffer,
-        loadedAt: Date.now(),
-        editorState,
-      };
-      this.files.setCurrent([updatedLoaded]);
+      const autoSaveEnabled =
+        typeof localStorage !== 'undefined'
+          ? localStorage.getItem('ipdfeditor.auto-save') !== 'false'
+          : true;
+      if (autoSaveEnabled) {
+        await this.storage.saveDocument(file.name, file.data, editorState);
+      }
+
+      if (this.loadedRef) {
+        (this.loadedRef as { editorState?: unknown }).editorState = editorState;
+      }
       this.state.markSaved();
       await this.loadRecentEntries();
-      this.toasts.success(`Saved "${file.name}" and all edits locally in browser.`);
       return true;
     } catch (err) {
       console.error('[Editor] Could not save document locally:', err);
@@ -1460,6 +1624,8 @@ export class EditorComponent implements OnDestroy {
         err instanceof Error ? err.message : 'Could not save changes locally.';
       this.toasts.error(message);
       return false;
+    } finally {
+      this.state.setIsSaving(false);
     }
   }
 
@@ -1590,8 +1756,20 @@ export class EditorComponent implements OnDestroy {
 
   /** Clear all recent file entries. */
   async clearRecentEntries(): Promise<void> {
+    const result = await this.dialog.confirm({
+      title: 'Clear Recent Documents',
+      message:
+        'Are you sure you want to clear your local recent documents history? Files on your device will remain intact.',
+      confirmLabel: 'Clear All',
+      cancelLabel: 'Cancel',
+      destructive: true,
+    });
+    if (!result.confirmed) {
+      return;
+    }
     await this.recentFiles.clearAll();
     this.recentEntries.set([]);
+    this.toasts.info('Recent history cleared');
   }
 
   /** Browser close/reload protection when document has unsaved changes. */
@@ -1901,6 +2079,10 @@ export class EditorComponent implements OnDestroy {
       this.docUrl = null;
     }
     this.viewer.reset();
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('keydown', this.globalKeydownCaptureListener, { capture: true });
+    }
+    this.state.setAutoSaveHandler(null);
   }
 
   selectTool(id: PdfToolId): void {
@@ -2060,6 +2242,7 @@ export class EditorComponent implements OnDestroy {
     this.loading.set(true);
     this.state.reset();
     this.viewer.reset();
+    this.pageAnnotationViewports.clear();
     this.isAutoScrolling = true;
     if (this.docUrl) {
       URL.revokeObjectURL(this.docUrl);
@@ -2071,12 +2254,15 @@ export class EditorComponent implements OnDestroy {
     this.docSrc.set(this.docUrl);
   }
 
-  onPagesLoaded(event: PagesLoadedEvent): void {
+  async onPagesLoaded(event: PagesLoadedEvent): Promise<void> {
     const doc = (event as unknown as { source: { pdfDocument: unknown } })
       .source.pdfDocument;
     this.viewer.setDocument(doc);
     const count = event.pagesCount;
     this.docName.set(this.loadedRef?.name ?? null);
+
+    // Prefetch all page base sizes before initializing layout so sizes are accurate
+    await this.prefetch(count);
 
     // If we have saved editor state (pages and annotations), restore them!
     const savedState = this.loadedRef?.editorState;
@@ -2089,12 +2275,23 @@ export class EditorComponent implements OnDestroy {
       if (savedState.annotations) {
         this.state.restoreAnnotations(savedState.annotations);
       }
+      this.pageAnnotationViewports.clear();
+      if (savedState.viewports) {
+        for (const [pId, vp] of Object.entries(savedState.viewports)) {
+          if (vp && vp.width > 0 && vp.height > 0) {
+            this.pageAnnotationViewports.set(pId, {
+              width: vp.width,
+              height: vp.height,
+            });
+          }
+        }
+      }
     } else {
       this.pagesStore.init(count);
+      this.pageAnnotationViewports.clear();
     }
 
     this.clearSearch();
-    void this.prefetch(count);
     if (this.loadedRef) {
       this.toasts.success(`Opened ${this.loadedRef.name}`);
       // Register in recent files and reset dirty state
@@ -2223,14 +2420,14 @@ export class EditorComponent implements OnDestroy {
       }
 
       const pageSpecs = targetPages.map((p) => {
-        const pageSize = this.baseSizes().get(p.sourceIndex) || { width: 595, height: 842 };
+        const dispSize = this.getPageDisplaySize(p);
         const anns = this.state.annotationsFor(p.id);
         return {
           sourceIndex: p.sourceIndex,
           rotation: p.rotation,
           annotations: anns,
-          baseWidth: pageSize.width,
-          baseHeight: pageSize.height,
+          baseWidth: dispSize.width,
+          baseHeight: dispSize.height,
         };
       });
 
@@ -2243,11 +2440,7 @@ export class EditorComponent implements OnDestroy {
         },
       );
 
-      const editorState = {
-        pages: this.pagesStore.pages().map((p) => ({ ...p })),
-        annotations: this.state.getSerializedAnnotations(),
-        currentId: this.pagesStore.currentId(),
-      };
+      const editorState = this.getStoredEditorState();
       const buffer = bytes.slice().buffer;
       await this.recentFiles.addOrUpdate(
         file.name,
@@ -2256,7 +2449,13 @@ export class EditorComponent implements OnDestroy {
         pageSpecs.length,
         editorState,
       );
-      await this.storage.saveDocument(file.name, buffer, editorState);
+      const autoSaveEnabled =
+        typeof localStorage !== 'undefined'
+          ? localStorage.getItem('ipdfeditor.auto-save') !== 'false'
+          : true;
+      if (autoSaveEnabled) {
+        await this.storage.saveDocument(file.name, buffer, editorState);
+      }
 
       const downloadFilename = sanitizePdfFilename(options.filename);
       this.downloads.download(
@@ -2498,6 +2697,30 @@ export class EditorComponent implements OnDestroy {
       const stage = this.stageRef()?.nativeElement;
       stage?.releasePointerCapture?.(event.pointerId);
     }
+    if (this.state.modified()) {
+      void this.autoSaveSilently();
+    }
+  }
+
+  onStagePointerLeave(_event: PointerEvent): void {
+    if (this.state.modified()) {
+      void this.autoSaveSilently();
+    }
+  }
+
+  @HostListener('window:pointerup')
+  @HostListener('window:touchend')
+  onWindowPointerEnd(): void {
+    if (this.state.modified()) {
+      void this.autoSaveSilently();
+    }
+  }
+
+  @HostListener('window:blur')
+  onWindowBlur(): void {
+    if (this.state.modified()) {
+      void this.autoSaveSilently();
+    }
   }
 
   @HostListener('window:keydown', ['$event'])
@@ -2535,11 +2758,13 @@ export class EditorComponent implements OnDestroy {
       return;
     }
 
-    // Ctrl/Cmd+S — Save (export) current document
+    // Ctrl/Cmd+S — Save current document progress locally
     if (hasZoomModifier && event.key.toLowerCase() === 's' && !event.shiftKey) {
       event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
       if (this.docName()) {
-        void this.exportPdf();
+        void this.onManualSaveClick();
       }
       return;
     }

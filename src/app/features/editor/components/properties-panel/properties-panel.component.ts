@@ -25,6 +25,7 @@ import {
   EraserMode,
   EraserTarget,
   IconStyleType,
+  ResizeMode,
 } from '../../../../core/models/pdf.models';
 import {
   SHAPE_CATEGORIES,
@@ -35,6 +36,7 @@ import {
   ICON_STYLE_OPTIONS,
 } from '../../../../core/constants/shapes';
 import { PanelSectionComponent } from '../../../../shared/components/panel/panel-section.component';
+import { measureTextAnnotation } from '../../../../core/utilities/text-measure.util';
 import { EditorStateService } from '../../state/editor-state.service';
 import { EditorPagesService } from '../../state/editor-pages.service';
 
@@ -278,12 +280,18 @@ export class PropertiesPanelComponent {
     return s ? s.label : kind;
   }
 
-  resizeModeOf(ann: PdfAnnotation): 'fixed' | 'free' {
+  resizeModeOf(ann: PdfAnnotation): ResizeMode {
     return (ann as any).resizeMode || this.state.resizeMode();
   }
 
-  setAnnotationResizeMode(ann: PdfAnnotation, mode: 'fixed' | 'free'): void {
+  setAnnotationResizeMode(ann: PdfAnnotation, mode: ResizeMode): void {
     this.state.updateAnnotation(ann.id, { resizeMode: mode } as any);
+  }
+
+  resizeModeLabel(mode: ResizeMode): string {
+    if (mode === 'fixed') return 'Fixed 1:1';
+    if (mode === 'item') return 'Item Ratio';
+    return 'Free Hand';
   }
 
   readonly iconStyleOptions = ICON_STYLE_OPTIONS;
@@ -634,14 +642,22 @@ export class PropertiesPanelComponent {
   }
 
   setText(ann: PdfAnnotation, value: string): void {
-    this.state.updateAnnotation(ann.id, { text: value } as Partial<TextAnnotation>);
+    if (ann.type === 'text') {
+      const m = measureTextAnnotation({ ...ann, text: value });
+      this.state.updateAnnotation(ann.id, {
+        text: value,
+        rect: { ...ann.rect, width: m.width, height: m.height },
+      } as Partial<TextAnnotation>);
+    }
   }
 
   setFontSize(ann: PdfAnnotation, value: string): void {
     const n = Number(value);
-    if (!Number.isNaN(n)) {
+    if (!Number.isNaN(n) && ann.type === 'text') {
+      const m = measureTextAnnotation({ ...ann, fontSize: n });
       this.state.updateAnnotation(ann.id, {
         fontSize: n,
+        rect: { ...ann.rect, width: m.width, height: m.height },
       } as Partial<TextAnnotation>);
     }
   }
@@ -651,19 +667,31 @@ export class PropertiesPanelComponent {
   }
 
   setFontFamily(ann: PdfAnnotation, value: string): void {
-    this.state.updateAnnotation(ann.id, {
-      fontFamily: value,
-    } as Partial<TextAnnotation>);
+    if (ann.type === 'text') {
+      const m = measureTextAnnotation({ ...ann, fontFamily: value });
+      this.state.updateAnnotation(ann.id, {
+        fontFamily: value,
+        rect: { ...ann.rect, width: m.width, height: m.height },
+      } as Partial<TextAnnotation>);
+    }
   }
 
   toggleBold(ann: TextAnnotation): void {
+    const nextWeight = ann.fontWeight >= 700 ? 400 : 700;
+    const m = measureTextAnnotation({ ...ann, fontWeight: nextWeight });
     this.state.updateAnnotation(ann.id, {
-      fontWeight: ann.fontWeight >= 700 ? 400 : 700,
+      fontWeight: nextWeight,
+      rect: { ...ann.rect, width: m.width, height: m.height },
     });
   }
 
   toggleItalic(ann: TextAnnotation): void {
-    this.state.updateAnnotation(ann.id, { italic: !ann.italic });
+    const nextItalic = !ann.italic;
+    const m = measureTextAnnotation({ ...ann, italic: nextItalic });
+    this.state.updateAnnotation(ann.id, {
+      italic: nextItalic,
+      rect: { ...ann.rect, width: m.width, height: m.height },
+    });
   }
 
   toggleUnderline(ann: TextAnnotation): void {
@@ -681,7 +709,11 @@ export class PropertiesPanelComponent {
 
   setTransform(ann: TextAnnotation, transform: 'none' | 'uppercase' | 'lowercase' | 'capitalize'): void {
     const next = ann.transform === transform ? 'none' : transform;
-    this.state.updateAnnotation(ann.id, { transform: next });
+    const m = measureTextAnnotation({ ...ann, transform: next });
+    this.state.updateAnnotation(ann.id, {
+      transform: next,
+      rect: { ...ann.rect, width: m.width, height: m.height },
+    });
   }
 
   hasTextBackground(ann: TextAnnotation): boolean {
@@ -695,7 +727,7 @@ export class PropertiesPanelComponent {
     }
     this.state.updateAnnotation(ann.id, {
       backgroundColor: ann.backgroundColor && ann.backgroundColor !== 'transparent' ? ann.backgroundColor : '#fef08a',
-      backgroundPadding: ann.backgroundPadding ?? 6,
+      backgroundPadding: ann.backgroundPadding ?? 0,
     });
   }
 
@@ -713,14 +745,22 @@ export class PropertiesPanelComponent {
   setLineHeight(ann: TextAnnotation, value: string): void {
     const n = Number(value);
     if (!Number.isNaN(n) && n >= 1 && n <= 3) {
-      this.state.updateAnnotation(ann.id, { lineHeight: n });
+      const m = measureTextAnnotation({ ...ann, lineHeight: n });
+      this.state.updateAnnotation(ann.id, {
+        lineHeight: n,
+        rect: { ...ann.rect, width: m.width, height: m.height },
+      });
     }
   }
 
   setLetterSpacing(ann: TextAnnotation, value: string): void {
     const n = Number(value);
     if (!Number.isNaN(n)) {
-      this.state.updateAnnotation(ann.id, { letterSpacing: n });
+      const m = measureTextAnnotation({ ...ann, letterSpacing: n });
+      this.state.updateAnnotation(ann.id, {
+        letterSpacing: n,
+        rect: { ...ann.rect, width: m.width, height: m.height },
+      });
     }
   }
 

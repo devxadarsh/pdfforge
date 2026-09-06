@@ -13,7 +13,11 @@
       <div class="editor-shell__doc">
         <span class="editor-shell__doc-name" [title]="documentName()">{{ documentName() }}</span>
         @if (hasDocument()) {
-          @if (modified()) {
+          @if (isSaving()) {
+            <span class="editor-shell__doc-status editor-shell__doc-status--saving" title="Saving changes locally...">
+              <i class="fa-solid fa-spinner fa-spin"></i> Saving…
+            </span>
+          } @else if (modified()) {
             <span class="editor-shell__doc-status editor-shell__doc-status--unsaved" title="Unsaved changes">
               <i class="fa-solid fa-circle"></i> Unsaved changes
             </span>
@@ -33,7 +37,7 @@
           [routerLink]="item.path"
           (click)="onNavClick($event, item.path)"
           routerLinkActive="editor-shell__nav-link--active"
-          [routerLinkActiveOptions]="{ exact: item.path === '/editor' }"
+          [routerLinkActiveOptions]="{ exact: item.path === '/editor' || item.path === '/' }"
         >
           {{ item.label }}
         </a>
