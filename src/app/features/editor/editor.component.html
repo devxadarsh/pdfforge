@@ -1316,19 +1316,29 @@
       </button>
     </div>
 
-    <!-- Desktop Search Bar -->
+    <!-- Desktop Search Bar (Right-aligned) -->
     <div class="editor__search editor__search--desktop">
-      <i class="fa-solid fa-magnifying-glass"></i>
-      <input type="search" class="pf-input editor__search-input" placeholder="Search in document…"
-        [value]="searchQuery()" (input)="onSearch($any($event.target).value)" aria-label="Search in document" />
+      <i class="fa-solid fa-magnifying-glass editor__search-icon"></i>
+      <input
+        type="search"
+        class="pf-input editor__search-input"
+        placeholder="Search in document…"
+        [value]="searchQuery()"
+        (input)="onSearch($any($event.target).value)"
+        (keydown)="onSearchKeydown($event)"
+        aria-label="Search in document"
+      />
       @if (searchQuery().trim()) {
-      <button type="button" class="icon-btn" (click)="searchPrev()" aria-label="Previous match">
-        <i class="fa-solid fa-chevron-up"></i>
-      </button>
-      <button type="button" class="icon-btn" (click)="searchNext()" aria-label="Next match">
-        <i class="fa-solid fa-chevron-down"></i>
-      </button>
-      <span class="editor__search-count">{{ searchCountLabel() }}</span>
+        <span class="editor__search-count">{{ searchCountLabel() }}</span>
+        <button type="button" class="icon-btn editor__search-btn" (click)="searchPrev()" title="Previous match (Shift+Enter)" aria-label="Previous match">
+          <i class="fa-solid fa-chevron-up"></i>
+        </button>
+        <button type="button" class="icon-btn editor__search-btn" (click)="searchNext()" title="Next match (Enter)" aria-label="Next match">
+          <i class="fa-solid fa-chevron-down"></i>
+        </button>
+        <button type="button" class="icon-btn editor__search-clear-btn" (click)="clearSearch()" title="Clear search (Esc)" aria-label="Clear search">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
       }
     </div>
 
@@ -1649,6 +1659,20 @@
                   [rotation]="page.rotation"
                   [isFullQuality]="isPageInRenderWindow(idx)"
                 ></app-pdf-page>
+                @if (hasSearchMatchesForPage(page.id)) {
+                  <div class="editor__search-highlights" aria-hidden="true">
+                    @for (m of getSearchMatchesForPage(page.id); track m.id) {
+                      <div
+                        class="editor__search-highlight"
+                        [class.editor__search-highlight--active]="isMatchActive(m.id)"
+                        [style.left.px]="m.normRect.x * getPageDisplaySize(page).width"
+                        [style.top.px]="m.normRect.y * getPageDisplaySize(page).height"
+                        [style.width.px]="m.normRect.width * getPageDisplaySize(page).width"
+                        [style.height.px]="m.normRect.height * getPageDisplaySize(page).height"
+                      ></div>
+                    }
+                  </div>
+                }
                 @if (isPageInRenderWindow(idx)) {
                   <app-editor-overlay
                     [pageId]="page.id"

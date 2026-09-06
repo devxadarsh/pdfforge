@@ -50,7 +50,13 @@ import { ExportModalComponent } from '../../shared/components/export-modal/expor
 import { DetailedExportOptions, ExportProgressUpdate, sanitizePdfFilename } from '../../core/models/export.models';
 import { FileService } from '../../core/services/file/file.service';
 import { DownloadService } from '../../core/services/download/download.service';
-import { PdfViewerService, PageSize } from '../../core/services/pdf/pdf-viewer.service';
+import {
+  PdfViewerService,
+  PageSize,
+  PdfTextSpan,
+  PdfPageTextData,
+  calcMatchNormRect,
+} from '../../core/services/pdf/pdf-viewer.service';
 import { PdfExportService } from '../../core/services/pdf/pdf-export.service';
 import { ToastService } from '../../core/services/toast.service';
 import { DialogService } from '../../core/services/dialog.service';
@@ -70,6 +76,19 @@ import { MobileTooltipDirective } from '../../shared/directives/mobile-tooltip.d
 
 import { SeoService } from '../../core/services/seo/seo.service';
 import { SEO_CONFIGS } from '../../core/constants/seo-data';
+
+export interface SearchMatch {
+  readonly id: string;
+  readonly pageIndex: number;
+  readonly pageId: string;
+  readonly normRect: {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly height: number;
+  };
+  readonly text: string;
+}
 
 @Component({
   selector: 'app-editor',
@@ -711,9 +730,39 @@ export class EditorComponent implements OnDestroy {
   readonly docName = signal<string | null>(null);
   readonly loading = signal(false);
   readonly searchQuery = signal('');
+  readonly searchMatches = signal<SearchMatch[]>([]);
+  readonly currentMatchIndex = signal(-1);
   readonly searchHits = signal<number[]>([]);
-  readonly searchTotal = signal(0);
-  readonly searchHitIndex = signal(-1);
+  readonly searchTotal = computed(() => this.searchMatches().length);
+  readonly searchHitIndex = computed(() => this.currentMatchIndex());
+
+  readonly matchesByPage = computed<Map<string, SearchMatch[]>>(() => {
+    const map = new Map<string, SearchMatch[]>();
+    for (const m of this.searchMatches()) {
+      const list = map.get(m.pageId);
+      if (list) {
+        list.push(m);
+      } else {
+        map.set(m.pageId, [m]);
+      }
+    }
+    return map;
+  });
+
+  getSearchMatchesForPage(pageId: string): SearchMatch[] {
+    return this.matchesByPage().get(pageId) || [];
+  }
+
+  hasSearchMatchesForPage(pageId: string): boolean {
+    const matches = this.matchesByPage().get(pageId);
+    return matches !== undefined && matches.length > 0;
+  }
+
+  isMatchActive(matchId: string): boolean {
+    const idx = this.currentMatchIndex();
+    const list = this.searchMatches();
+    return idx >= 0 && idx < list.length && list[idx].id === matchId;
+  }
 
   private readonly editorRef = viewChild<ElementRef<HTMLDivElement>>('editor');
   private readonly stageRef = viewChild<ElementRef<HTMLDivElement>>('stage');
@@ -834,13 +883,11 @@ export class EditorComponent implements OnDestroy {
       return '';
     }
     const total = this.searchTotal();
-    const pageCount = this.searchHits().length;
     if (total === 0) {
-      return 'No matches';
+      return '0 of 0';
     }
-    const matches = `${total} match${total !== 1 ? 'es' : ''}`;
-    const pages = `${pageCount} page${pageCount !== 1 ? 's' : ''}`;
-    return `${matches} · ${pages}`;
+    const curr = this.currentMatchIndex();
+    return `${curr + 1} of ${total}`;
   });
 
   readonly eraserSvgSize = computed(() => {
@@ -2870,10 +2917,34 @@ export class EditorComponent implements OnDestroy {
   }
 
   /* Search */
+  private offscreenMeasureCtx: CanvasRenderingContext2D | null = null;
+
+  private getMeasureContext(): CanvasRenderingContext2D | null {
+    if (!this.offscreenMeasureCtx && typeof document !== 'undefined') {
+      const c = document.createElement('canvas');
+      this.offscreenMeasureCtx = c.getContext('2d');
+    }
+    return this.offscreenMeasureCtx;
+  }
+
   onSearch(value: string): void {
     this.searchQuery.set(value);
     clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => void this.runSearch(value), 300);
+  }
+
+  onSearchKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      if (event.shiftKey) {
+        this.searchPrev();
+      } else {
+        this.searchNext();
+      }
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      this.clearSearch();
+    }
   }
 
   private async runSearch(query: string): Promise<void> {
@@ -2882,60 +2953,166 @@ export class EditorComponent implements OnDestroy {
       this.clearSearch();
       return;
     }
+
     const pages = this.pagesStore.pages();
-    const hits: number[] = [];
-    let total = 0;
-    for (let i = 0; i < pages.length; i++) {
-      const text = (await this.viewer.getPageText(pages[i].sourceIndex)).toLowerCase();
-      let found = 0;
-      let pos = text.indexOf(q);
-      while (pos !== -1) {
-        found++;
-        pos = text.indexOf(q, pos + q.length);
+    const allMatches: SearchMatch[] = [];
+    const hitPageIndices: number[] = [];
+    const ctx = this.getMeasureContext();
+
+    for (let pIdx = 0; pIdx < pages.length; pIdx++) {
+      const page = pages[pIdx];
+      const pageId = page.id;
+      let pageHasHit = false;
+
+      // 1. Search PDF document embedded text
+      try {
+        const textData = await this.viewer.getPageTextData(page.sourceIndex, page.rotation || 0);
+        for (let sIdx = 0; sIdx < textData.spans.length; sIdx++) {
+          const span = textData.spans[sIdx];
+          const spanLower = span.str.toLowerCase();
+          let pos = spanLower.indexOf(q);
+          while (pos !== -1) {
+            const endPos = pos + q.length;
+            const normRect = calcMatchNormRect(
+              span,
+              pos,
+              endPos,
+              textData.viewport,
+              ctx,
+            );
+            allMatches.push({
+              id: `sm-${pageId}-span-${sIdx}-${pos}`,
+              pageIndex: page.sourceIndex,
+              pageId: page.id,
+              normRect,
+              text: span.str.slice(pos, endPos),
+            });
+            pageHasHit = true;
+            pos = spanLower.indexOf(q, endPos);
+          }
+        }
+      } catch {
+        /* skip unreadable page */
       }
-      if (found > 0) {
-        hits.push(i);
-        total += found;
+
+      // 2. Search user-added overlay text annotations on this page
+      const annotations = this.state.annotationsFor(pageId);
+      const dispSize = this.getPageDisplaySize(page);
+      for (const ann of annotations) {
+        if (ann.type === 'text' && ann.text) {
+          const textAnn = ann as TextAnnotation;
+          const textLower = textAnn.text.toLowerCase();
+          let pos = textLower.indexOf(q);
+          const totalW = textAnn.rect.width;
+          const totalH = textAnn.rect.height;
+          const strLen = textAnn.text.length;
+
+          while (pos !== -1 && strLen > 0) {
+            const endPos = pos + q.length;
+            let startFrac = pos / strLen;
+            let endFrac = endPos / strLen;
+            if (ctx) {
+              ctx.font = `${textAnn.fontSize}px ${textAnn.fontFamily || 'sans-serif'}`;
+              const fullMeas = ctx.measureText(textAnn.text).width;
+              if (fullMeas > 0) {
+                startFrac = ctx.measureText(textAnn.text.slice(0, pos)).width / fullMeas;
+                endFrac = ctx.measureText(textAnn.text.slice(0, endPos)).width / fullMeas;
+              }
+            }
+            const matchPixelX = textAnn.rect.x + startFrac * totalW;
+            const matchPixelW = (endFrac - startFrac) * totalW;
+            const matchPixelY = textAnn.rect.y;
+            const matchPixelH = totalH;
+
+            allMatches.push({
+              id: `sm-${pageId}-ann-${ann.id}-${pos}`,
+              pageIndex: page.sourceIndex,
+              pageId: page.id,
+              normRect: {
+                x: Math.max(0, matchPixelX / (dispSize.width || 1)),
+                y: Math.max(0, matchPixelY / (dispSize.height || 1)),
+                width: Math.max(0.002, matchPixelW / (dispSize.width || 1)),
+                height: Math.max(0.005, matchPixelH / (dispSize.height || 1)),
+              },
+              text: textAnn.text.slice(pos, endPos),
+            });
+            pageHasHit = true;
+            pos = textLower.indexOf(q, endPos);
+          }
+        }
+      }
+
+      if (pageHasHit) {
+        hitPageIndices.push(pIdx);
       }
     }
-    this.searchHits.set(hits);
-    this.searchTotal.set(total);
-    this.searchHitIndex.set(hits.length ? 0 : -1);
-    if (hits.length) {
-      const targetId = pages[hits[0]].id;
-      this.pagesStore.setCurrent(targetId);
-      this.scrollToPage(targetId);
+
+    this.searchMatches.set(allMatches);
+    this.searchHits.set(hitPageIndices);
+
+    if (allMatches.length > 0) {
+      this.currentMatchIndex.set(0);
+      const first = allMatches[0];
+      this.pagesStore.setCurrent(first.pageId);
+      this.scrollToMatch(first);
+    } else {
+      this.currentMatchIndex.set(-1);
     }
   }
 
   searchNext(): void {
-    const hits = this.searchHits();
-    if (!hits.length) {
+    const list = this.searchMatches();
+    if (!list.length) {
       return;
     }
-    const idx = (this.searchHitIndex() + 1) % hits.length;
-    this.searchHitIndex.set(idx);
-    const targetId = this.pagesStore.pages()[hits[idx]].id;
-    this.pagesStore.setCurrent(targetId);
-    this.scrollToPage(targetId);
+    const nextIdx = (this.currentMatchIndex() + 1) % list.length;
+    this.currentMatchIndex.set(nextIdx);
+    const target = list[nextIdx];
+    this.pagesStore.setCurrent(target.pageId);
+    this.scrollToMatch(target);
   }
 
   searchPrev(): void {
-    const hits = this.searchHits();
-    if (!hits.length) {
+    const list = this.searchMatches();
+    if (!list.length) {
       return;
     }
-    const idx = (this.searchHitIndex() - 1 + hits.length) % hits.length;
-    this.searchHitIndex.set(idx);
-    const targetId = this.pagesStore.pages()[hits[idx]].id;
-    this.pagesStore.setCurrent(targetId);
-    this.scrollToPage(targetId);
+    const prevIdx = (this.currentMatchIndex() - 1 + list.length) % list.length;
+    this.currentMatchIndex.set(prevIdx);
+    const target = list[prevIdx];
+    this.pagesStore.setCurrent(target.pageId);
+    this.scrollToMatch(target);
   }
 
-  private clearSearch(): void {
+  clearSearch(): void {
     this.searchQuery.set('');
+    this.searchMatches.set([]);
     this.searchHits.set([]);
-    this.searchTotal.set(0);
-    this.searchHitIndex.set(-1);
+    this.currentMatchIndex.set(-1);
+  }
+
+  scrollToMatch(match: SearchMatch): void {
+    const stage = this.stageRef()?.nativeElement;
+    const pageEl = document.getElementById(`page-wrapper-${match.pageId}`);
+    if (!stage || !pageEl) {
+      return;
+    }
+    const page = this.pagesStore.pages().find((p) => p.id === match.pageId);
+    if (!page) {
+      return;
+    }
+    const dispSize = this.getPageDisplaySize(page);
+    const matchPixelY = pageEl.offsetTop + match.normRect.y * dispSize.height;
+    const matchH = match.normRect.height * dispSize.height;
+    const targetScrollTop = matchPixelY - stage.clientHeight / 2 + matchH / 2;
+
+    this.isAutoScrolling = true;
+    stage.scrollTo({
+      top: Math.max(0, targetScrollTop),
+      behavior: 'smooth',
+    });
+    setTimeout(() => {
+      this.isAutoScrolling = false;
+    }, 400);
   }
 }
