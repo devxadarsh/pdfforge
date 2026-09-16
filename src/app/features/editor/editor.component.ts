@@ -7,11 +7,12 @@ import {
   viewChild,
   ElementRef,
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   OnDestroy,
   HostListener,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { NgClass, KeyValuePipe } from '@angular/common';
+import { NgClass, NgStyle, KeyValuePipe } from '@angular/common';
 import {
   NgxExtendedPdfViewerModule,
   PagesLoadedEvent,
@@ -68,9 +69,14 @@ import { PdfPageComponent } from './components/pdf-page/pdf-page.component';
 import { EditorOverlayComponent } from './components/editor-overlay/editor-overlay.component';
 import { PropertiesPanelComponent } from './components/properties-panel/properties-panel.component';
 import { PagesPanelComponent } from './components/pages-panel/pages-panel.component';
+import { TextEditOverlayComponent } from './components/text-edit-overlay/text-edit-overlay.component';
 import { EditorPage } from './models/editor-page.model';
 import { EditorPagesService } from './state/editor-pages.service';
 import { EditorStateService } from './state/editor-state.service';
+import { EditorTextEditService } from './services/editor-text-edit.service';
+import { PdfContentEditService } from './services/pdf-content-edit.service';
+import type { TextRun, EditCommand } from '../../core/services/pdf/content-edit/text-run.model';
+import { resolveFontStyles, computeConsistentLetterSpacing, sampleCanvasBackgroundColor } from '../../core/utilities/font-matcher.util';
 
 import { MobileTooltipDirective } from '../../shared/directives/mobile-tooltip.directive';
 
@@ -96,6 +102,7 @@ export interface SearchMatch {
   imports: [
     RouterLink,
     NgClass,
+    NgStyle,
     KeyValuePipe,
     NgxExtendedPdfViewerModule,
     FileDropzoneComponent,
@@ -106,6 +113,7 @@ export interface SearchMatch {
     EditorOverlayComponent,
     PropertiesPanelComponent,
     PagesPanelComponent,
+    TextEditOverlayComponent,
     MobileTooltipDirective,
   ],
   templateUrl: './editor.component.html',
@@ -123,8 +131,13 @@ export class EditorComponent implements OnDestroy {
   private readonly storage = inject(DocumentStorageService);
   private readonly recentFiles = inject(RecentFilesService);
   private readonly seo = inject(SeoService);
+  private readonly cdr = inject(ChangeDetectorRef);
   readonly pagesStore = inject(EditorPagesService);
   readonly state = inject(EditorStateService);
+  /** Text content-edit engine service — wired for Prompt 5 click-to-edit. */
+  readonly textEdit = inject(EditorTextEditService);
+  /** Export pipeline for text content edits — wired for Prompt 6. */
+  readonly contentEditExport = inject(PdfContentEditService);
 
   readonly exporting = signal(false);
   readonly isFullscreen = signal(false);
@@ -807,6 +820,275 @@ export class EditorComponent implements OnDestroy {
     this.state.annotationsFor(this.currentPageId()),
   );
 
+  // ── Content-Edit Overlay (Prompt 5) ────────────────────────────────────────
+
+  /** Whether the content-edit tool is currently active. */
+  readonly isContentEditMode = computed(() => this.state.tool() === 'content-edit');
+
+  /** The TextRun currently being edited (null if none). */
+  readonly activeTextRun = computed<TextRun | null>(() => {
+    if (!this.isContentEditMode()) return null;
+    const id = this.textEdit.activeRunId();
+    if (!id) return null;
+    return this.textEdit.runs().find((r) => r.id === id) ?? null;
+  });
+
+  /**
+   * Page height in PDF points for coordinate conversion (PDF y-axis flip).
+   * Uses the base page size stored after the PDF is loaded.
+   */
+  readonly currentPageHeightPt = computed<number>(() => {
+    const idx = this.pagesStore.currentPage()?.sourceIndex ?? 0;
+    const rot = this.pagesStore.currentPage()?.rotation ?? 0;
+    const base = this.baseSizes().get(idx) ?? { width: 595.28, height: 841.89 };
+    return rot % 180 === 0 ? base.height : base.width;
+  });
+
+  /**
+   * Hit-test: called when the user clicks on the PDF page canvas area in
+   * content-edit mode. Determines which TextRun (if any) was clicked and
+   * activates the overlay for it.
+   *
+   * Coordinate math:
+   *   The click event gives (offsetX, offsetY) in CSS pixels relative to
+   *   the page's rendered container (top-left origin).
+   *   TextRun.boundingBox is in PDF points with bottom-left origin.
+   *   We convert both to the same space:
+   *     pdfX = offsetX / scale
+   *     pdfY = (pageHeightPt - offsetY / scale)   [flip y]
+   *   Then check if (pdfX, pdfY) is inside the run's bounding box.
+   */
+  async onPageCanvasClick(event: MouseEvent, page: EditorPage): Promise<void> {
+    // Always stop propagation — never let the click reach the page wrapper
+    // or any ancestor that could trigger navigation / scroll side-effects.
+    event.stopPropagation();
+    event.preventDefault();
+
+    if (!this.isContentEditMode()) return;
+
+    // Ensure active page matches the clicked page
+    if (this.pagesStore.currentId() !== page.id) {
+      this.pagesStore.setCurrent(page.id);
+      const pdfBytes = this.loadedRef?.data;
+      if (pdfBytes) {
+        await this.textEdit.loadPage(pdfBytes, page.sourceIndex);
+      }
+    }
+
+    if (this.textEdit.isLoading()) return;
+
+    const scale = this.getPageDisplaySize(page).scale;
+
+    // Use getBoundingClientRect for reliable click coordinates relative to page frame
+    const target = event.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    const clickX = (event.clientX - rect.left) / scale;
+    const clickY = (event.clientY - rect.top) / scale;
+
+    const pad = 4 / scale; // 4px tolerance in PDF points
+    const runs = this.textEdit.runs();
+    for (const run of runs) {
+      const bb = run.boundingBox;
+      if (
+        clickX >= bb.x - pad &&
+        clickX <= bb.x + bb.width + pad &&
+        clickY >= bb.y - pad &&
+        clickY <= bb.y + bb.height + pad
+      ) {
+        const pageFrame = target.closest('.editor__page-frame');
+        const canvas = pageFrame?.querySelector('canvas') as HTMLCanvasElement | null;
+        let detectedBg = '#ffffff';
+        if (canvas) {
+          const sample = sampleCanvasBackgroundColor(canvas, bb, scale);
+          detectedBg = this.rgbToHex(sample);
+        }
+        this.textEdit.activateRun(run.id, detectedBg);
+        this.propertiesPanelCollapsed.set(false);
+        this.cdr.markForCheck();
+        return;
+      }
+    }
+
+    // Click was outside all runs on empty canvas — deactivate.
+    this.textEdit.deactivate();
+    this.cdr.markForCheck();
+  }
+
+  /** Called when the text overlay commits an edit (blur or Enter). */
+  onTextRunCommitted(cmd: EditCommand): void {
+    // Keep active run so properties panel remains visible and accessible
+    this.textEdit.applyEdit(cmd, true);
+    this.cdr.markForCheck();
+    // PendingStreamEdit is accumulated in EditorTextEditService._pendingEdits.
+    // PdfContentEditService.exportDocument() reads it at export time (Prompt 6).
+  }
+
+  /** Called when the text overlay is cancelled (Escape). */
+  onTextRunCancelled(): void {
+    this.textEdit.deactivate();
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Computes CSS styles for committed edited text runs so they stay visible
+   * and persistent on the page canvas with area matching the updated text.
+   */
+  getRunPatchStyles(run: TextRun, page: EditorPage): Record<string, string> {
+    const scale = this.getPageDisplaySize(page).scale;
+    const bb = run.boundingBox;
+    const overrides = run.styleOverrides;
+    const styles = resolveFontStyles(run.fontName || run.fontResource);
+
+    const fontSize = overrides?.fontSize ?? run.fontSize;
+    const fontSizePx = Math.round(fontSize * scale * 100) / 100;
+
+    const padX = Math.round((overrides?.paddingX ?? 0) * scale);
+    const padY = Math.round((overrides?.paddingY ?? 0) * scale);
+    const marginX = Math.round((overrides?.marginX ?? 0) * scale);
+    const marginY = Math.round((overrides?.marginY ?? 0) * scale);
+
+    const maxTightHeight = fontSize > 0 ? fontSize * 1.08 : bb.height;
+    const tightH = bb.height > maxTightHeight && fontSize >= 4 ? maxTightHeight : bb.height;
+    const diffY = bb.height - tightH;
+    const tightY = diffY > 0 ? bb.y + diffY * 0.55 : bb.y;
+
+    const r = {
+      left: Math.round(bb.x * scale) + marginX,
+      top: Math.round(tightY * scale) + marginY,
+      width: Math.max(4, Math.round(bb.width * scale)),
+      height: Math.max(4, Math.round(tightH * scale)),
+    };
+
+    let letterSpacingCss: string;
+    if (overrides?.letterSpacing !== undefined) {
+      letterSpacingCss = `${overrides.letterSpacing * scale}px`;
+    } else {
+      const orig = this.textEdit.getOriginalRun(run.id) ?? run;
+      const spacing = computeConsistentLetterSpacing(
+        orig.text,
+        orig.boundingBox.width * scale,
+        fontSizePx,
+        orig.fontName || orig.fontResource,
+        orig.charSpacing,
+        scale,
+      );
+      letterSpacingCss = spacing === 0 ? 'normal' : `${spacing}px`;
+    }
+
+    const wordSpacingCss =
+      typeof run.wordSpacing === 'number' && Math.abs(run.wordSpacing) > 0.01
+        ? `${Math.round(run.wordSpacing * scale * 10) / 10}px`
+        : 'normal';
+
+    const hasBg =
+      overrides?.backgroundEnabled &&
+      overrides?.backgroundColor &&
+      overrides.backgroundColor !== 'transparent';
+
+    return {
+      left: `${r.left}px`,
+      top: `${r.top}px`,
+      minWidth: `${r.width}px`,
+      width: 'max-content',
+      height: `${r.height}px`,
+      color: overrides?.color ?? EditorTextEditService.pdfColorToCss(run.color),
+      'background-color': overrides?.backgroundColor || '#ffffff',
+      'font-family': overrides?.fontFamily ?? styles.fontFamily,
+      'font-weight': overrides?.fontWeight ? `${overrides.fontWeight}` : styles.fontWeight,
+      'font-style': overrides?.fontStyle ?? styles.fontStyle,
+      'text-decoration': overrides?.underline ? 'underline' : 'none',
+      'font-size': `${fontSizePx}px`,
+      'letter-spacing': letterSpacingCss,
+      'word-spacing': wordSpacingCss,
+      'line-height':
+        overrides?.lineHeight !== undefined ? `${overrides.lineHeight}` : `${r.height}px`,
+      'text-align': overrides?.textAlign ?? 'left',
+      'text-transform': overrides?.textTransform ?? 'none',
+      padding: `${padY}px ${padX}px`,
+      opacity: overrides?.opacity !== undefined ? `${overrides.opacity}` : '1',
+    };
+  }
+
+  /**
+   * Masks the original text area on the PDF canvas while a run is actively
+   * being edited, so original glyphs never peek through if text is shortened.
+   */
+  getActiveRunMaskStyles(run: TextRun, page: EditorPage): Record<string, string> {
+    const scale = this.getPageDisplaySize(page).scale;
+    const orig = this.textEdit.getOriginalRun(run.id) ?? run;
+    const bb = orig.boundingBox;
+    const fs = orig.fontSize;
+    const maxTightHeight = fs > 0 ? fs * 1.08 : bb.height;
+    const tightH = bb.height > maxTightHeight && fs >= 4 ? maxTightHeight : bb.height;
+    const diffY = bb.height - tightH;
+    const tightY = diffY > 0 ? bb.y + diffY * 0.55 : bb.y;
+    return {
+      left: `${Math.round(bb.x * scale)}px`,
+      top: `${Math.round(tightY * scale)}px`,
+      width: `${Math.max(4, Math.round(bb.width * scale))}px`,
+      height: `${Math.max(4, Math.round(tightH * scale))}px`,
+    };
+  }
+
+  /**
+   * Masks the original text area on the PDF canvas so any remaining old glyphs
+   * are completely hidden, even if the new text is shorter.
+   */
+  getRunOriginalMaskStyles(run: TextRun, page: EditorPage): Record<string, string> {
+    const scale = this.getPageDisplaySize(page).scale;
+    const orig = this.textEdit.getOriginalRun(run.id) ?? run;
+    const bb = orig.boundingBox;
+    const fs = orig.fontSize;
+    const maxTightHeight = fs > 0 ? fs * 1.08 : bb.height;
+    const tightH = bb.height > maxTightHeight && fs >= 4 ? maxTightHeight : bb.height;
+    const diffY = bb.height - tightH;
+    const tightY = diffY > 0 ? bb.y + diffY * 0.55 : bb.y;
+    return {
+      left: `${Math.round(bb.x * scale)}px`,
+      top: `${Math.round(tightY * scale)}px`,
+      width: `${Math.max(4, Math.round(bb.width * scale))}px`,
+      height: `${Math.max(4, Math.round(tightH * scale))}px`,
+    };
+  }
+
+  /** Clicking on an already-edited persistent text patch allows re-editing it. */
+  onPatchClick(event: MouseEvent, run: TextRun, page: EditorPage): void {
+    if (!this.isContentEditMode()) return;
+    event.stopPropagation();
+    event.preventDefault();
+    if (this.pagesStore.currentId() !== page.id) {
+      this.pagesStore.setCurrent(page.id);
+    }
+    const target = event.currentTarget as HTMLElement;
+    const pageFrame = target.closest('.editor__page-frame');
+    const canvas = pageFrame?.querySelector('canvas') as HTMLCanvasElement | null;
+    const scale = this.getPageDisplaySize(page).scale;
+    let detectedBg = '#ffffff';
+    if (canvas) {
+      const sample = sampleCanvasBackgroundColor(canvas, run.boundingBox, scale);
+      detectedBg = this.rgbToHex(sample);
+    }
+    this.textEdit.activateRun(run.id, detectedBg);
+    this.propertiesPanelCollapsed.set(false);
+  }
+
+  private rgbToHex(color: string): string {
+    if (color.startsWith('#')) {
+      if (color.length === 4) {
+        return `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`;
+      }
+      return color.slice(0, 7);
+    }
+    const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+    if (match) {
+      const r = Number(match[1]).toString(16).padStart(2, '0');
+      const g = Number(match[2]).toString(16).padStart(2, '0');
+      const b = Number(match[3]).toString(16).padStart(2, '0');
+      return `#${r}${g}${b}`;
+    }
+    return '#ffffff';
+  }
+
   getPageDisplaySize(page: EditorPage): { width: number; height: number; scale: number } {
     const idx = page.sourceIndex;
     const base = this.baseSizes().get(idx) ?? { width: 595.28, height: 841.89 };
@@ -1360,6 +1642,18 @@ export class EditorComponent implements OnDestroy {
         void this.exportPdf();
       }
     });
+
+    // When in content-edit mode, ensure text runs are loaded for the active page
+    effect(() => {
+      if (!this.isContentEditMode()) {
+        return;
+      }
+      const page = this.pagesStore.currentPage();
+      const pdfBytes = this.loadedRef?.data;
+      if (page && pdfBytes) {
+        void this.textEdit.loadPage(pdfBytes, page.sourceIndex);
+      }
+    });
   }
 
   readonly isMobileSearchOpen = signal(false);
@@ -1709,6 +2003,8 @@ export class EditorComponent implements OnDestroy {
 
     const picked = await this.files.pickFile(false);
     if (picked.length > 0) {
+      // Clear content-edit state from the previous document before loading.
+      this.textEdit.reset();
       await this.files.loadFiles(picked);
     }
   }
@@ -2130,6 +2426,7 @@ export class EditorComponent implements OnDestroy {
       window.removeEventListener('keydown', this.globalKeydownCaptureListener, { capture: true });
     }
     this.state.setAutoSaveHandler(null);
+    this.textEdit.reset();
   }
 
   selectTool(id: PdfToolId): void {
@@ -2153,6 +2450,21 @@ export class EditorComponent implements OnDestroy {
       const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
       if (!isMobile) {
         this.propertiesPanelCollapsed.set(false);
+      }
+    }
+    if (id === 'content-edit') {
+      // Activate text content editing: load runs for the current page.
+      // Use sourceIndex (original PDF page number) not currentIndex()
+      // (display-order position) — these differ when pages are reordered.
+      const pdfBytes = this.loadedRef?.data;
+      const pageIndex = this.pagesStore.currentPage()?.sourceIndex ?? 0;
+      if (pdfBytes) {
+        void this.textEdit.loadPage(pdfBytes, pageIndex);
+      }
+    } else {
+      // When leaving content-edit mode, cancel any active overlay.
+      if (this.state.tool() === 'content-edit') {
+        this.textEdit.deactivate();
       }
     }
     this.state.setTool(id);
@@ -2478,8 +2790,24 @@ export class EditorComponent implements OnDestroy {
         };
       });
 
+      // ── Step A: Apply text content edits (if any) ──────────────────────────
+      // This mutates the PDF content streams for any text runs the user edited
+      // via the content-edit tool. The result is a new ArrayBuffer; the original
+      // file.data is not mutated.
+      let sourceDataForExport: ArrayBuffer = file.data;
+      if (this.textEdit.hasPendingEdits()) {
+        this.exportProgress.set({ stage: 'Applying text edits…', percentage: 5, currentStep: 1, totalSteps: 10 });
+        try {
+          sourceDataForExport = await this.contentEditExport.exportDocument(file.data);
+        } catch (textEditErr) {
+          // Surface the error immediately; do not proceed with annotation export.
+          throw textEditErr;
+        }
+      }
+
+      // ── Step B: Annotation + page layout export (existing pipeline) ─────────
       const bytes = await this.exporter.exportDocument(
-        new Uint8Array(file.data.slice(0)),
+        new Uint8Array(sourceDataForExport.slice(0)),
         pageSpecs,
         options,
         (progress) => {
@@ -2833,6 +3161,11 @@ export class EditorComponent implements OnDestroy {
     const isRedo = (event.ctrlKey || event.metaKey) && (event.key.toLowerCase() === 'y' || (event.key.toLowerCase() === 'z' && event.shiftKey));
     if (isUndo) {
       event.preventDefault();
+      // Content-edit mode: route to text-edit history.
+      if (this.state.tool() === 'content-edit') {
+        this.textEdit.undo();
+        return;
+      }
       const res = this.state.undo();
       if (res.success && res.description) {
         this.toasts.info(`Undone: ${res.description}`);
@@ -2841,6 +3174,11 @@ export class EditorComponent implements OnDestroy {
     }
     if (isRedo) {
       event.preventDefault();
+      // Content-edit mode: route to text-edit history.
+      if (this.state.tool() === 'content-edit') {
+        this.textEdit.redo();
+        return;
+      }
       const res = this.state.redo();
       if (res.success && res.description) {
         this.toasts.info(`Redone: ${res.description}`);
@@ -2857,7 +3195,12 @@ export class EditorComponent implements OnDestroy {
       if (k === 'h') { this.selectTool('hand'); return; }
       if (k === 't') { this.selectTool('text'); return; }
       if (k === 'p') { this.selectTool('pen'); return; }
-      if (k === 'e') { this.selectTool('eraser'); return; }
+      if (k === 'e' && !event.shiftKey) { this.selectTool('eraser'); return; }
+      if (k === 'e' && event.shiftKey) {
+        // Shift+E toggles PDF text edit mode on/off.
+        this.selectTool(this.state.tool() === 'content-edit' ? 'select' : 'content-edit');
+        return;
+      }
       if (k === 's') { this.onShapeToolClick(); return; }
       if (k === 'i') { this.onIconToolClick(); return; }
     }

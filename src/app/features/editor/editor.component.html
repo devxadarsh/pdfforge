@@ -1249,6 +1249,35 @@
     </div>
   }
 
+  <!-- Content-Edit Mode Status Banner -->
+  @if (docName() && isContentEditMode()) {
+    <div class="editor__content-edit-banner" role="status" aria-live="polite">
+      <div class="editor__content-edit-banner-content">
+        <i class="fa-solid fa-i-cursor"></i>
+        <span class="editor__content-edit-banner-text">
+          <strong>PDF Text Edit mode</strong>
+          <span class="d-none d-md-inline"> — Click any text on the page to edit it directly.</span>
+          <span class="d-inline d-md-none"> — Tap text to edit.</span>
+        </span>
+        @if (textEdit.warnings().length > 0) {
+          <span class="editor__content-edit-banner-warn">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            {{ textEdit.warnings()[0] }}
+          </span>
+        }
+      </div>
+      <button
+        type="button"
+        class="editor__content-edit-banner-exit"
+        (click)="selectTool('select')"
+        title="Exit PDF Text Edit mode (Shift+E)"
+        aria-label="Exit PDF Text Edit mode"
+      >
+        <i class="fa-solid fa-xmark"></i> Exit
+      </button>
+    </div>
+  }
+
   <!-- Floating Placement Guidance Banner (Image / Stamp) -->
   @if (docName() && state.pendingPlacement(); as pending) {
     <div class="editor__placement-banner" role="status">
@@ -1683,6 +1712,48 @@
                     [width]="getPageDisplaySize(page).width"
                     [height]="getPageDisplaySize(page).height"
                   ></app-editor-overlay>
+                }
+                <!-- Content-Edit: invisible hit-test layer -->
+                @if (isContentEditMode()) {
+                  <div
+                    class="editor__content-edit-hittest"
+                    [attr.aria-label]="'Click text to edit'"
+                    (pointerdown)="$event.stopPropagation()"
+                    (click)="onPageCanvasClick($event, page)"
+                  ></div>
+                }
+                <!-- Content-Edit: original text mask to cover old text on canvas -->
+                @for (run of textEdit.getEditedRunsForPage(page.sourceIndex); track run.id) {
+                  <div
+                    class="editor__content-edit-mask"
+                    [ngStyle]="getRunOriginalMaskStyles(run, page)"
+                  ></div>
+                }
+                <!-- Content-Edit: persistent display of committed edited runs -->
+                @for (run of textEdit.getEditedRunsForPage(page.sourceIndex); track run.id) {
+                  @if (textEdit.activeRunId() !== run.id) {
+                    <div
+                      class="editor__content-edit-patch"
+                      [ngStyle]="getRunPatchStyles(run, page)"
+                      (click)="onPatchClick($event, run, page)"
+                    >{{ run.text }}</div>
+                  }
+                }
+                <!-- Content-Edit: text-run editing overlay (one run at a time) -->
+                @if (isContentEditMode() && pagesStore.currentId() === page.id) {
+                  @if (activeTextRun(); as run) {
+                    <div
+                      class="editor__content-edit-mask"
+                      [ngStyle]="getActiveRunMaskStyles(run, page)"
+                    ></div>
+                    <app-text-edit-overlay
+                      [run]="run"
+                      [scale]="getPageDisplaySize(page).scale"
+                      [pageHeightPt]="currentPageHeightPt()"
+                      (committed)="onTextRunCommitted($event)"
+                      (cancelled)="onTextRunCancelled()"
+                    ></app-text-edit-overlay>
+                  }
                 }
               </div>
             </div>

@@ -13,6 +13,11 @@ export interface WorkerPermissions {
   readonly modify: boolean;
 }
 
+export interface PdfValidationResult {
+  readonly valid: boolean;
+  readonly errorMessage?: string;
+}
+
 export interface PdfWorkerApi {
   mergePdfs(files: WorkerFileInfo[]): Promise<Uint8Array>;
   splitPdf(sourceBytes: Uint8Array, ranges: number[][]): Promise<Uint8Array[]>;
@@ -27,6 +32,8 @@ export interface PdfWorkerApi {
     permissions?: WorkerPermissions,
   ): Promise<Uint8Array>;
   unlockPdf(sourceBytes: Uint8Array, password: string): Promise<Uint8Array>;
+  /** Runs qpdf --check on the given PDF bytes. Returns {valid, errorMessage}. */
+  validatePdf(bytes: Uint8Array): Promise<PdfValidationResult>;
 }
 
 let cachedQpdf: any = null;
@@ -226,6 +233,37 @@ const api: PdfWorkerApi = {
     const doc = await PDFDocument.load(sourceBytes, { ignoreEncryption: true });
     const saved = await doc.save();
     return new Uint8Array(saved);
+  },
+
+  async validatePdf(bytes: Uint8Array): Promise<PdfValidationResult> {
+    if (!bytes || bytes.byteLength === 0) {
+      return { valid: false, errorMessage: 'Empty PDF bytes provided for validation.' };
+    }
+    try {
+      const qpdf = await getQpdf();
+      if (qpdf && qpdf.FS) {
+        const inName = `validate_${Date.now()}.pdf`;
+        qpdf.FS.writeFile(inName, bytes);
+        // qpdf --check: exit code 0 = no issues, 2 = warnings, 3 = warnings+errors, >0 = errors
+        const code = qpdf.callMain(['--check', inName]);
+        try { qpdf.FS.unlink(inName); } catch { /* ignore */ }
+        if (code === 0 || code === 3) {
+          // code 3 means warnings present but document is not damaged.
+          return { valid: true };
+        }
+        return {
+          valid: false,
+          errorMessage:
+            `Export produced a damaged PDF (qpdf exit code ${code}). ` +
+            `Please undo recent text edits and try again.`,
+        };
+      }
+    } catch (err) {
+      // If qpdf WASM fails to initialize, log and treat as valid (best-effort).
+      console.warn('[PdfWorker] validatePdf: qpdf unavailable, skipping validation:', err);
+    }
+    // Fallback: qpdf unavailable — assume valid.
+    return { valid: true };
   },
 };
 

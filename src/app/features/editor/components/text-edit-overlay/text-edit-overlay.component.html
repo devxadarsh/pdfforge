@@ -1,0 +1,30 @@
+<!-- text-edit-overlay.component.html -->
+<!--
+  Absolutely-positioned inline text editor overlay.
+  Sits above the PDF canvas (z-index via .overlay__box class).
+  Click is stopped here; all other pointer events fall through to the canvas.
+-->
+<div
+  class="teo-container"
+  (click)="onContainerClick($event)"
+  [ngStyle]="overlayStyles()"
+>
+  <!-- The contenteditable editing surface -->
+  <div
+    #editable
+    class="teo-editable"
+    contenteditable="true"
+    spellcheck="false"
+    autocorrect="off"
+    autocomplete="off"
+    [attr.aria-label]="'Edit text: ' + run().text"
+    role="textbox"
+    aria-multiline="false"
+    (keydown)="onKeydown($event)"
+    (paste)="onPaste($event)"
+    (blur)="onBlur()"
+  ></div>
+
+  <!-- Focus ring indicator (shown via CSS :focus-within) -->
+  <div class="teo-focus-ring" aria-hidden="true"></div>
+</div>

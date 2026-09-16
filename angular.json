@@ -26,11 +26,14 @@
             "allowedCommonJsDependencies": [
               "pako",
               "@neslinesli93/qpdf-wasm",
-              "tesseract.js"
+              "tesseract.js",
+              "mupdf"
             ],
             "externalDependencies": [
               "fs",
-              "path"
+              "path",
+              "node:fs",
+              "module"
             ],
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
@@ -47,6 +50,11 @@
               {
                 "glob": "qpdf.wasm",
                 "input": "node_modules/@neslinesli93/qpdf-wasm/dist",
+                "output": "assets"
+              },
+              {
+                "glob": "mupdf-wasm.wasm",
+                "input": "node_modules/mupdf/dist",
                 "output": "assets"
               }
             ],
@@ -121,6 +129,11 @@
               {
                 "glob": "qpdf.wasm",
                 "input": "node_modules/@neslinesli93/qpdf-wasm/dist",
+                "output": "assets"
+              },
+              {
+                "glob": "mupdf-wasm.wasm",
+                "input": "node_modules/mupdf/dist",
                 "output": "assets"
               }
             ],

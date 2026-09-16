@@ -2,9 +2,12 @@ import { Injectable, OnDestroy } from '@angular/core';
 import * as Comlink from 'comlink';
 import type {
   PdfWorkerApi,
+  PdfValidationResult,
   WorkerFileInfo,
   WorkerPermissions,
 } from '../../../workers/pdf.worker';
+
+export type { PdfValidationResult };
 
 @Injectable({ providedIn: 'root' })
 export class PdfWorkerService implements OnDestroy {
@@ -58,6 +61,11 @@ export class PdfWorkerService implements OnDestroy {
   async unlockPdf(sourceBytes: Uint8Array, password: string): Promise<Uint8Array> {
     const api = this.getApi();
     return await api.unlockPdf(sourceBytes, password);
+  }
+
+  async validatePdf(bytes: Uint8Array): Promise<PdfValidationResult> {
+    const api = this.getApi();
+    return await api.validatePdf(bytes);
   }
 
   ngOnDestroy(): void {

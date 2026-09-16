@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { MarketingShellComponent } from './layout/shells/marketing-shell/marketing-shell.component';
 import { EditorShellComponent } from './layout/shells/editor-shell/editor-shell.component';
 
+
 export const routes: Routes = [
   {
     path: '',
@@ -199,6 +200,26 @@ export const routes: Routes = [
         title: 'PDF Editor — iPDFEditor',
       },
     ],
+  },
+  // ── TEMPORARY: Prompt 1 Spike Verification Route ─────────────────────────
+  // Remove after acceptance criteria for Prompt 1 are verified.
+  {
+    path: 'mupdf-spike',
+    loadComponent: () =>
+      import('./features/mupdf-spike/mupdf-spike.component').then(
+        (m) => m.MupdfSpikeComponent,
+      ),
+    title: '[DEV] mupdf Spike — iPDFEditor',
+  },
+  // ── TEMPORARY: Prompt 2 Spike Verification Route ─────────────────────────
+  // Remove after acceptance criteria for Prompt 2 are verified.
+  {
+    path: 'font-glyph-spike',
+    loadComponent: () =>
+      import('./features/font-glyph-spike/font-glyph-spike.component').then(
+        (m) => m.FontGlyphSpikeComponent,
+      ),
+    title: '[DEV] Font Glyph Spike — iPDFEditor',
   },
   { path: '**', redirectTo: '' },
 ];

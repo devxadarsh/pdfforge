@@ -426,7 +426,7 @@ export class EditorOverlayComponent implements OnDestroy {
       return true;
     }
     const t = this.tool();
-    if (t === 'hand') {
+    if (t === 'hand' || t === 'content-edit') {
       return false;
     }
     if (t !== 'select') {

@@ -227,6 +227,512 @@
         </div>
       </div>
     </app-panel-section>
+  } @else if (textEdit.activeRun(); as activeRun) {
+    @for (run of [activeRun]; track run.id) {
+      <app-panel-section title="PDF Text Properties" icon="fa-solid fa-i-cursor">
+      <button
+        type="button"
+        class="props__delete props__delete--ghost"
+        (click)="resetRunStyling()"
+        title="Reset to original PDF styling"
+        aria-label="Reset to original PDF styling"
+        psec-actions
+      >
+        <i class="fa-solid fa-rotate-left"></i>
+      </button>
+      <button
+        type="button"
+        class="props__delete"
+        (click)="finishTextEditing()"
+        title="Done editing text"
+        aria-label="Done editing text"
+        psec-actions
+      >
+        <i class="fa-solid fa-check"></i>
+      </button>
+
+      <!-- TEXT CONTENT -->
+      <div class="props__group">
+        <div class="props__row props__row--between">
+          <label class="props__label">Text Content</label>
+          <span class="props__value-badge">{{ run.text.length }} chars</span>
+        </div>
+        <textarea
+          class="pf-input props__textarea"
+          rows="2"
+          [value]="run.text"
+          (input)="updateRunText(run, $any($event.target).value)"
+          placeholder="Type text..."
+          aria-label="PDF text content"
+        ></textarea>
+      </div>
+
+      <div class="props__divider"></div>
+
+      <!-- TYPOGRAPHY -->
+      <div class="props__group">
+        <label class="props__label">Typography</label>
+        <div class="props__row props__row--inline">
+          <select
+            class="pf-input props__select-font"
+            [value]="getRunFontFamily(run)"
+            (change)="setRunFontFamily(run, $any($event.target).value)"
+            aria-label="Font family"
+          >
+            <option
+              [value]="getDetectedFontFamily(run)"
+              [selected]="getRunFontFamily(run) === getDetectedFontFamily(run)"
+            >
+              {{ getDetectedFontLabel(run) }} (Detected)
+            </option>
+            @for (opt of fontOptions; track opt.value) {
+              @if (opt.value !== getDetectedFontFamily(run) && opt.label !== getDetectedFontLabel(run)) {
+                <option
+                  [value]="opt.value"
+                  [selected]="getRunFontFamily(run) === opt.value"
+                >
+                  {{ opt.label }}
+                </option>
+              }
+            }
+          </select>
+          <select
+            class="pf-input props__select-step"
+            [value]="fontSizeStep()"
+            (change)="setFontSizeStep($any($event.target).value)"
+            title="Size increment factor (step)"
+            aria-label="Size increment factor"
+          >
+            <option value="0.1">±0.1</option>
+            <option value="0.25">±0.25</option>
+            <option value="0.5">±0.5</option>
+            <option value="1">±1</option>
+            <option value="2">±2</option>
+            <option value="5">±5</option>
+          </select>
+          <input
+            class="pf-color props__color-picker"
+            type="color"
+            [value]="toColor(getRunColor(run))"
+            (input)="setRunColor(run, $any($event.target).value)"
+            title="Text color"
+            aria-label="Text color"
+          />
+        </div>
+
+        <!-- Font size slider with quick step buttons controlled by the increment factor -->
+        <div class="props__row props__row--inline" style="margin-top: 2px;">
+          <span class="props__sublabel" style="width: 54px;">Size (pt)</span>
+          <button
+            type="button"
+            class="props__step-btn"
+            (click)="stepRunFontSize(run, -fontSizeStep())"
+            [title]="'Decrease font size by ' + fontSizeStep() + 'pt'"
+            [attr.aria-label]="'Decrease font size by ' + fontSizeStep() + 'pt'"
+          >
+            <i class="fa-solid fa-minus"></i>
+          </button>
+          <input
+            class="pf-input props__field--grow"
+            type="range"
+            min="6"
+            max="72"
+            [step]="fontSizeStep()"
+            [value]="getRunFontSize(run)"
+            (input)="setRunFontSize(run, $any($event.target).value)"
+            aria-label="Font size slider"
+          />
+          <button
+            type="button"
+            class="props__step-btn"
+            (click)="stepRunFontSize(run, fontSizeStep())"
+            [title]="'Increase font size by ' + fontSizeStep() + 'pt'"
+            [attr.aria-label]="'Increase font size by ' + fontSizeStep() + 'pt'"
+          >
+            <i class="fa-solid fa-plus"></i>
+          </button>
+          <span class="props__value-badge">{{ getRunFontSize(run) }}pt</span>
+        </div>
+
+        <!-- Quick Text Color Swatches -->
+        <div class="props__swatches" style="margin-top: 2px;">
+          @for (s of textColorSwatches; track s.value) {
+            <button
+              type="button"
+              class="props__swatch"
+              [class.props__swatch--on]="getRunColor(run) === s.value"
+              [style.background]="s.value"
+              [title]="s.label"
+              [attr.aria-label]="'Set text color to ' + s.label"
+              (click)="setRunColor(run, s.value)"
+            ></button>
+          }
+        </div>
+
+        <!-- Bold / Italic / Underline & Align & Transform -->
+        <div class="props__row props__row--between" style="margin-top: 4px;">
+          <div class="props__seg-group">
+            <button
+              type="button"
+              class="props__seg-btn"
+              [class.props__seg-btn--on]="isRunBold(run)"
+              (click)="toggleRunBold(run)"
+              title="Bold"
+              aria-label="Bold"
+            >
+              <i class="fa-solid fa-bold"></i>
+            </button>
+            <button
+              type="button"
+              class="props__seg-btn"
+              [class.props__seg-btn--on]="isRunItalic(run)"
+              (click)="toggleRunItalic(run)"
+              title="Italic"
+              aria-label="Italic"
+            >
+              <i class="fa-solid fa-italic"></i>
+            </button>
+            <button
+              type="button"
+              class="props__seg-btn"
+              [class.props__seg-btn--on]="isRunUnderline(run)"
+              (click)="toggleRunUnderline(run)"
+              title="Underline"
+              aria-label="Underline"
+            >
+              <i class="fa-solid fa-underline"></i>
+            </button>
+          </div>
+
+          <div class="props__seg-group">
+            <button
+              type="button"
+              class="props__seg-btn"
+              [class.props__seg-btn--on]="getRunAlign(run) === 'left'"
+              (click)="setRunAlign(run, 'left')"
+              title="Align left"
+              aria-label="Align left"
+            >
+              <i class="fa-solid fa-align-left"></i>
+            </button>
+            <button
+              type="button"
+              class="props__seg-btn"
+              [class.props__seg-btn--on]="getRunAlign(run) === 'center'"
+              (click)="setRunAlign(run, 'center')"
+              title="Align center"
+              aria-label="Align center"
+            >
+              <i class="fa-solid fa-align-center"></i>
+            </button>
+            <button
+              type="button"
+              class="props__seg-btn"
+              [class.props__seg-btn--on]="getRunAlign(run) === 'right'"
+              (click)="setRunAlign(run, 'right')"
+              title="Align right"
+              aria-label="Align right"
+            >
+              <i class="fa-solid fa-align-right"></i>
+            </button>
+          </div>
+
+          <div class="props__seg-group">
+            <button
+              type="button"
+              class="props__seg-btn"
+              [class.props__seg-btn--on]="getRunTransform(run) === 'uppercase'"
+              (click)="setRunTransform(run, 'uppercase')"
+              title="Uppercase (AA)"
+              aria-label="Uppercase"
+            >
+              AA
+            </button>
+            <button
+              type="button"
+              class="props__seg-btn"
+              [class.props__seg-btn--on]="getRunTransform(run) === 'lowercase'"
+              (click)="setRunTransform(run, 'lowercase')"
+              title="Lowercase (aa)"
+              aria-label="Lowercase"
+            >
+              aa
+            </button>
+            <button
+              type="button"
+              class="props__seg-btn"
+              [class.props__seg-btn--on]="getRunTransform(run) === 'capitalize'"
+              (click)="setRunTransform(run, 'capitalize')"
+              title="Capitalize (Aa)"
+              aria-label="Capitalize"
+            >
+              Aa
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="props__divider"></div>
+
+      <!-- BACKGROUND COLOUR -->
+      <div class="props__group">
+        <label class="props__label">Background Colour</label>
+        <div class="props__swatches" style="margin-top: 4px;">
+          @for (s of backgroundSwatches; track s.value) {
+            <button
+              type="button"
+              class="props__swatch"
+              [class.props__swatch--on]="getRunBackgroundColor(run) === s.value"
+              [style.background]="s.value"
+              [title]="s.label"
+              [attr.aria-label]="'Set background to ' + s.label"
+              (click)="setRunBackgroundColor(run, s.value)"
+            ></button>
+          }
+          <input
+            class="pf-color props__swatch-input"
+            type="color"
+            [value]="toColor(getRunBackgroundColor(run))"
+            (input)="setRunBackgroundColor(run, $any($event.target).value)"
+            title="Custom background color"
+            aria-label="Custom background color"
+          />
+        </div>
+      </div>
+
+      <div class="props__divider"></div>
+
+      <!-- SPACE BETWEEN FONT (LETTER SPACING) & LINE HEIGHT -->
+      <div class="props__group">
+        <label class="props__label">Space Between Font (Tracking)</label>
+        <div class="props__row props__row--inline">
+          <span class="props__sublabel" style="width: 64px;">Letter Sp.</span>
+          <input
+            class="pf-input props__field--grow"
+            type="range"
+            min="-3"
+            max="25"
+            step="0.5"
+            [value]="getRunLetterSpacing(run)"
+            (input)="setRunLetterSpacing(run, $any($event.target).value)"
+            title="Letter spacing / space between font"
+            aria-label="Space between font slider"
+          />
+          <input
+            class="pf-input props__input-size"
+            type="number"
+            min="-5"
+            max="30"
+            step="0.5"
+            [value]="getRunLetterSpacing(run)"
+            (input)="setRunLetterSpacing(run, $any($event.target).value)"
+            title="Space between font in points"
+            aria-label="Space between font input"
+          />
+          <span class="props__value-badge">{{ getRunLetterSpacing(run) }}pt</span>
+        </div>
+
+        <div class="props__row props__row--inline">
+          <span class="props__sublabel" style="width: 64px;">Line Ht.</span>
+          <input
+            class="pf-input props__field--grow"
+            type="range"
+            min="0.8"
+            max="3.0"
+            step="0.1"
+            [value]="getRunLineHeight(run)"
+            (input)="setRunLineHeight(run, $any($event.target).value)"
+            title="Line height"
+            aria-label="Line height"
+          />
+          <span class="props__value-badge">{{ getRunLineHeight(run) | number: '1.1-1' }}x</span>
+        </div>
+      </div>
+
+      <div class="props__divider"></div>
+
+      <!-- PADDING ADJUSTMENT -->
+      <div class="props__group">
+        <div class="props__row props__row--between">
+          <label class="props__label">Padding (Inner Spacing)</label>
+          <div class="props__seg-group">
+            <button
+              type="button"
+              class="props__seg-btn props__seg-btn--sm"
+              (click)="setRunPaddingX(run, 0); setRunPaddingY(run, 0)"
+              title="Reset padding to 0"
+            >
+              0px
+            </button>
+            <button
+              type="button"
+              class="props__seg-btn props__seg-btn--sm"
+              (click)="setRunPaddingX(run, 4); setRunPaddingY(run, 2)"
+              title="Small padding"
+            >
+              Sm
+            </button>
+            <button
+              type="button"
+              class="props__seg-btn props__seg-btn--sm"
+              (click)="setRunPaddingX(run, 8); setRunPaddingY(run, 4)"
+              title="Medium padding"
+            >
+              Md
+            </button>
+          </div>
+        </div>
+
+        <div class="props__row props__row--inline">
+          <span class="props__sublabel" style="width: 64px;">Padding X</span>
+          <input
+            class="pf-input props__field--grow"
+            type="range"
+            min="0"
+            max="40"
+            step="1"
+            [value]="getRunPaddingX(run)"
+            (input)="setRunPaddingX(run, $any($event.target).value)"
+            aria-label="Horizontal padding slider"
+          />
+          <input
+            class="pf-input props__input-size"
+            type="number"
+            min="0"
+            max="60"
+            [value]="getRunPaddingX(run)"
+            (input)="setRunPaddingX(run, $any($event.target).value)"
+            aria-label="Horizontal padding input"
+          />
+          <span class="props__value-badge">{{ getRunPaddingX(run) }}px</span>
+        </div>
+
+        <div class="props__row props__row--inline">
+          <span class="props__sublabel" style="width: 64px;">Padding Y</span>
+          <input
+            class="pf-input props__field--grow"
+            type="range"
+            min="0"
+            max="40"
+            step="1"
+            [value]="getRunPaddingY(run)"
+            (input)="setRunPaddingY(run, $any($event.target).value)"
+            aria-label="Vertical padding slider"
+          />
+          <input
+            class="pf-input props__input-size"
+            type="number"
+            min="0"
+            max="60"
+            [value]="getRunPaddingY(run)"
+            (input)="setRunPaddingY(run, $any($event.target).value)"
+            aria-label="Vertical padding input"
+          />
+          <span class="props__value-badge">{{ getRunPaddingY(run) }}px</span>
+        </div>
+      </div>
+
+      <div class="props__divider"></div>
+
+      <!-- MARGIN / POSITION OFFSET ADJUSTMENT -->
+      <div class="props__group">
+        <div class="props__row props__row--between">
+          <label class="props__label">Margin / Position Offset</label>
+          <button
+            type="button"
+            class="props__seg-btn props__seg-btn--sm"
+            (click)="resetRunOffsets()"
+            title="Reset offsets to (0, 0)"
+          >
+            <i class="fa-solid fa-arrows-to-dot"></i> Reset
+          </button>
+        </div>
+
+        <div class="props__row props__row--inline">
+          <span class="props__sublabel" style="width: 64px;">Offset X</span>
+          <input
+            class="pf-input props__field--grow"
+            type="range"
+            min="-50"
+            max="50"
+            step="1"
+            [value]="getRunMarginX(run)"
+            (input)="setRunMarginX(run, $any($event.target).value)"
+            aria-label="Offset X slider"
+          />
+          <input
+            class="pf-input props__input-size"
+            type="number"
+            min="-150"
+            max="150"
+            [value]="getRunMarginX(run)"
+            (input)="setRunMarginX(run, $any($event.target).value)"
+            aria-label="Offset X input"
+          />
+          <span class="props__value-badge">{{ getRunMarginX(run) }}px</span>
+        </div>
+
+        <div class="props__row props__row--inline">
+          <span class="props__sublabel" style="width: 64px;">Offset Y</span>
+          <input
+            class="pf-input props__field--grow"
+            type="range"
+            min="-50"
+            max="50"
+            step="1"
+            [value]="getRunMarginY(run)"
+            (input)="setRunMarginY(run, $any($event.target).value)"
+            aria-label="Offset Y slider"
+          />
+          <input
+            class="pf-input props__input-size"
+            type="number"
+            min="-150"
+            max="150"
+            [value]="getRunMarginY(run)"
+            (input)="setRunMarginY(run, $any($event.target).value)"
+            aria-label="Offset Y input"
+          />
+          <span class="props__value-badge">{{ getRunMarginY(run) }}px</span>
+        </div>
+      </div>
+
+      <div class="props__divider"></div>
+
+      <!-- ADVANCED FEATURES: OPACITY & DETAILS -->
+      <div class="props__group">
+        <label class="props__label">Advanced Adjustments</label>
+        <div class="props__row props__row--inline">
+          <span class="props__sublabel" style="width: 64px;">Opacity</span>
+          <input
+            class="pf-input props__field--grow"
+            type="range"
+            min="10"
+            max="100"
+            step="1"
+            [value]="getRunOpacity(run)"
+            (input)="setRunOpacity(run, $any($event.target).value)"
+            aria-label="Opacity slider"
+          />
+          <span class="props__value-badge">{{ getRunOpacity(run) }}%</span>
+        </div>
+
+        <div class="props__row props__row--between" style="margin-top: 4px;">
+          <span class="props__sublabel" style="width: auto; font-size: 10px; color: var(--pf-text-muted);">
+            Origin: ({{ run.boundingBox.x | number:'1.0-0' }}, {{ run.boundingBox.y | number:'1.0-0' }})
+          </span>
+          <button
+            type="button"
+            class="props__seg-btn props__seg-btn--sm"
+            (click)="resetRunStyling()"
+            title="Reset font size, spacing, offsets, and colors to PDF original"
+          >
+            <i class="fa-solid fa-arrow-rotate-left"></i> Reset All Styling
+          </button>
+        </div>
+      </div>
+    </app-panel-section>
+    }
   } @else if (selected(); as ann) {
     <app-panel-section [title]="titleOf(ann)" [icon]="iconOf(ann)">
       <button
@@ -308,8 +814,9 @@
             <input
               class="pf-input props__input-size"
               type="number"
-              min="8"
-              max="120"
+              min="4"
+              max="140"
+              step="any"
               [value]="ann.fontSize"
               [disabled]="ann.locked"
               (input)="setFontSize(ann, $any($event.target).value)"
@@ -534,6 +1041,52 @@
               <span class="props__value-badge">{{ ann.backgroundPadding ?? 6 }}px</span>
             </div>
           }
+        </div>
+
+        <!-- POSITION & MARGIN / OFFSET FOR TEXT ANNOTATION -->
+        <div class="props__group">
+          <label class="props__label">Position & Margin</label>
+          <div class="props__row props__row--inline">
+            <span class="props__sublabel">Pos X</span>
+            <input
+              class="pf-input props__input-size props__field--grow"
+              type="number"
+              [value]="ann.rect.x"
+              [disabled]="ann.locked"
+              (input)="setRectX(ann, +$any($event.target).value)"
+              title="Position X"
+              aria-label="Position X"
+            />
+            <span class="props__sublabel">Pos Y</span>
+            <input
+              class="pf-input props__input-size props__field--grow"
+              type="number"
+              [value]="ann.rect.y"
+              [disabled]="ann.locked"
+              (input)="setRectY(ann, +$any($event.target).value)"
+              title="Position Y"
+              aria-label="Position Y"
+            />
+          </div>
+        </div>
+
+        <!-- OPACITY FOR TEXT ANNOTATION -->
+        <div class="props__group">
+          <div class="props__row props__row--inline">
+            <span class="props__sublabel">Opacity</span>
+            <input
+              class="pf-input props__field--grow"
+              type="range"
+              min="10"
+              max="100"
+              step="1"
+              [value]="getOpacityPercent(ann)"
+              [disabled]="ann.locked"
+              (input)="setOpacityPercent(ann, $any($event.target).value)"
+              aria-label="Text opacity"
+            />
+            <span class="props__value-badge">{{ getOpacityPercent(ann) }}%</span>
+          </div>
         </div>
       }
 
@@ -1870,6 +2423,19 @@
             </label>
           </div>
         }
+      </div>
+    </app-panel-section>
+  } @else if (activeTool() === 'content-edit') {
+    <app-panel-section title="PDF Text Edit" icon="fa-solid fa-i-cursor">
+      <div class="props__group">
+        <label class="props__label">Direct Text Editing</label>
+        <p class="props__hint" style="font-size: 12px; line-height: 1.5; color: var(--pf-on-surface); margin: 0 0 8px 0;">
+          <i class="fa-solid fa-mouse-pointer" style="color: var(--pf-primary); margin-right: 6px;"></i>
+          Click on any text on the page to start editing it directly.
+        </p>
+        <p class="props__hint" style="font-size: 11px; line-height: 1.4; color: var(--pf-text-muted); margin: 0;">
+          Once selected, adjust its font size, space between font, padding, margin offsets, background colour, font family, and advanced styles in real-time right here.
+        </p>
       </div>
     </app-panel-section>
   } @else if (activeTool() === 'select') {

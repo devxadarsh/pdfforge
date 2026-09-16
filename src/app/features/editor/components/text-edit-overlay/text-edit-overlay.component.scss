@@ -1,0 +1,102 @@
+// text-edit-overlay.component.scss
+// ─────────────────────────────────────────────────────────────────────────────
+// Scoped styles for the inline PDF text edit overlay.
+// Uses design tokens from _tokens.scss where applicable.
+// No global class pollution — all selectors are component-scoped.
+
+:host {
+  position: absolute;
+  inset: 0;
+  // Above PDF canvas (z=10) and annotation overlay (z=20), below toolbars (z=100).
+  z-index: 30;
+  pointer-events: none; // Container is pass-through; children handle events.
+  display: block;
+  contain: layout;
+}
+
+.teo-container {
+  position: absolute; // Coordinates (left, top, minWidth, height) set by [ngStyle]
+  display: inline-flex;
+  align-items: center;
+  pointer-events: auto; // Re-enable for the container itself.
+  background: #ffffff;
+  cursor: text;
+  border-radius: var(--pf-radius-sm, 2px);
+  width: max-content;
+  box-sizing: border-box;
+  // Borderless: seamlessly integrates with the PDF page content
+  outline: none;
+  border: none;
+  box-shadow: none;
+
+  &:focus-within {
+    outline: none;
+    box-shadow: none;
+  }
+}
+
+.teo-editable {
+  width: max-content;
+  min-width: 20px;
+  height: 100%;
+  font-family: inherit;
+  font-weight: inherit;
+  font-style: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  word-spacing: inherit;
+  line-height: inherit;
+  white-space: pre; // Preserves all whitespace and space character widths.
+  overflow: visible;
+  background: transparent;
+  // No default browser styling.
+  border: none;
+  outline: none;
+  padding: 0 2px;
+  margin: 0;
+  box-sizing: border-box;
+  cursor: text;
+  // Prevent zoom on double-tap mobile.
+  touch-action: manipulation;
+
+  // Caret color matches the text color (inherits via color: on :host styles).
+  caret-color: currentColor;
+
+  // Suppress browser default selection colour to match our outline.
+  &::selection {
+    background: rgba(37, 99, 235, 0.25);
+  }
+
+  // Content-editable placeholder when empty (not needed in v1 but keeps UX clean).
+  &:empty::before {
+    content: attr(aria-placeholder);
+    color: var(--pf-on-surface-variant, #434655);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
+.teo-focus-ring {
+  display: none;
+}
+
+// ─── Reduced motion ────────────────────────────────────────────────────────
+@media (prefers-reduced-motion: reduce) {
+  .teo-container,
+  .teo-editable {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+// ─── High contrast ─────────────────────────────────────────────────────────
+@media (forced-colors: active) {
+  .teo-container {
+    outline: none;
+  }
+
+  .teo-editable {
+    background: Field;
+    color: FieldText;
+  }
+}

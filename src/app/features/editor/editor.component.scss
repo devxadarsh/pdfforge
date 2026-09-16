@@ -807,6 +807,45 @@
   transition: box-shadow 0.2s ease;
 }
 
+// ── Content-Edit hit-test layer ──────────────────────────────────────────────
+// Invisible full-page overlay that captures clicks for text run hit-testing.
+// z-index: above the PDF canvas (z=0), below annotation overlay (z=20).
+.editor__content-edit-hittest {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  cursor: text;
+  pointer-events: all;
+  // Fully transparent — don't obscure the PDF.
+  background: transparent;
+}
+
+// ── Content-Edit persistent patch ─────────────────────────────────────────────
+// Renders committed edited text runs directly on top of the PDF canvas so changes
+// remain persistent and visible across pages, zooms, and tool changes.
+.editor__content-edit-mask {
+  position: absolute;
+  background-color: #ffffff;
+  z-index: 21;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.editor__content-edit-patch {
+  position: absolute;
+  background-color: #ffffff;
+  white-space: pre;
+  overflow: visible;
+  z-index: 22;
+  user-select: none;
+  box-sizing: border-box;
+  pointer-events: all;
+  cursor: text;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 1px;
+}
+
 .editor__landing {
   display: flex;
   flex-direction: column;
@@ -2387,6 +2426,107 @@
   color: var(--pf-on-surface-variant, #6b7280);
 }
 
+// ── Content-Edit Mode Status Banner ────────────────────────────────────────────
+.editor__content-edit-banner {
+  position: absolute;
+  top: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--pf-surface-container-high, #0f2027);
+  color: var(--pf-on-surface, #e2e8f0);
+  border: 1px solid #10b981;
+  padding: 6px 8px 6px 16px;
+  border-radius: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(16, 185, 129, 0.18);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  animation: bannerSlideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  max-width: min(640px, calc(100vw - 32px));
+}
+
+.editor__content-edit-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+
+  > i {
+    color: #10b981;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+}
+
+.editor__content-edit-banner-text {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.editor__content-edit-banner-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  font-size: 11px;
+  font-weight: 500;
+  flex-shrink: 0;
+
+  i { font-size: 10px; }
+}
+
+.editor__content-edit-banner-exit {
+  flex-shrink: 0;
+  border: none;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border-radius: 16px;
+  padding: 4px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.18);
+    color: #f87171;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #10b981;
+    outline-offset: 2px;
+  }
+}
+
+@media (max-width: 768px) {
+  .editor__content-edit-banner {
+    top: auto;
+    bottom: 70px;
+    left: 10px;
+    right: 10px;
+    transform: none;
+    white-space: normal;
+    border-radius: 12px;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 .editor__placement-banner {
   position: absolute;
   top: 48px;

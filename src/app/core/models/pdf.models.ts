@@ -19,7 +19,8 @@ export type PdfToolId =
   | 'image'
   | 'signature'
   | 'stamp'
-  | 'comment';
+  | 'comment'
+  | 'content-edit';
 
 export type AnnotationType =
   | 'text'
